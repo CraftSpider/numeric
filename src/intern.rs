@@ -1,5 +1,4 @@
 use std::cell::UnsafeCell;
-use std::mem::MaybeUninit;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::RwLockReadGuard;
@@ -31,20 +30,24 @@ impl<T> Deref for InternRef<'_, T> {
 
 pub struct Interned<T> {
     refs: AtomicUsize,
-    val: UnsafeCell<MaybeUninit<T>>,
+    val: UnsafeCell<Option<T>>,
 }
 
 impl<T> Interned<T> {
     fn new_uninit() -> Interned<T> {
-        Interned { refs: AtomicUsize::new(0), val: UnsafeCell::new(MaybeUninit::uninit()) }
+        Interned { refs: AtomicUsize::new(0), val: UnsafeCell::new(None) }
+    }
+
+    fn val_opt(&self) -> Option<&T> {
+        unsafe { (*self.val.get()).as_ref() }
     }
 
     pub fn val(&self) -> &T {
-        unsafe { (*self.val.get()).assume_init_ref() }
+        unsafe { (*self.val.get()).as_ref().unwrap_unchecked() }
     }
 
-    pub fn set_val(&self, val: T) {
-        unsafe { (*self.val.get()).write(val) };
+    fn set_val(&self, val: T) {
+        unsafe { (*self.val.get()) = Some(val) };
     }
 }
 
@@ -71,7 +74,7 @@ where
                 // This intentionally allows reviving dead slots - saves work if you're rapidly dropping
                 // and creating references to a value
                 let count = i.refs.load(Ordering::Acquire);
-                if count != 0 && val == i.val() {
+                if i.val_opt().map_or(false, |cur_val| val == cur_val) {
                     return Find::Exists((idx, idx2));
                 } else if count == 0 {
                     return Find::Dead((idx, idx2));
@@ -82,7 +85,10 @@ where
     }
 
     fn incr_inner(interned: &Interned<T>) {
-        interned.refs.fetch_add(1, Ordering::AcqRel);
+        let val = interned.refs.fetch_add(1, Ordering::AcqRel);
+        if val == usize::MAX {
+            panic!("Too many instance of a single value!");
+        }
     }
 
     fn decr_inner(interned: &Interned<T>) {
@@ -101,11 +107,13 @@ where
                 loc1 * 32 + loc2
             }
             Find::Dead((loc1, loc2)) => {
+                Self::incr_inner(&self.inner[loc1][loc2]);
                 self.inner[loc1][loc2].set_val(val);
                 loc1 * 32 + loc2
             }
             Find::None => {
                 let len = self.inner.push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
+                Self::incr_inner(&self.inner[len - 1][0]);
                 self.inner[len - 1][0].set_val(val);
                 (len - 1) * 32
             }

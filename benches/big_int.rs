@@ -33,10 +33,10 @@ pub fn bench_clone(c: &mut Criterion) {
 
     // Un-comment to check how we're doing against just an inline vector.
     // At start: We need like 128 items to be slower than interning
-    /*c.bench_function("Clone::clone(vector)", |b| {
+    c.bench_function("Clone::clone(vector)", |b| {
         let v = vec![0usize; 32];
         b.iter(|| black_box(&v).clone())
-    });*/
+    });
 }
 
 pub fn bench_add(c: &mut Criterion) {
