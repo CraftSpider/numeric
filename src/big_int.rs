@@ -6,7 +6,7 @@ use num_traits::{FromPrimitive, Num, One, Pow, Signed, ToPrimitive, Zero};
 use once_cell::sync::Lazy;
 
 use crate::bit_slice::BitSlice;
-use crate::intern::Interner;
+use crate::intern::{Interner, SliceHack};
 use crate::utils::*;
 
 static INT_STORE: Lazy<Interner<Box<[usize]>>> = Lazy::new(|| Interner::new());
@@ -103,17 +103,17 @@ impl BigInt {
         BigInt(TaggedOffset::new(val, if neg { Tag::InlineNeg } else { Tag::Inline }))
     }
 
-    fn new_intern(val: Vec<usize>, neg: bool) -> BigInt {
-        let offset = INT_STORE.add(val.into_boxed_slice());
+    fn new_intern(val: &[usize], neg: bool) -> BigInt {
+        let offset = INT_STORE.add(SliceHack(val));
         BigInt(TaggedOffset::new(offset, if neg { Tag::Neg } else { Tag::None }))
     }
 
-    fn new_vec(v: Vec<usize>, neg: bool) -> BigInt {
-        let v = shrink_vec(v);
-        if v.len() == 1 && v[0] <= (usize::MAX >> 2) {
-            BigInt::new_inline(v[0] as usize, neg)
+    fn new_slice(val: &[usize], neg: bool) -> BigInt {
+        let val = shrink_slice(val);
+        if val.len() == 1 && val[0] <= (usize::MAX >> 2) {
+            BigInt::new_inline(val[0], neg)
         } else {
-            BigInt::new_intern(v, neg)
+            BigInt::new_intern(val, neg)
         }
     }
 
@@ -132,7 +132,7 @@ impl BigInt {
         let mut scratch = self.clone();
 
         while scratch > 0 {
-            let digit = (scratch.clone() % base).to_u8().unwrap();
+            let digit = (scratch.clone() % base).to_u8().expect("Mod base should always be less than 255");
             digits.push(digit);
             scratch = scratch / base;
         }
@@ -242,6 +242,7 @@ impl Ord for BigInt {
     }
 }
 
+#[derive(Debug)]
 pub struct OutOfRangeError;
 
 macro_rules! impl_ops_for_int {
@@ -251,6 +252,9 @@ macro_rules! impl_ops_for_int {
         impl_ops_for_int!($ty, *, Mul, mul);
         impl_ops_for_int!($ty, /, Div, div);
         impl_ops_for_int!($ty, %, Rem, rem);
+
+        impl_ops_for_int!($ty, <<, Shl, shl);
+        impl_ops_for_int!($ty, >>, Shr, shr);
     };
 
     ($ty:ty, $op:tt, $trait:ident, $meth:ident) => {
@@ -269,13 +273,13 @@ macro_rules! impl_for_int {
         impl From<$signed> for BigInt {
             fn from(val: $signed) -> Self {
                 let neg = val.is_negative();
-                BigInt::new_vec(int_to_arr(val.abs() as $unsigned), neg)
+                BigInt::new_slice(&int_to_arr(val.abs() as $unsigned), neg)
             }
         }
 
         impl From<$unsigned> for BigInt {
             fn from(val: $unsigned) -> Self {
-                BigInt::new_vec(int_to_arr(val), false)
+                BigInt::new_slice(&int_to_arr(val), false)
             }
         }
 
@@ -286,7 +290,7 @@ macro_rules! impl_for_int {
                 if bi > &BigInt::from(Self::MAX) || bi < &BigInt::from(Self::MIN) {
                     Err(OutOfRangeError)
                 } else {
-                    Ok(bi.with_slice(|s| arr_to_int(s.inner())))
+                    bi.with_slice(|s| arr_to_int(s.inner())).ok_or(OutOfRangeError)
                 }
             }
         }
@@ -298,7 +302,7 @@ macro_rules! impl_for_int {
                 if bi > &BigInt::from(Self::MAX) || bi < &BigInt::from(Self::MIN) {
                     Err(OutOfRangeError)
                 } else {
-                    Ok(bi.with_slice(|s| arr_to_int(s.inner())))
+                    bi.with_slice(|s| arr_to_int(s.inner())).ok_or(OutOfRangeError)
                 }
             }
         }
@@ -364,6 +368,12 @@ macro_rules! impl_op {
     (rem($self:ident, $rhs:ident) => $block:block) => {
         impl_op!(rem, Rem, $self, $rhs, $block);
     };
+    (shl($self:ident, $rhs:ident) => $block:block) => {
+        impl_op!(shl, Shl, $self, $rhs, $block);
+    };
+    (shr($self:ident, $rhs:ident) => $block:block) => {
+        impl_op!(shr, Shr, $self, $rhs, $block);
+    };
     ($meth:ident, $trait:ident, $self:ident, $rhs:ident, $block:block) => {
         impl core::ops::$trait<BigInt> for BigInt {
             type Output = BigInt;
@@ -410,7 +420,7 @@ impl_op!(add(self, rhs) => {
         }
     });
 
-    BigInt::new_vec(out, neg)
+    BigInt::new_slice(&out, neg)
 });
 
 impl_op!(sub(self, rhs) => {
@@ -428,7 +438,7 @@ impl_op!(sub(self, rhs) => {
         }
     });
 
-    BigInt::new_vec(out, neg)
+    BigInt::new_slice(&out, neg)
 });
 
 impl_op!(mul(self, rhs) => {
@@ -436,22 +446,37 @@ impl_op!(mul(self, rhs) => {
         (this * other, self.is_negative() != rhs.is_negative())
     });
 
-    BigInt::new_vec(out.into_inner(), neg)
+    BigInt::new_slice(&out.into_inner(), neg)
 });
 
 impl_op!(div(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        (this / other).0.into_inner()
+        (this / other).into_inner()
     });
-    BigInt::new_vec(out, self.is_negative() != rhs.is_negative())
+    BigInt::new_slice(&out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(rem(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        #[allow(clippy::suspicious_arithmetic_impl)]
-        (this / other).1.into_inner()
+        (this % other).into_inner()
     });
-    BigInt::new_vec(out, self.is_negative() != rhs.is_negative())
+    BigInt::new_slice(&out, self.is_negative() != rhs.is_negative())
+});
+
+// TODO: Don't convert to usize for these
+
+impl_op!(shl(self, rhs) => {
+    let out = BigInt::with_slices(self, rhs, |this, other| {
+        (this << usize::try_from(rhs).unwrap()).into_inner()
+    });
+    BigInt::new_slice(&out, self.is_negative())
+});
+
+impl_op!(shr(self, rhs) => {
+    let out = BigInt::with_slices(self, rhs, |this, other| {
+        (this >> usize::try_from(rhs).unwrap()).into_inner()
+    });
+    BigInt::new_slice(&out, self.is_negative())
 });
 
 impl ops::Neg for BigInt {
@@ -645,35 +670,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_usize_arr() {
-        assert_eq!(int_to_arr::<u16, usize>(0), vec![0]);
-        assert_eq!(int_to_arr::<u16, usize>(1), vec![1]);
-        assert_eq!(int_to_arr::<u16, usize>(u16::MAX), vec![u16::MAX as usize]);
-
-        assert_eq!(int_to_arr::<u128, usize>(0), vec![0]);
-        assert_eq!(int_to_arr::<u128, usize>(1), vec![1]);
-        assert_eq!(int_to_arr::<u128, usize>(usize::MAX as u128 + 1), vec![1, 0]);
-        assert_eq!(int_to_arr::<u128, usize>(u128::MAX), vec![usize::MAX, usize::MAX]);
-    }
-
-    #[test]
     fn test_new() {
-        let b0 = BigInt::new_vec(vec![0], false);
+        let b0 = BigInt::new_slice(&[0], false);
         assert!(b0.is_inline());
-        let b1 = BigInt::new_vec(vec![usize::MAX >> 2], false);
+        let b1 = BigInt::new_slice(&[usize::MAX >> 2], false);
         assert!(b1.is_inline());
-        let b2 = BigInt::new_vec(vec![(usize::MAX >> 2) + 1], false);
+        let b2 = BigInt::new_slice(&[(usize::MAX >> 2) + 1], false);
         assert!(b2.is_interned());
-        let b3 = BigInt::new_vec(vec![0, 1], false);
+        let b3 = BigInt::new_slice(&[0, 1], false);
         assert!(b3.is_interned());
     }
 
     #[test]
     fn test_print() {
-        assert_eq!(BigInt::new_vec(vec![1], false).to_string(), "1");
-        assert_eq!(BigInt::new_vec(vec![10], false).to_string(), "10");
-        assert_eq!(BigInt::new_vec(vec![111], false).to_string(), "111");
-        assert_eq!(BigInt::new_vec(vec![0, 1], false).to_string(), "18446744073709551616");
+        assert_eq!(BigInt::from(1).to_string(), "1");
+        assert_eq!(BigInt::from(10).to_string(), "10");
+        assert_eq!(BigInt::from(111).to_string(), "111");
+        assert_eq!(BigInt::from(18446744073709551616u128).to_string(), "18446744073709551616");
     }
 
     #[test]
@@ -690,6 +703,8 @@ mod tests {
         assert_eq!(BigInt::from(5) + BigInt::from(-10), BigInt::from(-5));
         assert_eq!(BigInt::from(15) + BigInt::from(-10), BigInt::from(5));
         assert_eq!(BigInt::from(-1) + BigInt::from(-1), BigInt::from(-2));
+
+        assert_eq!(BigInt::from(usize::MAX) + BigInt::from(usize::MAX), BigInt::from((usize::MAX as u128) * 2))
     }
 
     #[test]
@@ -713,8 +728,17 @@ mod tests {
 
         assert_eq!(BigInt::from(1) / BigInt::from(3), BigInt::from(0));
         assert_eq!(
-            BigInt::new_vec(vec![0, 0, 1], false) / BigInt::new_vec(vec![2], false),
-            BigInt::new_vec(vec![0, (usize::MAX / 2) + 1], false),
+            BigInt::new_slice(&[0, 0, 1], false) / BigInt::new_slice(&[2], false),
+            BigInt::new_slice(&[0, (usize::MAX / 2) + 1], false),
         );
+    }
+
+    #[test]
+    fn test_shl() {
+        assert_eq!(BigInt::from(1) << BigInt::from(1), BigInt::from(2));
+        assert_eq!(BigInt::from(2) << BigInt::from(1), BigInt::from(4));
+        assert_eq!(BigInt::from(3) << BigInt::from(1), BigInt::from(6));
+
+        assert_eq!(BigInt::from(usize::MAX) << BigInt::from(1), BigInt::from((usize::MAX as u128) * 2));
     }
 }

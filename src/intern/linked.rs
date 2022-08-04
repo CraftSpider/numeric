@@ -40,6 +40,7 @@ impl<T> Node<T> {
 }
 
 pub struct UnsyncLinked<T> {
+    // TODO: AtomicPtr, relaxed loads, compare and swap on store
     head: NonNull<Node<T>>,
 }
 
@@ -58,6 +59,10 @@ impl<T> UnsyncLinked<T> {
             len += 1;
         }
         (cur_node, len)
+    }
+
+    pub fn len(&self) -> usize {
+        self.tail().1
     }
 
     /// Returns the new length of the list
@@ -107,5 +112,26 @@ where
             }
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_thread() {
+        let list = UnsyncLinked::<u8>::new_with(0);
+        std::thread::scope(|scope| {
+            let list = &list;
+            let mut joins = Vec::new();
+            for i in 0..99 {
+                joins.push(scope.spawn(move || list.push(i)));
+            }
+            for join in joins {
+                join.join().unwrap();
+            }
+            assert_eq!(list.len(), 100);
+        });
     }
 }

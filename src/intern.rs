@@ -9,6 +9,54 @@ use linked::UnsyncLinked;
 
 const CHUNK_SIZE: usize = 32;
 
+pub trait IntoOwned<T> {
+    fn into_owned(self) -> T;
+}
+
+impl<T> IntoOwned<T> for T {
+    fn into_owned(self) -> T {
+        self
+    }
+}
+
+impl<T> IntoOwned<Vec<T>> for &[T]
+where
+    T: Clone,
+{
+    fn into_owned(self) -> Vec<T> {
+        self.to_owned()
+    }
+}
+
+impl<T> IntoOwned<Box<[T]>> for &[T]
+where
+    T: Copy,
+{
+    fn into_owned(self) -> Box<[T]> {
+        self.into()
+    }
+}
+
+pub struct SliceHack<'a, T>(pub &'a [T]);
+
+impl<T> IntoOwned<Box<[T]>> for SliceHack<'_, T>
+    where
+        T: Copy,
+{
+    fn into_owned(self) -> Box<[T]> {
+        self.0.into()
+    }
+}
+
+impl<T> PartialEq<Box<[T]>> for SliceHack<'_, T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Box<[T]>) -> bool {
+        self.0 == &**other
+    }
+}
+
 pub enum Find<T> {
     Exists(T),
     Dead(T),
@@ -99,7 +147,10 @@ where
         );
     }
 
-    pub fn add(&self, val: T) -> usize {
+    pub fn add<U>(&self, val: U) -> usize
+    where
+        U: IntoOwned<T> + PartialEq<T>,
+    {
         let find = Self::find(&self.inner, &val);
         match find {
             Find::Exists((loc1, loc2)) => {
@@ -108,13 +159,13 @@ where
             }
             Find::Dead((loc1, loc2)) => {
                 Self::incr_inner(&self.inner[loc1][loc2]);
-                self.inner[loc1][loc2].set_val(val);
+                self.inner[loc1][loc2].set_val(val.into_owned());
                 loc1 * 32 + loc2
             }
             Find::None => {
                 let len = self.inner.push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
                 Self::incr_inner(&self.inner[len - 1][0]);
-                self.inner[len - 1][0].set_val(val);
+                self.inner[len - 1][0].set_val(val.into_owned());
                 (len - 1) * 32
             }
         }
@@ -130,5 +181,45 @@ where
 
     pub fn decr(&self, offset: usize) {
         Self::decr_inner(&self.inner[offset / 32][offset % 32])
+    }
+
+    fn refcount(&self, offset: usize) -> usize {
+        self.inner[offset / 32][offset % 32].refs.load(Ordering::Relaxed)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        let interner = Interner::new();
+
+        let pos1 = interner.add(0);
+        let pos2 = interner.add(0);
+        let pos3 = interner.add(1);
+        let pos4 = interner.add(1);
+
+        assert_eq!(pos1, pos2);
+        assert_eq!(pos3, pos4);
+        assert_ne!(pos1, pos3);
+    }
+
+    #[test]
+    fn test_dead_live() {
+        let interner = Interner::new();
+
+        // Create value
+        let pos1 = interner.add(0);
+        assert_eq!(interner.refcount(pos1), 1);
+        // Kill the location
+        interner.decr(pos1);
+        assert_eq!(interner.refcount(pos1), 0);
+        // Revive it
+        let pos2 = interner.add(0);
+
+        assert_eq!(pos1, pos2);
+        assert_eq!(interner.refcount(pos2), 1);
     }
 }

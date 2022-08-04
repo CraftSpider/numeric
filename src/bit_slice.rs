@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
 use std::fmt;
-use std::hint::unreachable_unchecked;
-use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
+use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub};
 use num_traits::{PrimInt, One, Zero};
+
+mod algos;
 
 mod private {
     use std::slice::SliceIndex;
@@ -257,7 +258,7 @@ where
     S::Output: PrimInt,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for idx in 0..self.bit_len() {
+        for idx in (0..self.bit_len()).rev() {
             write!(f, "{}", self.get_bit(idx) as u8)?;
         }
         Ok(())
@@ -282,7 +283,7 @@ where
 
     fn shr(self, rhs: usize) -> Self::Output {
         let mut out = BitSlice::new(vec![<S::Output>::zero(); self.len()]);
-        for idx in (0..self.bit_len()).rev() {
+        for idx in (0..=self.bit_len()).rev() {
             let new = self.get_bit(idx);
             if let Some(idx) = idx.checked_sub(rhs) {
                 out.set_bit_ignore(idx, new);
@@ -300,11 +301,14 @@ where
     type Output = BitSlice<Vec<S::Output>>;
 
     fn shl(self, rhs: usize) -> Self::Output {
+        let bit_len = self.bit_len();
         let mut out = BitSlice::new(vec![<S::Output>::zero(); self.len()]);
-        for idx in 0..self.bit_len() {
+        for idx in 0..=bit_len {
             let new = self.get_bit(idx);
-            #[allow(clippy::suspicious_arithmetic_impl)]
-            out.set_bit_pushing(idx + rhs, new);
+            if new || idx + rhs < bit_len {
+                #[allow(clippy::suspicious_arithmetic_impl)]
+                out.set_bit_pushing(idx + rhs, new);
+            }
         }
         out
     }
@@ -335,40 +339,7 @@ where
     type Output = BitSlice<Vec<S::Output>>;
 
     fn add(self, rhs: BitSlice<T>) -> Self::Output {
-        let len = usize::max(self.len(), rhs.len());
-        let bit_len = usize::max(self.bit_len(), rhs.bit_len());
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); len]);
-
-        let mut carry = false;
-        for idx in 0..bit_len {
-            let l = self.get_bit(idx) as u8;
-            let r = rhs.get_bit(idx) as u8;
-
-            let c = if carry {
-                carry = false;
-                1
-            } else {
-                0
-            };
-
-            let new = match c + l + r {
-                0 => false,
-                1 => true,
-                2 => {
-                    carry = true;
-                    false
-                }
-                3 => {
-                    carry = true;
-                    true
-                }
-                _ => unsafe { unreachable_unchecked() },
-            };
-
-            out.set_bit_pushing(idx, new);
-        }
-
-        out
+        Self::add_bitwise(self, rhs)
     }
 }
 
@@ -457,29 +428,25 @@ where
     S::Output: PrimInt,
     T::Output: PrimInt,
 {
-    type Output = (BitSlice<Vec<S::Output>>, BitSlice<Vec<S::Output>>);
+    type Output = BitSlice<Vec<S::Output>>;
 
     fn div(self, rhs: BitSlice<T>) -> Self::Output {
-        let num = self;
-        let div = rhs;
+        Self::long_div_bitwise(self, rhs).0
+    }
+}
 
-        let len = usize::max(num.len(), div.len());
-        let bit_len = usize::max(num.bit_len(), div.bit_len());
+impl<S, T> Rem<BitSlice<T>> for BitSlice<S>
+where
+    BitSlice<Vec<S::Output>>: PartialOrd<BitSlice<T>>,
+    S: IndexOpt<usize> + Len,
+    T: IndexOpt<usize> + Len + Clone,
+    S::Output: PrimInt,
+    T::Output: PrimInt,
+{
+    type Output = BitSlice<Vec<S::Output>>;
 
-        let mut quotient = BitSlice::new(vec![<S::Output>::zero(); len]);
-        let mut remainder: BitSlice<_> = BitSlice::new(vec![<S::Output>::zero(); len]);
-
-        for idx in (0..bit_len).rev() {
-            remainder = remainder << 1;
-            remainder.set_bit(0, num.get_bit(idx));
-            if remainder >= div {
-                // Ignore the bool - subtract will never overflow
-                remainder = (remainder - div.clone()).0;
-                quotient.set_bit(idx, true);
-            }
-        }
-
-        (quotient, remainder)
+    fn rem(self, rhs: BitSlice<T>) -> Self::Output {
+        Self::long_div_bitwise(self, rhs).1
     }
 }
 
@@ -499,5 +466,89 @@ where
 {
     fn partial_cmp(&self, other: &BitSlice<&[U]>) -> Option<Ordering> {
         <[T] as PartialOrd<[U]>>::partial_cmp(&self.0, other.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_bit() {
+        let slice = BitSlice::<&[u16]>::new(&[0b1010101010101010, 0b1010101010101010]);
+        for idx in 0..32 {
+            let b = slice.get_bit(idx);
+            assert_eq!(b, (idx % 2) != 0);
+        }
+    }
+
+    #[test]
+    fn test_set_bit() {
+        let mut data = [0b1010101010101010, 0b1010101010101010];
+        let mut slice = BitSlice::<&mut [u16]>::new(&mut data);
+        slice.set_bit(0, true);
+        slice.set_bit(31, false);
+        assert_eq!(slice.inner(), &[0b1010101010101011, 0b0010101010101010])
+    }
+
+    #[test]
+    fn test_mul() {
+        let slice1 = BitSlice::<&[u8]>::new(&[0b00000000]);
+        let slice2 = BitSlice::<&[u8]>::new(&[0b00000001]);
+
+        assert_eq!((slice1 * slice2).inner(), &[0b0, 0b0, 0b0]);
+
+        let slice3 = BitSlice::<&[u8]>::new(&[0b00000001]);
+        let slice4 = BitSlice::<&[u8]>::new(&[0b00000010]);
+
+        assert_eq!((slice3 * slice4).inner(), &[0b10, 0b0, 0b0]);
+
+        let slice5 = BitSlice::<&[u8]>::new(&[0b00000010]);
+        let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
+
+        assert_eq!((slice5 * slice6).inner(), &[0b100, 0b0, 0b0]);
+    }
+
+    #[test]
+    fn test_div() {
+        let slice1 = BitSlice::<&[u8]>::new(&[0b10]);
+        let slice2 = BitSlice::<&[u8]>::new(&[0b01]);
+
+        assert_eq!((slice1 / slice2).inner(), &[0b10]);
+
+        let slice3 = BitSlice::<&[u8]>::new(&[0b10]);
+        let slice4 = BitSlice::<&[u8]>::new(&[0b10]);
+
+        assert_eq!((slice3 / slice4).inner(), &[0b01]);
+
+        let slice5 = BitSlice::<&[u8]>::new(&[0b00000000, 0b1]);
+        let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
+
+        assert_eq!((slice5 / slice6).inner(), &[0b10000000, 0b0])
+    }
+
+    #[test]
+    fn test_rem() {
+        let slice1 = BitSlice::<&[u8]>::new(&[0b11]);
+        let slice2 = BitSlice::<&[u8]>::new(&[0b10]);
+
+        assert_eq!((slice1 % slice2).inner(), &[0b01]);
+
+        let slice3 = BitSlice::<&[u8]>::new(&[0b10]);
+        let slice4 = BitSlice::<&[u8]>::new(&[0b10]);
+
+        assert_eq!((slice3 % slice4).inner(), &[0b00]);
+
+        let slice5 = BitSlice::<&[u8]>::new(&[0b00000001, 0b111]);
+        let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
+
+        assert_eq!((slice5 % slice6).inner(), &[0b01, 0b0]);
+    }
+
+    #[test]
+    fn test_shl() {
+        let slice = BitSlice::<&[u16]>::new(&[0b1010101010101010, 0b1010101010101010]);
+        let res = slice << 1;
+        assert_eq!(res.inner(), &[0b0101010101010100, 0b0101010101010101, 0b1]);
     }
 }
