@@ -3,12 +3,14 @@ use num_traits::{PrimInt, Zero};
 
 use super::{BitSlice, IndexOpt, Len};
 
+type OwnedSlice<T> = BitSlice<Vec<T>>;
+
 impl<S> BitSlice<S>
 where
     S: IndexOpt<usize> + Len,
     S::Output: PrimInt,
 {
-    pub fn add_bitwise<T>(left: BitSlice<S>, right: BitSlice<T>) -> BitSlice<Vec<S::Output>>
+    pub fn add_bitwise<T>(left: BitSlice<S>, right: BitSlice<T>) -> OwnedSlice<S::Output>
     where
         T: IndexOpt<usize> + Len,
         T::Output: PrimInt,
@@ -49,9 +51,9 @@ where
         out
     }
 
-    pub fn long_div_bitwise<T>(num: BitSlice<S>, div: BitSlice<T>) -> (BitSlice<Vec<S::Output>>, BitSlice<Vec<S::Output>>)
+    pub fn long_div_bitwise<T>(num: BitSlice<S>, div: BitSlice<T>) -> (OwnedSlice<S::Output>, OwnedSlice<S::Output>)
     where
-        BitSlice<Vec<S::Output>>: PartialOrd<BitSlice<T>>,
+        OwnedSlice<S::Output>: PartialOrd<BitSlice<T>>,
         T: IndexOpt<usize> + Len + Clone,
         T::Output: PrimInt,
     {

@@ -189,6 +189,11 @@ where
     S: IndexOptMut<usize>,
     S::Output: PrimInt,
 {
+    /// Set a single bit by index on this slice
+    ///
+    /// # Panics
+    ///
+    /// If `pos` is outside the range of this slice
     pub fn set_bit(&mut self, pos: usize, val: bool) {
         let (idx, bit) = self.idx_bit(pos);
         if let Some(item) = self.0.index_mut(idx) {
@@ -474,6 +479,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_idx() {
+        let slice = BitSlice::<&[u8]>::new(&[]);
+
+        for i in 0..8 {
+            for j in 0..8 {
+                assert_eq!(slice.idx_bit(i * 8 + j), (i, j));
+            }
+        }
+    }
+
+    #[test]
     fn test_get_bit() {
         let slice = BitSlice::<&[u16]>::new(&[0b1010101010101010, 0b1010101010101010]);
         for idx in 0..32 {
@@ -524,20 +540,31 @@ mod tests {
         let slice5 = BitSlice::<&[u8]>::new(&[0b00000000, 0b1]);
         let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
 
-        assert_eq!((slice5 / slice6).inner(), &[0b10000000, 0b0])
+        assert_eq!((slice5 / slice6).inner(), &[0b10000000, 0b0]);
+
+        let slice7 = BitSlice::<&[u8]>::new(&[0b0, 0b0, 0b0, 0b1]);
+        let slice8 = BitSlice::<&[u8]>::new(&[0b10]);
+
+        assert_eq!((slice7 / slice8).inner(), &[0b0, 0b0, 0b10000000, 0b0]);
     }
 
     #[test]
     fn test_rem() {
-        let slice1 = BitSlice::<&[u8]>::new(&[0b11]);
-        let slice2 = BitSlice::<&[u8]>::new(&[0b10]);
+        for i in 0..4 {
+            let slice = &[i];
+            let slice1 = BitSlice::<&[u8]>::new(slice);
+            let slice2 = BitSlice::<&[u8]>::new(&[0b10]);
 
-        assert_eq!((slice1 % slice2).inner(), &[0b01]);
+            assert_eq!((slice1 % slice2).inner(), &[i % 2]);
+        }
 
-        let slice3 = BitSlice::<&[u8]>::new(&[0b10]);
-        let slice4 = BitSlice::<&[u8]>::new(&[0b10]);
+        for i in 0..6 {
+            let slice = &[i];
+            let slice3 = BitSlice::<&[u8]>::new(slice);
+            let slice4 = BitSlice::<&[u8]>::new(&[0b11]);
 
-        assert_eq!((slice3 % slice4).inner(), &[0b00]);
+            assert_eq!((slice3 % slice4).inner(), &[i % 3]);
+        }
 
         let slice5 = BitSlice::<&[u8]>::new(&[0b00000001, 0b111]);
         let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);

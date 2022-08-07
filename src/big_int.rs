@@ -1,15 +1,14 @@
 use std::cmp::Ordering;
-use std::fmt::{Debug, Display, Write};
+use std::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use std::hint::unreachable_unchecked;
 use std::{fmt, ops};
 use num_traits::{FromPrimitive, Num, One, Pow, Signed, ToPrimitive, Zero};
-use once_cell::sync::Lazy;
 
 use crate::bit_slice::BitSlice;
 use crate::intern::{Interner, SliceHack};
 use crate::utils::*;
 
-static INT_STORE: Lazy<Interner<Box<[usize]>>> = Lazy::new(|| Interner::new());
+static INT_STORE: Interner<Box<[usize]>> = Interner::new();
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Tag {
@@ -125,14 +124,16 @@ impl BigInt {
         }
     }
 
-    fn write_base<W: Write>(&self, base: usize, w: &mut W) -> fmt::Result {
+    fn write_base<W: Write>(&self, base: usize, w: &mut W, chars: &[char]) -> fmt::Result {
         // This is the simplest way - mod base for digit, div base for next digit
         // It isn't super fast though, so there are probably optimization improvements
         let mut digits = Vec::new();
         let mut scratch = self.clone();
 
         while scratch > 0 {
-            let digit = (scratch.clone() % base).to_u8().expect("Mod base should always be less than 255");
+            let digit = (scratch.clone() % base)
+                .to_u8()
+                .expect("Mod base should always be less than 255");
             digits.push(digit);
             scratch = scratch / base;
         }
@@ -142,7 +143,7 @@ impl BigInt {
         }
 
         for &d in digits.iter().rev() {
-            w.write_char((b'0' + d) as char)?;
+            w.write_char(chars[d as usize])?;
         }
         Ok(())
     }
@@ -160,19 +161,61 @@ impl BigInt {
 
 impl Debug for BigInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_negative() {
-            write!(f, "-")?;
-        }
-        self.write_base(10, f)
+        Display::fmt(self, f)
     }
 }
 
 impl Display for BigInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const DIGITS: &[char] = &['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
         if self.is_negative() {
             write!(f, "-")?;
         }
-        self.write_base(10, f)
+        self.write_base(10, f, &DIGITS)
+    }
+}
+
+impl Binary for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_negative() {
+            write!(f, "-")?;
+        }
+        write!(f, "0b")?;
+        self.with_slice(|slice| {
+            for idx in (0..slice.bit_len()).rev() {
+                write!(f, "{}", slice.get_bit(idx) as u8)?;
+            }
+            Ok(())
+        })
+    }
+}
+
+impl UpperHex for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const DIGITS: &[char] = &[
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        ];
+
+        if self.is_negative() {
+            write!(f, "-")?;
+        }
+        write!(f, "0x")?;
+        self.write_base(16, f, &DIGITS)
+    }
+}
+
+impl LowerHex for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const DIGITS: &[char] = &[
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+        ];
+
+        if self.is_negative() {
+            write!(f, "-")?;
+        }
+        write!(f, "0x")?;
+        self.write_base(16, f, &DIGITS)
     }
 }
 
@@ -466,14 +509,14 @@ impl_op!(rem(self, rhs) => {
 // TODO: Don't convert to usize for these
 
 impl_op!(shl(self, rhs) => {
-    let out = BigInt::with_slices(self, rhs, |this, other| {
+    let out = BigInt::with_slices(self, rhs, |this, _| {
         (this << usize::try_from(rhs).unwrap()).into_inner()
     });
     BigInt::new_slice(&out, self.is_negative())
 });
 
 impl_op!(shr(self, rhs) => {
-    let out = BigInt::with_slices(self, rhs, |this, other| {
+    let out = BigInt::with_slices(self, rhs, |this, _| {
         (this >> usize::try_from(rhs).unwrap()).into_inner()
     });
     BigInt::new_slice(&out, self.is_negative())
@@ -725,7 +768,6 @@ mod tests {
         assert_eq!(BigInt::from(-2) / BigInt::from(2), BigInt::from(-1));
         assert_eq!(BigInt::from(2) / BigInt::from(-2), BigInt::from(-1));
         assert_eq!(BigInt::from(-2) / BigInt::from(-2), BigInt::from(1));
-
         assert_eq!(BigInt::from(1) / BigInt::from(3), BigInt::from(0));
         assert_eq!(
             BigInt::new_slice(&[0, 0, 1], false) / BigInt::new_slice(&[2], false),

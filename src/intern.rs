@@ -107,10 +107,8 @@ impl<T> Interner<T>
 where
     T: Clone + PartialEq,
 {
-    pub fn new() -> Interner<T> {
-        Interner {
-            inner: UnsyncLinked::new_with([(); CHUNK_SIZE].map(|_| Interned::new_uninit())),
-        }
+    pub const fn new() -> Interner<T> {
+        Interner { inner: UnsyncLinked::new() }
     }
 
     fn find<U>(list: &UnsyncLinked<[Interned<T>; CHUNK_SIZE]>, val: &U) -> Find<(usize, usize)>

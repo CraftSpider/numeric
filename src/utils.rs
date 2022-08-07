@@ -1,14 +1,14 @@
 use num_traits::{PrimInt, Unsigned};
 
 pub fn shrink_slice<T: PrimInt>(val: &[T]) -> &[T] {
-    let idx = val.iter().rev().enumerate().find_map(|(idx, v)| if *v != T::zero() {
+    let idx = val.iter().enumerate().rev().find_map(|(idx, v)| if *v != T::zero() {
         Some(idx)
     } else {
         None
     });
     match idx {
-        Some(idx) if idx != 0 => &val[..idx],
-        _ => val,
+        Some(idx) => &val[..=idx],
+        _ => &val[..1],
     }
 }
 
@@ -57,9 +57,16 @@ mod tests {
     #[test]
     fn test_shrink_slice() {
         assert_eq!(shrink_slice(&[0]), &[0]);
+        assert_eq!(shrink_slice(&[0, 0]), &[0]);
+        assert_eq!(shrink_slice(&[0, 0, 0]), &[0]);
         assert_eq!(shrink_slice(&[0, 1]), &[0, 1]);
-        assert_eq!(shrink_slice(&[1, 0]), &[1]);
+        assert_eq!(shrink_slice(&[0, 1, 1]), &[0, 1, 1]);
+
         assert_eq!(shrink_slice(&[1]), &[1]);
+        assert_eq!(shrink_slice(&[1, 1]), &[1, 1]);
+        assert_eq!(shrink_slice(&[1, 1, 1]), &[1, 1, 1]);
+        assert_eq!(shrink_slice(&[1, 0]), &[1]);
+        assert_eq!(shrink_slice(&[1, 0, 0]), &[1]);
     }
 
     #[test]

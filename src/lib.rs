@@ -1,9 +1,9 @@
-//!
+//! Crate for implementations of numeric types - BigInt, Decimal, etc.
 
 #![feature(backtrace)]
 
 #![warn(
-    // missing_docs,
+    missing_docs,
     elided_lifetimes_in_paths,
     explicit_outlives_requirements,
     missing_abi,
@@ -12,7 +12,6 @@
     semicolon_in_expressions_from_macros,
     unused_import_braces,
     unused_lifetimes,
-    // clippy::cargo,
     clippy::missing_panics_doc,
     clippy::doc_markdown,
     clippy::ptr_as_ptr,
