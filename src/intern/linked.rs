@@ -60,6 +60,10 @@ impl<T> UnsyncLinked<T> {
     fn tail(&self) -> (*mut Node<T>, usize) {
         let mut cur_node = self.head.load(Ordering::Relaxed);
 
+        if cur_node.is_null() {
+            return (cur_node, 0);
+        }
+
         let mut len = 1;
 
         while let Some(new_node) = Node::get_next_opt(cur_node) {
@@ -70,8 +74,14 @@ impl<T> UnsyncLinked<T> {
         (cur_node, len)
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.tail().1
+    }
+
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.head.load(Ordering::Relaxed).is_null()
     }
 
     /// Returns the new length of the list

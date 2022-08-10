@@ -145,6 +145,11 @@ where
         );
     }
 
+    #[inline(always)]
+    fn offset_to_idx(offset: usize) -> (usize, usize) {
+        (offset / 32, offset % 32)
+    }
+
     pub fn add<U>(&self, val: U) -> usize
     where
         U: IntoOwned<T> + PartialEq<T>,
@@ -170,19 +175,24 @@ where
     }
 
     pub fn get(&self, offset: usize) -> &Interned<T> {
-        &self.inner[offset / 32][offset % 32]
+        let (idx1, idx2) = Self::offset_to_idx(offset);
+        &self.inner[idx1][idx2]
     }
 
     pub fn incr(&self, offset: usize) {
-        Self::incr_inner(&self.inner[offset / 32][offset % 32])
+        let (idx1, idx2) = Self::offset_to_idx(offset);
+        Self::incr_inner(&self.inner[idx1][idx2])
     }
 
     pub fn decr(&self, offset: usize) {
-        Self::decr_inner(&self.inner[offset / 32][offset % 32])
+        let (idx1, idx2) = Self::offset_to_idx(offset);
+        Self::decr_inner(&self.inner[idx1][idx2])
     }
 
-    fn refcount(&self, offset: usize) -> usize {
-        self.inner[offset / 32][offset % 32].refs.load(Ordering::Relaxed)
+    #[allow(dead_code)]
+    pub fn refcount(&self, offset: usize) -> usize {
+        let (idx1, idx2) = Self::offset_to_idx(offset);
+        self.inner[idx1][idx2].refs.load(Ordering::Relaxed)
     }
 }
 

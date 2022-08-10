@@ -1,3 +1,7 @@
+//! An implementation of a BigInt, optimized for rapid cloning and minimal memory usage.
+//!
+//! Small values are stored inline, large values are stored in a refcounted interner.
+
 use std::cmp::Ordering;
 use std::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use std::hint::unreachable_unchecked;
@@ -8,10 +12,14 @@ use crate::bit_slice::BitSlice;
 use crate::intern::{Interner, SliceHack};
 use crate::utils::*;
 
+#[macro_use]
+mod macros;
+
 static INT_STORE: Interner<Box<[usize]>> = Interner::new();
 
+/// The tag associated with a `TaggedOffset`
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Tag {
+enum Tag {
     None = 0,
     Neg = 1,
     Inline = 2,
@@ -55,8 +63,9 @@ impl TryFrom<usize> for Tag {
     }
 }
 
+/// An offset containing a `Tag` in its lower two bits
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct TaggedOffset(usize);
+struct TaggedOffset(usize);
 
 impl TaggedOffset {
     #[must_use]
@@ -86,6 +95,8 @@ impl TaggedOffset {
     }
 }
 
+/// A 'big' integer - an unbounded signed value, capable of representing any value up to however
+/// many bytes the running computer can reasonably hold in memory.
 pub struct BigInt(TaggedOffset);
 
 impl BigInt {
@@ -93,9 +104,10 @@ impl BigInt {
         left.with_slice(|left| right.with_slice(|right| f(left, right)))
     }
 
+    /// Create a new `BigInt` with the default value of zero
     #[must_use]
-    pub fn new() -> BigInt {
-        Self::zero()
+    pub const fn new() -> BigInt {
+        BigInt::new_inline(0, false)
     }
 
     const fn new_inline(val: usize, neg: bool) -> BigInt {
@@ -148,11 +160,13 @@ impl BigInt {
         Ok(())
     }
 
+    /// Check whether this value is stored inline
     #[must_use]
     pub fn is_inline(&self) -> bool {
         self.0.tag().inline()
     }
 
+    /// Check whether this value is stored in the global interner
     #[must_use]
     pub fn is_interned(&self) -> bool {
         !self.0.tag().inline()
@@ -240,6 +254,12 @@ impl Drop for BigInt {
     }
 }
 
+impl Default for BigInt {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PartialEq for BigInt {
     fn eq(&self, other: &Self) -> bool {
         if self.0 == other.0 {
@@ -285,108 +305,10 @@ impl Ord for BigInt {
     }
 }
 
+/// The error for when you try to convert a `BigInt` with a value that is too large or small for
+/// the type being converted into.
 #[derive(Debug)]
 pub struct OutOfRangeError;
-
-macro_rules! impl_ops_for_int {
-    ($ty:ty) => {
-        impl_ops_for_int!($ty, +, Add, add);
-        impl_ops_for_int!($ty, -, Sub, sub);
-        impl_ops_for_int!($ty, *, Mul, mul);
-        impl_ops_for_int!($ty, /, Div, div);
-        impl_ops_for_int!($ty, %, Rem, rem);
-
-        impl_ops_for_int!($ty, <<, Shl, shl);
-        impl_ops_for_int!($ty, >>, Shr, shr);
-    };
-
-    ($ty:ty, $op:tt, $trait:ident, $meth:ident) => {
-        impl core::ops::$trait<$ty> for BigInt {
-            type Output = BigInt;
-
-            fn $meth(self, other: $ty) -> BigInt {
-                self $op BigInt::from(other)
-            }
-        }
-    };
-}
-
-macro_rules! impl_for_int {
-    ($signed:ty, $unsigned:ty) => {
-        impl From<$signed> for BigInt {
-            fn from(val: $signed) -> Self {
-                let neg = val.is_negative();
-                BigInt::new_slice(&int_to_arr(val.abs() as $unsigned), neg)
-            }
-        }
-
-        impl From<$unsigned> for BigInt {
-            fn from(val: $unsigned) -> Self {
-                BigInt::new_slice(&int_to_arr(val), false)
-            }
-        }
-
-        impl TryFrom<&BigInt> for $signed {
-            type Error = OutOfRangeError;
-
-            fn try_from(bi: &BigInt) -> Result<Self, Self::Error> {
-                if bi > &BigInt::from(Self::MAX) || bi < &BigInt::from(Self::MIN) {
-                    Err(OutOfRangeError)
-                } else {
-                    bi.with_slice(|s| arr_to_int(s.inner())).ok_or(OutOfRangeError)
-                }
-            }
-        }
-
-        impl TryFrom<&BigInt> for $unsigned {
-            type Error = OutOfRangeError;
-
-            fn try_from(bi: &BigInt) -> Result<Self, Self::Error> {
-                if bi > &BigInt::from(Self::MAX) || bi < &BigInt::from(Self::MIN) {
-                    Err(OutOfRangeError)
-                } else {
-                    bi.with_slice(|s| arr_to_int(s.inner())).ok_or(OutOfRangeError)
-                }
-            }
-        }
-
-        impl PartialEq<$signed> for BigInt {
-            fn eq(&self, other: &$signed) -> bool {
-                if self.is_negative() != other.is_negative() {
-                    return false;
-                }
-                let other = other.abs();
-
-                self.with_slice(|this| {
-                    this == BitSlice::new(int_to_arr(other as $unsigned))
-                })
-            }
-        }
-
-        impl PartialEq<$unsigned> for BigInt {
-            fn eq(&self, other: &$unsigned) -> bool {
-                self.with_slice(|this| {
-                    this == BitSlice::new(int_to_arr(*other))
-                })
-            }
-        }
-
-        impl PartialOrd<$signed> for BigInt {
-            fn partial_cmp(&self, other: &$signed) -> Option<Ordering> {
-                Some(BigInt::cmp(self, &BigInt::from(*other)))
-            }
-        }
-
-        impl PartialOrd<$unsigned> for BigInt {
-            fn partial_cmp(&self, other: &$unsigned) -> Option<Ordering> {
-                Some(BigInt::cmp(self, &BigInt::from(*other)))
-            }
-        }
-
-        impl_ops_for_int!($signed);
-        impl_ops_for_int!($unsigned);
-    }
-}
 
 impl_for_int!(i8, u8);
 impl_for_int!(i16, u16);
@@ -395,70 +317,15 @@ impl_for_int!(i64, u64);
 impl_for_int!(i128, u128);
 impl_for_int!(isize, usize);
 
-macro_rules! impl_op {
-    (add($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(add, Add, $self, $rhs, $block);
-    };
-    (sub($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(sub, Sub, $self, $rhs, $block);
-    };
-    (mul($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(mul, Mul, $self, $rhs, $block);
-    };
-    (div($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(div, Div, $self, $rhs, $block);
-    };
-    (rem($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(rem, Rem, $self, $rhs, $block);
-    };
-    (shl($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(shl, Shl, $self, $rhs, $block);
-    };
-    (shr($self:ident, $rhs:ident) => $block:block) => {
-        impl_op!(shr, Shr, $self, $rhs, $block);
-    };
-    ($meth:ident, $trait:ident, $self:ident, $rhs:ident, $block:block) => {
-        impl core::ops::$trait<BigInt> for BigInt {
-            type Output = BigInt;
-
-            fn $meth(self, rhs: BigInt) -> Self::Output {
-                <&BigInt as core::ops::$trait<&BigInt>>::$meth(&self, &rhs)
-            }
-        }
-
-        impl core::ops::$trait<&BigInt> for BigInt {
-            type Output = BigInt;
-
-            fn $meth(self, rhs: &BigInt) -> Self::Output {
-                <&BigInt as core::ops::$trait<&BigInt>>::$meth(&self, rhs)
-            }
-        }
-
-        impl core::ops::$trait<BigInt> for &BigInt {
-            type Output = BigInt;
-
-            fn $meth(self, rhs: BigInt) -> Self::Output {
-                <&BigInt as core::ops::$trait<&BigInt>>::$meth(self, &rhs)
-            }
-        }
-
-        impl core::ops::$trait<&BigInt> for &BigInt {
-            type Output = BigInt;
-
-            fn $meth($self, $rhs: &BigInt) -> Self::Output $block
-        }
-    };
-}
-
 impl_op!(add(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         if self.is_negative() == rhs.is_negative() {
-            ((this + other).into_inner(), self.is_negative())
+            (BitSlice::add_bitwise(this, other).into_inner(), self.is_negative())
         } else if self > rhs {
-            let (out, neg) = this - other;
+            let (out, neg) = BitSlice::sub_bitwise(this, other);
             (out.into_inner(), neg != self.is_negative())
         } else {
-            let (out, neg) = this - other;
+            let (out, neg) = BitSlice::sub_bitwise(this, other);
             (out.into_inner(), neg == rhs.is_negative())
         }
     });
@@ -470,14 +337,14 @@ impl_op!(sub(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         if self.is_negative() == rhs.is_negative() {
             if self > rhs {
-                let (out, neg) = this - other;
+                let (out, neg) = BitSlice::sub_bitwise(this, other);
                 (out.into_inner(), neg == self.is_negative())
             } else {
-                let (out, neg) = this - other;
+                let (out, neg) = BitSlice::sub_bitwise(this, other);
                 (out.into_inner(), neg == rhs.is_negative())
             }
         } else {
-            ((this + other).into_inner(), self.is_negative())
+            (BitSlice::add_bitwise(this, other).into_inner(), self.is_negative())
         }
     });
 
@@ -485,39 +352,37 @@ impl_op!(sub(self, rhs) => {
 });
 
 impl_op!(mul(self, rhs) => {
-    let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
-        (this * other, self.is_negative() != rhs.is_negative())
+    let out = BigInt::with_slices(self, rhs, |this, other| {
+        BitSlice::add_shift_mul_bitwise(this, other)
     });
 
-    BigInt::new_slice(&out.into_inner(), neg)
+    BigInt::new_slice(&out.into_inner(), self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(div(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        (this / other).into_inner()
+        BitSlice::long_div_bitwise(this, other).0.into_inner()
     });
     BigInt::new_slice(&out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(rem(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        (this % other).into_inner()
+        BitSlice::long_div_bitwise(this, other).1.into_inner()
     });
     BigInt::new_slice(&out, self.is_negative() != rhs.is_negative())
 });
 
-// TODO: Don't convert to usize for these
-
 impl_op!(shl(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, _| {
-        (this << usize::try_from(rhs).unwrap()).into_inner()
+        BitSlice::shl_wrap_and_mask(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported")).into_inner()
     });
     BigInt::new_slice(&out, self.is_negative())
 });
 
 impl_op!(shr(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, _| {
-        (this >> usize::try_from(rhs).unwrap()).into_inner()
+        BitSlice::shr_bitwise(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported")).into_inner()
     });
     BigInt::new_slice(&out, self.is_negative())
 });
@@ -578,7 +443,7 @@ impl_assign_op!(rem(self, rhs) => { *self = &*self % rhs });
 
 impl Zero for BigInt {
     fn zero() -> Self {
-        BigInt::new_inline(0, false)
+        Self::new()
     }
 
     fn is_zero(&self) -> bool {
@@ -592,9 +457,13 @@ impl One for BigInt {
     }
 }
 
+/// The error for when you try to create a `BigInt` from a string and either the radix is invalid,
+/// or the string contains invalid characters.
 #[derive(Debug)]
 pub enum FromStrError {
+    /// Radix was outside the valid range for conversion
     InvalidRadix(u32),
+    /// Character wasn't a valid digit for the provided radix
     InvalidChar(char),
 }
 

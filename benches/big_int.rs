@@ -83,9 +83,26 @@ pub fn bench_div(c: &mut Criterion) {
     });
 }
 
+pub fn bench_shl(c: &mut Criterion) {
+    c.bench_function("Shl::shl(1, 1)", |b| {
+        let i = BigInt::from(1);
+        b.iter(|| black_box(&i) << black_box(&i))
+    });
+
+    c.bench_function("Shl::shl(usize::MAX, 1)", |b| {
+        let i = BigInt::from(usize::MAX);
+        let i2 = BigInt::from(1);
+        b.iter(|| black_box(&i) << black_box(&i2))
+    });
+
+    c.bench_function("<usize as Shl>::shl(usize::MAX, 1)", |b| {
+        b.iter(|| black_box(usize::MAX) << black_box(1))
+    });
+}
+
 criterion_group!(
     name = benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = bench_from, bench_clone, bench_add, bench_sub
+    targets = bench_from, bench_clone, bench_add, bench_sub, bench_mul, bench_div, bench_shl
 );
 criterion_main!(benches);

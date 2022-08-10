@@ -1,9 +1,14 @@
+//! A type for bitwise operations on slices of integers
+
 use std::cmp::Ordering;
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub};
+use std::ops::Neg;
 use num_traits::{PrimInt, One, Zero};
 
 mod algos;
+mod iter;
+
+pub use iter::*;
 
 mod private {
     use std::slice::SliceIndex;
@@ -16,13 +21,22 @@ mod private {
         }
     }
 
+    impl<T, const N: usize> Len for [T; N] {
+        #[inline]
+        fn len(&self) -> usize {
+            N
+        }
+    }
+
     impl<T> Len for [T] {
+        #[inline]
         fn len(&self) -> usize {
             <[T]>::len(self)
         }
     }
 
     impl<T> Len for Vec<T> {
+        #[inline]
         fn len(&self) -> usize {
             <Vec<T>>::len(self)
         }
@@ -32,6 +46,7 @@ mod private {
     where
         T: Len
     {
+        #[inline]
         fn len(&self) -> usize {
             T::len(*self)
         }
@@ -41,6 +56,7 @@ mod private {
     where
         T: Len
     {
+        #[inline]
         fn len(&self) -> usize {
             T::len(*self)
         }
@@ -52,34 +68,25 @@ mod private {
         fn index(&self, idx: T) -> Option<&Self::Output>;
     }
 
+    impl<T, I, const N: usize> IndexOpt<I> for [T; N]
+    where
+        I: SliceIndex<[T]>,
+    {
+        type Output = I::Output;
+
+        #[inline]
+        fn index(&self, idx: I) -> Option<&Self::Output> {
+            self.get(idx)
+        }
+    }
+
     impl<T, I> IndexOpt<I> for [T]
     where
         I: SliceIndex<[T]>,
     {
         type Output = I::Output;
 
-        fn index(&self, idx: I) -> Option<&Self::Output> {
-            self.get(idx)
-        }
-    }
-
-    impl<T, I> IndexOpt<I> for &[T]
-    where
-        I: SliceIndex<[T]>,
-    {
-        type Output = I::Output;
-
-        fn index(&self, idx: I) -> Option<&Self::Output> {
-            self.get(idx)
-        }
-    }
-
-    impl<T, I> IndexOpt<I> for &mut [T]
-    where
-        I: SliceIndex<[T]>,
-    {
-        type Output = I::Output;
-
+        #[inline]
         fn index(&self, idx: I) -> Option<&Self::Output> {
             self.get(idx)
         }
@@ -91,8 +98,33 @@ mod private {
     {
         type Output = I::Output;
 
+        #[inline]
         fn index(&self, idx: I) -> Option<&Self::Output> {
             self.get(idx)
+        }
+    }
+
+    impl<T, I> IndexOpt<I> for &T
+    where
+        T: ?Sized + IndexOpt<I>,
+    {
+        type Output = T::Output;
+
+        #[inline]
+        fn index(&self, idx: I) -> Option<&Self::Output> {
+            <T as IndexOpt<I>>::index(self, idx)
+        }
+    }
+
+    impl<T, I> IndexOpt<I> for &mut T
+    where
+        T: ?Sized + IndexOpt<I>,
+    {
+        type Output = T::Output;
+
+        #[inline]
+        fn index(&self, idx: I) -> Option<&Self::Output> {
+            <T as IndexOpt<I>>::index(self, idx)
         }
     }
 
@@ -100,19 +132,21 @@ mod private {
         fn index_mut(&mut self, idx: T) -> Option<&mut Self::Output>;
     }
 
-    impl<T, I> IndexOptMut<I> for [T]
+    impl<T, I, const N: usize> IndexOptMut<I> for [T; N]
     where
         I: SliceIndex<[T]>,
     {
+        #[inline]
         fn index_mut(&mut self, idx: I) -> Option<&mut Self::Output> {
             self.get_mut(idx)
         }
     }
 
-    impl<T, I> IndexOptMut<I> for &mut [T]
+    impl<T, I> IndexOptMut<I> for [T]
     where
         I: SliceIndex<[T]>,
     {
+        #[inline]
         fn index_mut(&mut self, idx: I) -> Option<&mut Self::Output> {
             self.get_mut(idx)
         }
@@ -122,26 +156,41 @@ mod private {
     where
         I: SliceIndex<[T]>,
     {
+        #[inline]
         fn index_mut(&mut self, idx: I) -> Option<&mut Self::Output> {
             self.get_mut(idx)
+        }
+    }
+
+    impl<T, I> IndexOptMut<I> for &mut T
+    where
+        T: ?Sized + IndexOptMut<I>,
+    {
+        #[inline]
+        fn index_mut(&mut self, idx: I) -> Option<&mut Self::Output> {
+            <T as IndexOptMut<I>>::index_mut(self, idx)
         }
     }
 }
 
 use private::*;
 
-/// Utility for bit-by-bit algorithms on slices of primitive integers
+/// Utility for algorithms on slices of primitive integers
+#[derive(Clone)]
 pub struct BitSlice<S>(S);
 
 impl<S> BitSlice<S> {
+    /// Create a new `BitSlice` containing a value
     pub fn new(inner: S) -> BitSlice<S> {
         BitSlice(inner)
     }
 
+    /// Get a reference to the value in this `BitSlice`
     pub fn inner(&self) -> &S {
         &self.0
     }
 
+    /// Consume this `BitSlice` to regain ownership of its contained value
     pub fn into_inner(self) -> S {
         self.0
     }
@@ -152,14 +201,17 @@ where
     S: Len + IndexOpt<usize>,
     S::Output: Sized,
 {
+    /// Get the length of this `BitSlice` in terms of `S`
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Whether this `BitSlice` is empty
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Get the length of this `BitSlice` in bits
     pub fn bit_len(&self) -> usize {
         self.len() * std::mem::size_of::<S::Output>() * 8
     }
@@ -177,10 +229,42 @@ where
         )
     }
 
+    /// Get an iterator over the elements of this slice
+    pub fn iter(&self) -> Iter<'_, S> {
+        Iter::new(self)
+    }
+
+    /// Get the value of an element at a given position, panicking if the index is out of range
+    pub fn get(&self, pos: usize) -> S::Output {
+        self.get_opt(pos).expect("get index in-bounds")
+    }
+
+    /// Get the value of an element at a given position, returning `None` if the index is out of
+    /// range
+    pub fn get_opt(&self, pos: usize) -> Option<S::Output> {
+        self.0.index(pos).copied()
+    }
+
+    /// Get the value of a bit at a given position, panicking if the index is out of range
+    ///
+    /// # Panics
+    ///
+    /// If `pos` is outside the range of this slice
     pub fn get_bit(&self, pos: usize) -> bool {
+        self.get_bit_opt(pos).expect("get_bit index in-bounds")
+    }
+
+    /// Get the value of a bit at a given position, returning `None` if the index is out of range
+    pub fn get_bit_opt(&self, pos: usize) -> Option<bool> {
         let (idx, bit) = self.idx_bit(pos);
-        let val = self.0.index(idx).copied().unwrap_or_else(<S::Output>::zero);
-        val & (<S::Output>::one() << bit) != <S::Output>::zero()
+        self.0.index(idx).copied().map(|val| {
+            val & (<S::Output>::one() << bit) != <S::Output>::zero()
+        })
+    }
+
+    /// Get an iterator over the bit values of this slice
+    pub fn iter_bits(&self) -> BitIter<'_, S> {
+        BitIter::new(self)
     }
 }
 
@@ -189,40 +273,65 @@ where
     S: IndexOptMut<usize>,
     S::Output: PrimInt,
 {
-    /// Set a single bit by index on this slice
+    /// Set a single value by index on this slice, panicking if the index is out of range
+    pub fn set(&mut self, pos: usize, val: S::Output) {
+        self.set_opt(pos, val).unwrap_or_else(|| {
+            panic!("Attempt to write value at index {} out of bounds", pos)
+        })
+    }
+
+    /// Set a single value by index on this slice, returning `None` if the index is out of range
+    pub fn set_opt(&mut self, pos: usize, val: S::Output) -> Option<()> {
+        self.0.index_mut(pos).map(|cur| {
+            *cur = val;
+        })
+    }
+
+    /// Set a single value by index on this slice, doing nothing if the index is out of range
+    pub fn set_ignore(&mut self, pos: usize, val: S::Output) {
+        let _ = self.set_opt(pos, val);
+    }
+
+    /// Set a single bit by index on this slice, panicking if the index is out of range
     ///
     /// # Panics
     ///
     /// If `pos` is outside the range of this slice
     pub fn set_bit(&mut self, pos: usize, val: bool) {
+        self.set_bit_opt(pos, val).unwrap_or_else(|| {
+            let (idx, bit) = self.idx_bit(pos);
+            panic!("Attempt to write bit at {}:{} out of bounds", idx, bit)
+        });
+    }
+
+    /// Set a single bit by index on this slice, returning `None` if the index is out of range
+    pub fn set_bit_opt(&mut self, pos: usize, val: bool) -> Option<()> {
         let (idx, bit) = self.idx_bit(pos);
         if let Some(item) = self.0.index_mut(idx) {
             *item = *item & !(<S::Output>::one() << bit);
             if val {
                 *item = *item | (<S::Output>::one() << bit);
             }
+            Some(())
         } else {
-            panic!("Attempt to write bit at {}:{} out of bounds", idx, bit);
+            None
         }
     }
 
+    /// Set a single bit by index on this slice, doing nothing if the index is out of range
     pub fn set_bit_ignore(&mut self, pos: usize, val: bool) {
-        let (idx, bit) = self.idx_bit(pos);
-        if let Some(item) = self.0.index_mut(idx) {
-            *item = *item & !(<S::Output>::one() << bit);
-            if val {
-                *item = *item | (<S::Output>::one() << bit);
-            }
-        }
+        self.set_bit_opt(pos, val);
     }
 }
 
 impl<T> BitSlice<Vec<T>> {
+    /// Get a `BitSlice<&[T]>` of this value
     #[must_use]
     pub fn as_slice(&self) -> BitSlice<&[T]> {
         BitSlice(&self.0)
     }
 
+    /// Get a `BitSlice<&mut [T]>` of this value
     #[must_use]
     pub fn as_mut_slice(&mut self) -> BitSlice<&mut [T]> {
         BitSlice(&mut self.0)
@@ -233,6 +342,18 @@ impl<T> BitSlice<Vec<T>>
 where
     T: PrimInt,
 {
+    /// Set a single value by index on this slice, extending it if the index is out of range
+    pub fn set_pushing(&mut self, pos: usize, val: T) {
+        let item = loop {
+            match self.0.index_mut(pos) {
+                Some(item) => break item,
+                None => self.0.push(T::zero()),
+            }
+        };
+        *item = val;
+    }
+
+    /// Set a single bit by index on this slice, extending it if the index is out of range
     pub fn set_bit_pushing(&mut self, pos: usize, val: bool) {
         let (idx, bit) = self.idx_bit(pos);
 
@@ -251,6 +372,7 @@ where
 }
 
 impl<T> BitSlice<&mut [T]> {
+    /// Get a `BitSlice<&[T]>` of this value
     #[must_use]
     pub fn as_slice(&self) -> BitSlice<&[T]> {
         BitSlice(self.0)
@@ -270,55 +392,6 @@ where
     }
 }
 
-impl<S> Clone for BitSlice<S>
-where
-    S: Clone,
-{
-    fn clone(&self) -> Self {
-        BitSlice(self.0.clone())
-    }
-}
-
-impl<S> Shr<usize> for BitSlice<S>
-where
-    S: IndexOpt<usize> + Len,
-    S::Output: PrimInt,
-{
-    type Output = BitSlice<Vec<S::Output>>;
-
-    fn shr(self, rhs: usize) -> Self::Output {
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); self.len()]);
-        for idx in (0..=self.bit_len()).rev() {
-            let new = self.get_bit(idx);
-            if let Some(idx) = idx.checked_sub(rhs) {
-                out.set_bit_ignore(idx, new);
-            }
-        }
-        out
-    }
-}
-
-impl<S> Shl<usize> for BitSlice<S>
-where
-    S: IndexOpt<usize> + Len,
-    S::Output: PrimInt,
-{
-    type Output = BitSlice<Vec<S::Output>>;
-
-    fn shl(self, rhs: usize) -> Self::Output {
-        let bit_len = self.bit_len();
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); self.len()]);
-        for idx in 0..=bit_len {
-            let new = self.get_bit(idx);
-            if new || idx + rhs < bit_len {
-                #[allow(clippy::suspicious_arithmetic_impl)]
-                out.set_bit_pushing(idx + rhs, new);
-            }
-        }
-        out
-    }
-}
-
 impl<S> Neg for BitSlice<S>
 where
     S: IndexOptMut<usize> + Len,
@@ -331,127 +404,6 @@ where
             self.set_bit(idx, !self.get_bit(idx));
         }
         self
-    }
-}
-
-impl<S, T> Add<BitSlice<T>> for BitSlice<S>
-where
-    S: IndexOpt<usize> + Len,
-    T: IndexOpt<usize> + Len,
-    S::Output: PrimInt,
-    T::Output: PrimInt,
-{
-    type Output = BitSlice<Vec<S::Output>>;
-
-    fn add(self, rhs: BitSlice<T>) -> Self::Output {
-        Self::add_bitwise(self, rhs)
-    }
-}
-
-impl<S, T> Sub<BitSlice<T>> for BitSlice<S>
-where
-    S: IndexOpt<usize> + Len,
-    T: IndexOpt<usize> + Len,
-    S::Output: PrimInt,
-    T::Output: PrimInt,
-{
-    type Output = (BitSlice<Vec<S::Output>>, bool);
-
-    fn sub(self, rhs: BitSlice<T>) -> Self::Output {
-        let len = usize::max(self.len(), rhs.len());
-        let bit_len = usize::max(self.bit_len(), rhs.bit_len());
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); len]);
-
-        let mut carry = false;
-        for idx in 0..bit_len {
-            let l = self.get_bit(idx);
-            let r = rhs.get_bit(idx);
-
-            let c = if carry {
-                carry = false;
-                true
-            } else {
-                false
-            };
-
-            let new = match (l, r, c) {
-                (true, false, false) => true,
-                (true, true, false) | (true, false, true) | (false, false, false) => false,
-                (false, true, false) | (false, false, true) | (true, true, true) => {
-                    carry = true;
-                    true
-                }
-                (false, true, true) => {
-                    carry = true;
-                    false
-                }
-            };
-
-            out.set_bit(idx, new);
-        }
-
-        if carry {
-            out.set_bit(0, !out.get_bit(0));
-            out = -out;
-        }
-
-        (out, carry)
-    }
-}
-
-impl<S, T> Mul<BitSlice<T>> for BitSlice<S>
-where
-    S: IndexOpt<usize> + Len + Clone,
-    T: IndexOpt<usize> + Len,
-    S::Output: PrimInt,
-    T::Output: PrimInt,
-{
-    type Output = BitSlice<Vec<S::Output>>;
-
-    fn mul(self, rhs: BitSlice<T>) -> Self::Output {
-        let len = usize::max(self.len(), rhs.len());
-        let mut new_self = self << 0;
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); len * 2]);
-
-        for idx in 0..rhs.bit_len() {
-            let r = rhs.get_bit(idx);
-            if r {
-                out = out + new_self.clone();
-            }
-            new_self = new_self << 1;
-        }
-
-        out
-    }
-}
-
-impl<S, T> Div<BitSlice<T>> for BitSlice<S>
-where
-    BitSlice<Vec<S::Output>>: PartialOrd<BitSlice<T>>,
-    S: IndexOpt<usize> + Len,
-    T: IndexOpt<usize> + Len + Clone,
-    S::Output: PrimInt,
-    T::Output: PrimInt,
-{
-    type Output = BitSlice<Vec<S::Output>>;
-
-    fn div(self, rhs: BitSlice<T>) -> Self::Output {
-        Self::long_div_bitwise(self, rhs).0
-    }
-}
-
-impl<S, T> Rem<BitSlice<T>> for BitSlice<S>
-where
-    BitSlice<Vec<S::Output>>: PartialOrd<BitSlice<T>>,
-    S: IndexOpt<usize> + Len,
-    T: IndexOpt<usize> + Len + Clone,
-    S::Output: PrimInt,
-    T::Output: PrimInt,
-{
-    type Output = BitSlice<Vec<S::Output>>;
-
-    fn rem(self, rhs: BitSlice<T>) -> Self::Output {
-        Self::long_div_bitwise(self, rhs).1
     }
 }
 
@@ -508,21 +460,21 @@ mod tests {
     }
 
     #[test]
-    fn test_mul() {
+    fn test_add_shift_mul_bitwise() {
         let slice1 = BitSlice::<&[u8]>::new(&[0b00000000]);
         let slice2 = BitSlice::<&[u8]>::new(&[0b00000001]);
 
-        assert_eq!((slice1 * slice2).inner(), &[0b0, 0b0, 0b0]);
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice1, slice2).inner(), &[0b0, 0b0, 0b0]);
 
         let slice3 = BitSlice::<&[u8]>::new(&[0b00000001]);
         let slice4 = BitSlice::<&[u8]>::new(&[0b00000010]);
 
-        assert_eq!((slice3 * slice4).inner(), &[0b10, 0b0, 0b0]);
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice3, slice4).inner(), &[0b10, 0b0, 0b0]);
 
         let slice5 = BitSlice::<&[u8]>::new(&[0b00000010]);
         let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
 
-        assert_eq!((slice5 * slice6).inner(), &[0b100, 0b0, 0b0]);
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice5, slice6).inner(), &[0b100, 0b0, 0b0]);
     }
 
     #[test]
@@ -530,22 +482,22 @@ mod tests {
         let slice1 = BitSlice::<&[u8]>::new(&[0b10]);
         let slice2 = BitSlice::<&[u8]>::new(&[0b01]);
 
-        assert_eq!((slice1 / slice2).inner(), &[0b10]);
+        assert_eq!(BitSlice::long_div_bitwise(slice1, slice2).0.inner(), &[0b10]);
 
         let slice3 = BitSlice::<&[u8]>::new(&[0b10]);
         let slice4 = BitSlice::<&[u8]>::new(&[0b10]);
 
-        assert_eq!((slice3 / slice4).inner(), &[0b01]);
+        assert_eq!(BitSlice::long_div_bitwise(slice3, slice4).0.inner(), &[0b01]);
 
         let slice5 = BitSlice::<&[u8]>::new(&[0b00000000, 0b1]);
         let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
 
-        assert_eq!((slice5 / slice6).inner(), &[0b10000000, 0b0]);
+        assert_eq!(BitSlice::long_div_bitwise(slice5, slice6).0.inner(), &[0b10000000, 0b0]);
 
         let slice7 = BitSlice::<&[u8]>::new(&[0b0, 0b0, 0b0, 0b1]);
         let slice8 = BitSlice::<&[u8]>::new(&[0b10]);
 
-        assert_eq!((slice7 / slice8).inner(), &[0b0, 0b0, 0b10000000, 0b0]);
+        assert_eq!(BitSlice::long_div_bitwise(slice7, slice8).0.inner(), &[0b0, 0b0, 0b10000000, 0b0]);
     }
 
     #[test]
@@ -555,7 +507,7 @@ mod tests {
             let slice1 = BitSlice::<&[u8]>::new(slice);
             let slice2 = BitSlice::<&[u8]>::new(&[0b10]);
 
-            assert_eq!((slice1 % slice2).inner(), &[i % 2]);
+            assert_eq!(BitSlice::long_div_bitwise(slice1, slice2).1.inner(), &[i % 2]);
         }
 
         for i in 0..6 {
@@ -563,19 +515,22 @@ mod tests {
             let slice3 = BitSlice::<&[u8]>::new(slice);
             let slice4 = BitSlice::<&[u8]>::new(&[0b11]);
 
-            assert_eq!((slice3 % slice4).inner(), &[i % 3]);
+            assert_eq!(BitSlice::long_div_bitwise(slice3, slice4).1.inner(), &[i % 3]);
         }
 
         let slice5 = BitSlice::<&[u8]>::new(&[0b00000001, 0b111]);
         let slice6 = BitSlice::<&[u8]>::new(&[0b00000010]);
 
-        assert_eq!((slice5 % slice6).inner(), &[0b01, 0b0]);
+        assert_eq!(BitSlice::long_div_bitwise(slice5, slice6).1.inner(), &[0b01, 0b0]);
     }
 
     #[test]
     fn test_shl() {
         let slice = BitSlice::<&[u16]>::new(&[0b1010101010101010, 0b1010101010101010]);
-        let res = slice << 1;
+        let res = BitSlice::shl_bitwise(slice.clone(), 1);
+        assert_eq!(res.inner(), &[0b0101010101010100, 0b0101010101010101, 0b1]);
+
+        let res = BitSlice::shl_wrap_and_mask(slice, 1);
         assert_eq!(res.inner(), &[0b0101010101010100, 0b0101010101010101, 0b1]);
     }
 }

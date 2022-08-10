@@ -1,6 +1,8 @@
+#![feature(array_zip)]
 //! Crate for implementations of numeric types - BigInt, Decimal, etc.
 
-#![feature(backtrace)]
+#![cfg_attr(feature = "specialize", feature(min_specialization))]
+#![cfg_attr(feature = "__bench_public", allow(unused))]
 
 #![warn(
     missing_docs,
@@ -20,7 +22,11 @@
     clippy::must_use_candidate
 )]
 
+#[macro_use]
+mod macros;
 mod intern;
-mod utils;
+bench_public! { mod utils; }
 pub mod bit_slice;
 pub mod big_int;
+pub mod u;
+pub mod i;
