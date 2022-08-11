@@ -1,98 +1,66 @@
-use num_traits::{One, PrimInt, Zero};
-use crate::bit_slice::private::{IndexOpt, Len};
+use std::iter::FusedIterator;
+use std::mem;
+use num_traits::PrimInt;
 use super::BitSlice;
 
-pub struct Iter<'a, S> {
-    slice: &'a BitSlice<S>,
-    idx_front: usize,
-    idx_back: usize,
-}
-
-impl<'a, S> Iter<'a, S> {
-    pub(super) fn new(slice: &'a BitSlice<S>) -> Iter<'a, S> {
-        Iter {
-            slice,
-            idx_front: 0,
-            idx_back: 0,
-        }
-    }
-}
-
-impl<'a, S> Iterator for Iter<'a, S>
-where
-    S: IndexOpt<usize> + Len,
-    S::Output: Sized + Copy,
-{
-    type Item = (usize, S::Output);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let orig_idx = self.idx_front;
-        if self.idx_front + self.idx_back >= self.slice.len() {
-            return None;
-        }
-        let out = *self.slice.0.index(orig_idx)?;
-        self.idx_front += 1;
-        Some((orig_idx, out))
-    }
-}
-
-impl<'a, S> ExactSizeIterator for Iter<'a, S>
-where
-    S: IndexOpt<usize> + Len,
-    S::Output: Sized + Copy,
-{
-    fn len(&self) -> usize {
-        self.slice.len()
-    }
-}
-
-impl<'a, S> DoubleEndedIterator for Iter<'a, S>
-where
-    S: IndexOpt<usize> + Len,
-    S::Output: Sized + Copy,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let len = self.slice.len();
-        if self.idx_back == len || self.idx_front + self.idx_back >= len {
-            return None;
-        }
-        let orig_idx = len - self.idx_back - 1;
-        let out = *self.slice.0.index(orig_idx)?;
-        self.idx_back += 1;
-        Some((orig_idx, out))
-    }
-}
-
-pub struct BitIter<'a, S> {
-    slice: &'a BitSlice<S>,
+pub struct BitIter<'a, I> {
+    iter: core::slice::Iter<'a, I>,
+    cur: Option<I>,
     idx: usize,
 }
 
-impl<'a, S> BitIter<'a, S> {
-    pub(super) fn new(slice: &'a BitSlice<S>) -> BitIter<'a, S> {
+impl<'a, I> BitIter<'a, I> {
+    pub(super) fn new<S>(slice: &'a BitSlice<S, I>) -> BitIter<'a, I>
+    where
+        S: AsRef<[I]>,
+        I: Copy,
+    {
+        let mut iter = slice.slice().iter();
         BitIter {
-            slice,
+            cur: iter.next().copied(),
             idx: 0,
+            iter,
         }
     }
 }
 
-impl<'a, S> Iterator for BitIter<'a, S>
+impl<'a, I> Iterator for BitIter<'a, I>
 where
-    S: IndexOpt<usize>,
-    S::Output: PrimInt,
+    I: PrimInt,
 {
-    type Item = (usize, bool);
+    type Item = bool;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let orig_idx = self.idx;
-        let (idx, bit) = self.slice.idx_bit(orig_idx);
-        let val = *self.slice.0.index(idx)?;
+        let val = self.cur?;
+        let bit_size = mem::size_of::<I>() * 8;
+        let bit_idx = self.idx % bit_size;
+
         self.idx += 1;
-        Some((
-            orig_idx,
-            val & (<S::Output>::one() << bit) != <S::Output>::zero(),
-        ))
+        if bit_idx == bit_size - 1 {
+            self.cur = self.iter.next().copied();
+        }
+
+        Some(val & (I::one() << bit_idx) != I::zero(), )
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
     }
 }
 
+impl<'a, I> ExactSizeIterator for BitIter<'a, I>
+where
+    I: PrimInt,
+{
+    fn len(&self) -> usize {
+        let remaining = self.iter.len();
+        let size = mem::size_of::<I>() * 8;
+        size * remaining + if self.cur.is_some() { size - self.idx } else { 0 }
+    }
+}
+
+impl<I> FusedIterator for BitIter<'_, I>
+where
+    I: PrimInt,
+{}

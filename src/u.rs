@@ -11,8 +11,8 @@ use crate::bit_slice::BitSlice;
 pub struct U<const N: usize>([u8; N]);
 
 impl<const N: usize> U<N> {
-    fn as_slices<R>(left: U<N>, right: U<N>, f: impl FnOnce(BitSlice<[u8; N]>, BitSlice<[u8; N]>) -> R) -> R {
-        f(BitSlice::new(left.0), BitSlice::new(right.0))
+    fn into_slice(self) -> BitSlice<[u8; N], u8> {
+        BitSlice::new(self.0)
     }
 }
 
@@ -89,9 +89,9 @@ impl<const N: usize> Add for U<N> {
 
     maybe_default!(
         fn add(self, rhs: Self) -> Self::Output {
-            let out = Self::as_slices(self, rhs, |left, right| {
-                BitSlice::add_in_place_bitwise(left, &right).into_inner()
-            });
+            let left = self.into_slice();
+            let right = rhs.into_slice();
+            let out = BitSlice::add_in_place_bitwise(left, &right).into_inner();
             U(out)
         }
     );
@@ -109,25 +109,25 @@ mod specialize {
 
     impl Add for U<2> {
         fn add(self, rhs: Self) -> Self::Output {
-            U::from_u16(self.as_u16(), rhs.as_u16())
+            U::from_u16(self.as_u16() + rhs.as_u16())
         }
     }
 
     impl Add for U<4> {
         fn add(self, rhs: Self) -> Self::Output {
-            U::from_u32(self.as_u32(), rhs.as_u32())
+            U::from_u32(self.as_u32() + rhs.as_u32())
         }
     }
 
     impl Add for U<8> {
         fn add(self, rhs: Self) -> Self::Output {
-            U::from_u64(self.as_u64(), rhs.as_u64())
+            U::from_u64(self.as_u64() + rhs.as_u64())
         }
     }
 
     impl Add for U<16> {
         fn add(self, rhs: Self) -> Self::Output {
-            U::from_u128(self.as_u128(), rhs.as_u128())
+            U::from_u128(self.as_u128() + rhs.as_u128())
         }
     }
 }
@@ -200,7 +200,10 @@ impl<const N: usize> Shl<usize> for U<N> {
     type Output = Self;
 
     fn shl(self, rhs: usize) -> Self::Output {
-        todo!()
+        #[cfg(debug_assertions)]
+        return U(BitSlice::shl_wrap_and_mask_checked(BitSlice::new(self.0), rhs).unwrap().into_inner());
+        #[cfg(not(debug_assertions))]
+        return U(BitSlice::shl_wrap_and_mask_wrapping(BitSlice::new(self.0), rhs).into_inner());
     }
 }
 

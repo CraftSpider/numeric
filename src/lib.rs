@@ -1,5 +1,6 @@
+//! Crate for implementations of numeric types - `BigInt`, `Decimal`, etc.
+
 #![feature(array_zip)]
-//! Crate for implementations of numeric types - BigInt, Decimal, etc.
 
 #![cfg_attr(feature = "specialize", feature(min_specialization))]
 #![cfg_attr(feature = "__bench_public", allow(unused))]

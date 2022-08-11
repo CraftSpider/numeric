@@ -69,7 +69,7 @@ macro_rules! impl_for_int {
                 let other = other.abs();
 
                 self.with_slice(|this| {
-                    this == BitSlice::new(int_to_arr(other as $unsigned))
+                    this == BitSlice::<_, usize>::new(int_to_arr(other as $unsigned))
                 })
             }
         }
@@ -77,7 +77,7 @@ macro_rules! impl_for_int {
         impl PartialEq<$unsigned> for BigInt {
             fn eq(&self, other: &$unsigned) -> bool {
                 self.with_slice(|this| {
-                    this == BitSlice::new(int_to_arr(*other))
+                    this == BitSlice::<_, usize>::new(int_to_arr(*other))
                 })
             }
         }

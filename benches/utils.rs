@@ -4,11 +4,11 @@ use criterion::{criterion_main, criterion_group, Criterion, black_box};
 use pprof::criterion::{PProfProfiler, Output};
 
 fn bench_int_arr(c: &mut Criterion) {
-    c.bench_function("into_to_arr::<u128, usize>(0)", |b| {
+    c.bench_function("int_to_arr::<u128, usize>(0)", |b| {
         b.iter(|| int_to_arr::<u128, usize>(black_box(0)))
     });
 
-    c.bench_function("into_to_arr::<u128, usize>(u128::MAX)", |b| {
+    c.bench_function("int_to_arr::<u128, usize>(u128::MAX)", |b| {
         b.iter(|| int_to_arr::<u128, usize>(black_box(u128::MAX)))
     });
 }

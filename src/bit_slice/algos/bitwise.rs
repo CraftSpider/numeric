@@ -1,30 +1,32 @@
 use std::hint::unreachable_unchecked;
-use num_traits::{PrimInt, Zero};
+use num_traits::PrimInt;
 
-use crate::bit_slice::{BitSlice, IndexOpt, IndexOptMut, Len};
+use crate::bit_slice::BitSlice;
 use super::OwnedSlice;
 
-impl<S> BitSlice<S>
+impl<S, I> BitSlice<S, I>
 where
-    S: IndexOpt<usize> + Len,
-    S::Output: PrimInt,
+    S: AsRef<[I]>,
+    I: PrimInt,
 {
     /// Shift a slice left by `usize` items, implemented as a series of bitwise swaps
-    pub fn shl_bitwise(left: BitSlice<S>, right: usize) -> OwnedSlice<S::Output> {
+    pub fn shl_bitwise(left: BitSlice<S, I>, right: usize) -> OwnedSlice<I> {
         let bit_len = left.bit_len();
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); left.len()]);
-        for (idx, new) in left.iter_bits() {
-            if new || idx + right < bit_len {
-                #[allow(clippy::suspicious_arithmetic_impl)]
-                out.set_bit_pushing(idx + right, new);
-            }
-        }
+        let mut out = BitSlice::new(vec![I::zero(); left.len()]);
+        left.iter_bits()
+            .enumerate()
+            .for_each(|(idx, new)| {
+                if new || idx + right < bit_len {
+                    #[allow(clippy::suspicious_arithmetic_impl)]
+                    out.set_bit_pushing(idx + right, new);
+                }
+            });
         out
     }
 
     /// Shift a slice right by `usize` items, implemented as a series of bitwise swaps
-    pub fn shr_bitwise(left: BitSlice<S>, right: usize) -> OwnedSlice<S::Output> {
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); left.len()]);
+    pub fn shr_bitwise(left: BitSlice<S, I>, right: usize) -> OwnedSlice<I> {
+        let mut out = BitSlice::new(vec![I::zero(); left.len()]);
         for idx in (0..=left.bit_len()).rev() {
             let new = left.get_bit(idx);
             if let Some(idx) = idx.checked_sub(right) {
@@ -35,14 +37,13 @@ where
     }
 
     /// Add two slices, implemented as a bitwise add-and-carry
-    pub fn add_bitwise<T>(left: BitSlice<S>, right: BitSlice<T>) -> OwnedSlice<S::Output>
-        where
-            T: IndexOpt<usize> + Len,
-            T::Output: PrimInt,
+    pub fn add_bitwise<T>(left: BitSlice<S, I>, right: BitSlice<T, I>) -> OwnedSlice<I>
+    where
+        T: AsRef<[I]>,
     {
         let len = usize::max(left.len(), right.len());
         let bit_len = usize::max(left.bit_len(), right.bit_len());
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); len]);
+        let mut out = BitSlice::new(vec![I::zero(); len]);
 
         let mut carry = false;
         for idx in 0..=bit_len {
@@ -77,14 +78,13 @@ where
     }
 
     /// Subtract two slices, implemented as a bitwise sub-and-borrow
-    pub fn sub_bitwise<T>(left: BitSlice<S>, right: BitSlice<T>) -> (OwnedSlice<S::Output>, bool)
-        where
-            T: IndexOpt<usize> + Len,
-            T::Output: PrimInt,
+    pub fn sub_bitwise<T>(left: BitSlice<S, I>, right: BitSlice<T, I>) -> (OwnedSlice<I>, bool)
+    where
+        T: AsRef<[I]>,
     {
         let len = usize::max(left.len(), right.len());
         let bit_len = usize::max(left.bit_len(), right.bit_len());
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); len]);
+        let mut out = BitSlice::new(vec![I::zero(); len]);
 
         let mut carry = false;
         for idx in 0..bit_len {
@@ -123,14 +123,13 @@ where
     }
 
     /// Multiply two slices, implemented as a bitwise shift-and-add
-    pub fn add_shift_mul_bitwise<T>(left: BitSlice<S>, right: BitSlice<T>) -> OwnedSlice<S::Output>
-        where
-            T: IndexOpt<usize> + Len,
-            T::Output: PrimInt,
+    pub fn add_shift_mul_bitwise<T>(left: BitSlice<S, I>, right: BitSlice<T, I>) -> OwnedSlice<I>
+    where
+        T: AsRef<[I]>,
     {
         let len = usize::max(left.len(), right.len());
         let mut new_self = BitSlice::shl_bitwise(left, 0);
-        let mut out = BitSlice::new(vec![<S::Output>::zero(); len * 2]);
+        let mut out = BitSlice::new(vec![I::zero(); len * 2]);
 
         for idx in 0..right.bit_len() {
             let r = right.get_bit(idx);
@@ -144,17 +143,16 @@ where
     }
 
     /// Divide two slices, implemented as bitwise long division
-    pub fn long_div_bitwise<T>(num: BitSlice<S>, div: BitSlice<T>) -> (OwnedSlice<S::Output>, OwnedSlice<S::Output>)
-        where
-            OwnedSlice<S::Output>: PartialOrd<BitSlice<T>>,
-            T: IndexOpt<usize> + Len + Clone,
-            T::Output: PrimInt,
+    pub fn long_div_bitwise<T>(num: BitSlice<S, I>, div: BitSlice<T, I>) -> (OwnedSlice<I>, OwnedSlice<I>)
+    where
+        OwnedSlice<I>: PartialOrd<BitSlice<T, I>>,
+        T: Clone + AsRef<[I]>,
     {
         let len = usize::max(num.len(), div.len());
         let bit_len = usize::max(num.bit_len(), div.bit_len());
 
-        let mut quotient = BitSlice::new(vec![<S::Output>::zero(); len]);
-        let mut remainder: BitSlice<_> = BitSlice::new(vec![<S::Output>::zero(); len]);
+        let mut quotient = BitSlice::new(vec![I::zero(); len]);
+        let mut remainder: BitSlice<_, _> = BitSlice::new(vec![I::zero(); len]);
 
         for idx in (0..bit_len).rev() {
             remainder = BitSlice::shl_bitwise(remainder, 1);
@@ -170,17 +168,16 @@ where
     }
 }
 
-impl<S> BitSlice<S>
-    where
-        S: IndexOptMut<usize> + Len,
-        S::Output: PrimInt,
+impl<S, I> BitSlice<S, I>
+where
+    S: AsRef<[I]> + AsMut<[I]>,
+    I: PrimInt,
 {
     /// Add two slices, implemented as a bitwise add-and-carry, storing the result in the lefthand
     /// slice.
-    pub fn add_in_place_bitwise<T>(mut left: BitSlice<S>, right: &BitSlice<T>) -> BitSlice<S>
-        where
-            T: IndexOpt<usize> + Len,
-            T::Output: PrimInt,
+    pub fn add_in_place_bitwise<T>(mut left: BitSlice<S, I>, right: &BitSlice<T, I>) -> BitSlice<S, I>
+    where
+        T: AsRef<[I]>,
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
 

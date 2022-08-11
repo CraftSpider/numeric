@@ -23,10 +23,6 @@ pub fn bench_shl(c: &mut Criterion) {
         let i = BitSlice::new(&[usize::MAX]);
         b.iter(|| BitSlice::shl_wrap_and_mask(black_box(i.clone()), black_box(1)))
     });
-
-    c.bench_function("<usize as Shl>::shl(usize::MAX, 1)", |b| {
-        b.iter(|| black_box(usize::MAX) << black_box(1))
-    });
 }
 
 criterion_group!(

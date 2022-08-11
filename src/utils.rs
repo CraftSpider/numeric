@@ -31,16 +31,16 @@ pub fn int_to_arr<T: PrimInt + Unsigned, U: PrimInt + Unsigned>(val: T) -> [U; 1
                 .expect("Our value didn't fit in a T - must be too big") + T::one();
 
             let mut left = val;
-            for idx in 0..16 {
+            for item in &mut out {
                 match U::from(left) {
                     Some(u) => {
-                        out[idx] = u;
+                        *item = u;
                         break;
                     }
                     None => {
                         left = left / max;
                         let rem: T = val % max;
-                        out[idx] = U::from(rem).expect("Modulo U::max_value() + 1 - Will always be >= U::max_value()");
+                        *item = U::from(rem).expect("Modulo U::max_value() + 1 - Will always be >= U::max_value()");
                     }
                 }
             }

@@ -1,4 +1,4 @@
-//! An implementation of a BigInt, optimized for rapid cloning and minimal memory usage.
+//! An implementation of a 'big integer', optimized for rapid cloning and minimal memory usage.
 //!
 //! Small values are stored inline, large values are stored in a refcounted interner.
 
@@ -100,7 +100,7 @@ impl TaggedOffset {
 pub struct BigInt(TaggedOffset);
 
 impl BigInt {
-    fn with_slices<R>(left: &BigInt, right: &BigInt, f: impl FnOnce(BitSlice<&[usize]>, BitSlice<&[usize]>) -> R) -> R {
+    fn with_slices<R>(left: &BigInt, right: &BigInt, f: impl FnOnce(BitSlice<&[usize], usize>, BitSlice<&[usize], usize>) -> R) -> R {
         left.with_slice(|left| right.with_slice(|right| f(left, right)))
     }
 
@@ -128,7 +128,7 @@ impl BigInt {
         }
     }
 
-    fn with_slice<R>(&self, f: impl FnOnce(BitSlice<&[usize]>) -> R) -> R {
+    fn with_slice<R>(&self, f: impl FnOnce(BitSlice<&[usize], usize>) -> R) -> R {
         if self.0.tag().inline() {
             f(BitSlice::new(&[self.0.offset()]))
         } else {
