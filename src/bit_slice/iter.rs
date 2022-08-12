@@ -3,6 +3,7 @@ use std::mem;
 use num_traits::PrimInt;
 use super::BitSlice;
 
+/// See `BitSlice::iter_bits`
 pub struct BitIter<'a, I> {
     iter: core::slice::Iter<'a, I>,
     cur: Option<I>,

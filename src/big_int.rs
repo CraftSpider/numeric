@@ -320,7 +320,7 @@ impl_for_int!(isize, usize);
 impl_op!(add(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         if self.is_negative() == rhs.is_negative() {
-            (BitSlice::add_bitwise(this, other).into_inner(), self.is_negative())
+            (BitSlice::add_element(this, other).into_inner(), self.is_negative())
         } else if self > rhs {
             let (out, neg) = BitSlice::sub_bitwise(this, other);
             (out.into_inner(), neg != self.is_negative())

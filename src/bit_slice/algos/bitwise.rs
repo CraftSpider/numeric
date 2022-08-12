@@ -1,4 +1,5 @@
 use std::hint::unreachable_unchecked;
+use num_traits::ops::overflowing::OverflowingAdd;
 use num_traits::PrimInt;
 
 use crate::bit_slice::BitSlice;
@@ -7,7 +8,7 @@ use super::OwnedSlice;
 impl<S, I> BitSlice<S, I>
 where
     S: AsRef<[I]>,
-    I: PrimInt,
+    I: PrimInt + OverflowingAdd,
 {
     /// Shift a slice left by `usize` items, implemented as a series of bitwise swaps
     pub fn shl_bitwise(left: BitSlice<S, I>, right: usize) -> OwnedSlice<I> {

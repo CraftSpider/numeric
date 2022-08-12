@@ -3,7 +3,7 @@
 #![feature(array_zip)]
 
 #![cfg_attr(feature = "specialize", feature(min_specialization))]
-#![cfg_attr(feature = "__bench_public", allow(unused))]
+#![cfg_attr(feature = "__bench_priv", allow(unused))]
 
 #![warn(
     missing_docs,

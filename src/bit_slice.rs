@@ -12,8 +12,16 @@ mod iter;
 pub use iter::*;
 
 /// Utility for algorithms on slices of primitive integers
-#[derive(Clone)]
 pub struct BitSlice<S, I>(S, PhantomData<[I]>);
+
+impl<S, I> Clone for BitSlice<S, I>
+where
+    S: Clone,
+{
+    fn clone(&self) -> Self {
+        BitSlice(self.0.clone(), PhantomData)
+    }
+}
 
 impl<S, I> BitSlice<S, I> {
     /// Create a new `BitSlice` containing a value
@@ -37,6 +45,7 @@ impl<S, I> BitSlice<S, I>
 where
     S: AsRef<[I]>,
 {
+    /// Access this items as a slice of its elements
     #[inline(always)]
     pub fn slice(&self) -> &[I] {
         self.0.as_ref()
@@ -62,6 +71,7 @@ impl<S, I> BitSlice<S, I>
 where
     S: AsMut<[I]>,
 {
+    /// Access this item as a mutable slice of its inner elements
     #[inline(always)]
     pub fn slice_mut(&mut self) -> &mut [I] {
         self.0.as_mut()

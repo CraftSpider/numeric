@@ -18,11 +18,13 @@ impl<const N: usize> U<N> {
 
 impl U<1> {
     /// Lossless infallible conversion for `U<1> -> u8`
+    #[must_use]
     pub fn as_u8(self) -> u8 {
         u8::from_le_bytes(self.0)
     }
 
     /// Lossless infallible conversion for `u8 -> U<1>`
+    #[must_use]
     pub fn from_u8(val: u8) -> Self {
         Self(val.to_le_bytes())
     }
@@ -30,11 +32,13 @@ impl U<1> {
 
 impl U<2> {
     /// Lossless infallible conversion for `U<2> -> u16`
+    #[must_use]
     pub fn as_u16(self) -> u16 {
         u16::from_le_bytes(self.0)
     }
 
     /// Lossless infallible conversion for `u16 -> U<2>`
+    #[must_use]
     pub fn from_u16(val: u16) -> Self {
         Self(val.to_le_bytes())
     }
@@ -54,11 +58,13 @@ impl U<4> {
 
 impl U<8> {
     /// Lossless infallible conversion for `U<8> -> u64`
+    #[must_use]
     pub fn as_u64(self) -> u64 {
         u64::from_le_bytes(self.0)
     }
 
     /// Lossless infallible conversion for `u64 -> U<8>`
+    #[must_use]
     pub fn from_u64(val: u64) -> Self {
         Self(val.to_le_bytes())
     }
@@ -66,12 +72,44 @@ impl U<8> {
 
 impl U<16> {
     /// Lossless infallible conversion for `U<16> -> u128`
+    #[must_use]
     pub fn as_u128(self) -> u128 {
         u128::from_le_bytes(self.0)
     }
 
     /// Lossless infallible conversion for `u128 -> U<16>`
+    #[must_use]
     pub fn from_u128(val: u128) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+#[cfg(target_pointer_width = "32")]
+impl U<4> {
+    /// Lossless infallible conversion for `U<PtrWidth> -> usize`
+    #[must_use]
+    pub fn as_usize(self) -> usize {
+        usize::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `usize -> U<PtrWidth>`
+    #[must_use]
+    pub fn from_usize(val: usize) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl U<8> {
+    /// Lossless infallible conversion for `U<PtrWidth> -> usize`
+    #[must_use]
+    pub fn as_usize(self) -> usize {
+        usize::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `usize -> U<PtrWidth>`
+    #[must_use]
+    pub fn from_usize(val: usize) -> Self {
         Self(val.to_le_bytes())
     }
 }
@@ -91,14 +129,17 @@ impl<const N: usize> Add for U<N> {
         fn add(self, rhs: Self) -> Self::Output {
             let left = self.into_slice();
             let right = rhs.into_slice();
-            let out = BitSlice::add_in_place_bitwise(left, &right).into_inner();
+            #[cfg(debug_assertions)]
+            let out = BitSlice::add_element_checked(left, right).unwrap().into_inner();
+            #[cfg(not(debug_assertions))]
+            let out = BitSlice::add_element_wrapping(left, right).into_inner();
             U(out)
         }
     );
 }
 
 #[cfg(feature = "specialize")]
-mod specialize {
+mod specialize_add {
     use super::*;
 
     impl Add for U<1> {
