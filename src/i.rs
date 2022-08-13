@@ -7,6 +7,8 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Su
 use num_traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, NumCast, One, PrimInt, Saturating, Signed, ToPrimitive, Zero};
 
 /// N-byte bounded, signed integer. `I<1> == i8`, `I<16> == i128`, etc.
+///
+/// Represented in two's complement, with the highest bit forming the sign bit
 pub struct I<const N: usize>([u8; N]);
 
 impl<const N: usize> Copy for I<N> {}

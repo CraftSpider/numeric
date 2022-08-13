@@ -186,7 +186,7 @@ impl Display for BigInt {
         if self.is_negative() {
             write!(f, "-")?;
         }
-        self.write_base(10, f, &DIGITS)
+        self.write_base(10, f, DIGITS)
     }
 }
 
@@ -215,7 +215,7 @@ impl UpperHex for BigInt {
             write!(f, "-")?;
         }
         write!(f, "0x")?;
-        self.write_base(16, f, &DIGITS)
+        self.write_base(16, f, DIGITS)
     }
 }
 
@@ -229,7 +229,7 @@ impl LowerHex for BigInt {
             write!(f, "-")?;
         }
         write!(f, "0x")?;
-        self.write_base(16, f, &DIGITS)
+        self.write_base(16, f, DIGITS)
     }
 }
 
@@ -322,10 +322,10 @@ impl_op!(add(self, rhs) => {
         if self.is_negative() == rhs.is_negative() {
             (BitSlice::add_element(this, other).into_inner(), self.is_negative())
         } else if self > rhs {
-            let (out, neg) = BitSlice::sub_bitwise(this, other);
+            let (out, neg) = BitSlice::sub_element(this, other);
             (out.into_inner(), neg != self.is_negative())
         } else {
-            let (out, neg) = BitSlice::sub_bitwise(this, other);
+            let (out, neg) = BitSlice::sub_element(this, other);
             (out.into_inner(), neg == rhs.is_negative())
         }
     });
@@ -337,10 +337,10 @@ impl_op!(sub(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         if self.is_negative() == rhs.is_negative() {
             if self > rhs {
-                let (out, neg) = BitSlice::sub_bitwise(this, other);
+                let (out, neg) = BitSlice::sub_element(this, other);
                 (out.into_inner(), neg == self.is_negative())
             } else {
-                let (out, neg) = BitSlice::sub_bitwise(this, other);
+                let (out, neg) = BitSlice::sub_element(this, other);
                 (out.into_inner(), neg == rhs.is_negative())
             }
         } else {

@@ -27,7 +27,11 @@
 mod macros;
 mod intern;
 bench_public! { mod utils; }
+pub mod traits;
 pub mod bit_slice;
 pub mod big_int;
+pub mod decimal;
 pub mod u;
 pub mod i;
+pub mod f;
+pub mod fixed;

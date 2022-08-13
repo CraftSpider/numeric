@@ -130,6 +130,10 @@ where
     I: PrimInt,
 {
     /// Set a single value by index on this slice, panicking if the index is out of range
+    ///
+    /// # Panics
+    ///
+    /// If `pos` is outside the range of this slice
     pub fn set(&mut self, pos: usize, val: I) {
         self.set_opt(pos, val).unwrap_or_else(|| {
             panic!("Attempt to write value at index {} out of bounds", pos)
@@ -320,21 +324,39 @@ mod tests {
     }
 
     #[test]
+    fn test_add() {
+        let slice1 = BitSlice::<&[u8], _>::new(&[0b01010101]);
+        let slice2 = BitSlice::<&[u8], _>::new(&[0b10101010]);
+
+        assert_eq!(BitSlice::add_bitwise(slice1.clone(), slice2.clone()).inner(), &[0b11111111]);
+        assert_eq!(BitSlice::add_element(slice1.clone(), slice2.clone()).inner(), &[0b11111111]);
+    }
+
+    #[test]
+    fn test_sub() {
+        let slice1 = BitSlice::<&[u8], _>::new(&[0b10000000]);
+        let slice2 = BitSlice::<&[u8], _>::new(&[0b00000001]);
+
+        assert_eq!(BitSlice::sub_bitwise(slice1.clone(), slice2.clone()).0.inner(), &[0b01111111]);
+        assert_eq!(BitSlice::sub_element(slice1.clone(), slice2.clone()).0.inner(), &[0b01111111]);
+    }
+
+    #[test]
     fn test_add_shift_mul_bitwise() {
         let slice1 = BitSlice::<&[u8], _>::new(&[0b00000000]);
         let slice2 = BitSlice::<&[u8], _>::new(&[0b00000001]);
 
-        assert_eq!(BitSlice::add_shift_mul_bitwise(slice1, slice2).inner(), &[0b0, 0b0, 0b0]);
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice1, slice2).inner(), &[0b0]);
 
         let slice3 = BitSlice::<&[u8], _>::new(&[0b00000001]);
         let slice4 = BitSlice::<&[u8], _>::new(&[0b00000010]);
 
-        assert_eq!(BitSlice::add_shift_mul_bitwise(slice3, slice4).inner(), &[0b10, 0b0, 0b0]);
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice3, slice4).inner(), &[0b10]);
 
         let slice5 = BitSlice::<&[u8], _>::new(&[0b00000010]);
         let slice6 = BitSlice::<&[u8], _>::new(&[0b00000010]);
 
-        assert_eq!(BitSlice::add_shift_mul_bitwise(slice5, slice6).inner(), &[0b100, 0b0, 0b0]);
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice5, slice6).inner(), &[0b100]);
     }
 
     #[test]
@@ -381,7 +403,7 @@ mod tests {
         let slice5 = BitSlice::<&[u8], _>::new(&[0b00000001, 0b111]);
         let slice6 = BitSlice::<&[u8], _>::new(&[0b00000010]);
 
-        assert_eq!(BitSlice::long_div_bitwise(slice5, slice6).1.inner(), &[0b01, 0b0]);
+        assert_eq!(BitSlice::long_div_bitwise(slice5, slice6).1.inner(), &[0b01]);
     }
 
     #[test]

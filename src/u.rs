@@ -11,8 +11,51 @@ use crate::bit_slice::BitSlice;
 pub struct U<const N: usize>([u8; N]);
 
 impl<const N: usize> U<N> {
+    /// Create a new instance containing the default value (0)
+    #[inline]
+    #[must_use]
+    pub const fn new() -> U<N> {
+        U([0; N])
+    }
+
+    /// Create a value from raw bytes, laid out in little-endian order
+    #[must_use]
+    pub const fn from_le_bytes(bytes: [u8; N]) -> U<N> {
+        U(bytes)
+    }
+
+    /// Create a value from raw bytes, laid out in big-endian order
+    #[must_use]
+    pub const fn from_be_bytes(bytes: [u8; N]) -> U<N> {
+        todo!()
+    }
+
+    /// Create a value from raw bytes, laid out in the native endianness
+    #[must_use]
+    pub const fn from_ne_bytes(bytes: [u8; N]) -> U<N> {
+        todo!()
+    }
+
     fn into_slice(self) -> BitSlice<[u8; N], u8> {
         BitSlice::new(self.0)
+    }
+
+    /// Convert this value to raw bytes, laid out in little-endian order
+    #[must_use]
+    pub const fn to_le_bytes(self) -> [u8; N] {
+        self.0
+    }
+
+    /// Convert this value to raw bytes, laid out in big-endian order
+    #[must_use]
+    pub const fn to_be_bytes(self) -> [u8; N] {
+        todo!()
+    }
+
+    /// Convert this value to raw bytes, laid out in the native endianness
+    #[must_use]
+    pub const fn to_ne_bytes(self) -> [u8; N] {
+        todo!()
     }
 }
 
@@ -46,11 +89,13 @@ impl U<2> {
 
 impl U<4> {
     /// Lossless infallible conversion for `U<4> -> u32`
+    #[must_use]
     pub fn as_u32(self) -> u32 {
         u32::from_le_bytes(self.0)
     }
 
     /// Lossless infallible conversion for `u32 -> U<4>`
+    #[must_use]
     pub fn from_u32(val: u32) -> Self {
         Self(val.to_le_bytes())
     }
@@ -122,6 +167,13 @@ impl<const N: usize> Clone for U<N> {
     }
 }
 
+impl<const N: usize> Default for U<N> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const N: usize> Add for U<N> {
     type Output = Self;
 
@@ -177,7 +229,13 @@ impl<const N: usize> Sub for U<N> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        todo!()
+        let left = self.into_slice();
+        let right = rhs.into_slice();
+        #[cfg(debug_assertions)]
+        let out = BitSlice::sub_element_checked(left, right).unwrap().into_inner();
+        #[cfg(not(debug_assertions))]
+        let out = BitSlice::sub_element_wrapping(left, right).into_inner();
+        U(out)
     }
 }
 
@@ -267,24 +325,32 @@ impl<const N: usize> ToPrimitive for U<N> {
         todo!()
     }
 
+    fn to_i128(&self) -> Option<i128> {
+        todo!()
+    }
+
     fn to_u64(&self) -> Option<u64> {
+        todo!()
+    }
+
+    fn to_u128(&self) -> Option<u128> {
         todo!()
     }
 }
 
 impl<const N: usize> Bounded for U<N> {
     fn min_value() -> Self {
-        todo!()
+        U([0; N])
     }
 
     fn max_value() -> Self {
-        todo!()
+        U([u8::MAX; N])
     }
 }
 
 impl<const N: usize> PartialEq for U<N> {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        self.0 == other.0
     }
 }
 
@@ -292,7 +358,7 @@ impl<const N: usize> Eq for U<N> {}
 
 impl<const N: usize> PartialOrd for U<N> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        todo!()
+        Some(self.cmp(other))
     }
 }
 
@@ -338,7 +404,7 @@ impl<const N: usize> Saturating for U<N> {
 
 impl<const N: usize> Zero for U<N> {
     fn zero() -> Self {
-        todo!()
+        U([0; N])
     }
 
     fn is_zero(&self) -> bool {
@@ -354,11 +420,11 @@ impl<const N: usize> One for U<N> {
 
 impl<const N: usize> PrimInt for U<N> {
     fn count_ones(self) -> u32 {
-        todo!()
+        self.into_slice().iter_bits().fold(0, |count, b| if b { count + 1 } else { count })
     }
 
     fn count_zeros(self) -> u32 {
-        todo!()
+        self.into_slice().iter_bits().fold(0, |count, b| if b { count } else { count + 1 })
     }
 
     fn leading_zeros(self) -> u32 {

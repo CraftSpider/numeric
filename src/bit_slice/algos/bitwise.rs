@@ -1,5 +1,5 @@
 use std::hint::unreachable_unchecked;
-use num_traits::ops::overflowing::OverflowingAdd;
+use num_traits::ops::overflowing::{OverflowingAdd, OverflowingSub};
 use num_traits::PrimInt;
 
 use crate::bit_slice::BitSlice;
@@ -8,7 +8,7 @@ use super::OwnedSlice;
 impl<S, I> BitSlice<S, I>
 where
     S: AsRef<[I]>,
-    I: PrimInt + OverflowingAdd,
+    I: PrimInt + OverflowingAdd + OverflowingSub,
 {
     /// Shift a slice left by `usize` items, implemented as a series of bitwise swaps
     pub fn shl_bitwise(left: BitSlice<S, I>, right: usize) -> OwnedSlice<I> {
@@ -72,7 +72,9 @@ where
                 _ => unsafe { unreachable_unchecked() },
             };
 
-            out.set_bit_pushing(idx, new);
+            if new {
+                out.set_bit_pushing(idx, new);
+            }
         }
 
         out
@@ -129,15 +131,15 @@ where
         T: AsRef<[I]>,
     {
         let len = usize::max(left.len(), right.len());
-        let mut new_self = BitSlice::shl_bitwise(left, 0);
+        let mut new_self = BitSlice::shl_wrap_and_mask(left, 0);
         let mut out = BitSlice::new(vec![I::zero(); len * 2]);
 
         for idx in 0..right.bit_len() {
             let r = right.get_bit(idx);
             if r {
-                out = BitSlice::add_bitwise(out, new_self.clone());
+                out = BitSlice::add_element(out, new_self.clone());
             }
-            new_self = BitSlice::shl_bitwise(new_self, 1);
+            new_self = BitSlice::shl_wrap_and_mask(new_self, 1);
         }
 
         out
@@ -156,11 +158,11 @@ where
         let mut remainder: BitSlice<_, _> = BitSlice::new(vec![I::zero(); len]);
 
         for idx in (0..bit_len).rev() {
-            remainder = BitSlice::shl_bitwise(remainder, 1);
+            remainder = BitSlice::shl_wrap_and_mask(remainder, 1);
             remainder.set_bit(0, num.get_bit(idx));
             if remainder >= div {
                 // Ignore the bool - subtract will never overflow
-                remainder = BitSlice::sub_bitwise(remainder, div.clone()).0;
+                remainder = BitSlice::sub_element(remainder, div.clone()).0;
                 quotient.set_bit(idx, true);
             }
         }
