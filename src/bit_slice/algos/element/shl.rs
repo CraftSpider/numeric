@@ -56,7 +56,7 @@ where
         let bit_size = mem::size_of::<I>() * 8;
         let arr_shift = (right / bit_size) + 1;
         let elem_shift = right % bit_size;
-        let inverse_elem_shift = bit_size - elem_shift;
+        let inverse_elem_shift = (bit_size - elem_shift) % bit_size;
         let elem_mask: I = !(I::max_value() << elem_shift);
         let zero = I::zero();
 

@@ -1,7 +1,7 @@
 
-use numeric::big_int::BigInt;
+use numeric::int::big_int::BigInt;
 use criterion::{criterion_main, criterion_group, Criterion, black_box, BenchmarkId};
-use pprof::criterion::{PProfProfiler, Output};
+// use pprof::criterion::{PProfProfiler, Output};
 
 pub fn bench_from(c: &mut Criterion) {
     c.benchmark_group("<BigInt as From<u*>>")
@@ -19,7 +19,7 @@ pub fn bench_from(c: &mut Criterion) {
         )
         .bench_function(
             BenchmarkId::new("From<u16>", "MAX"),
-            |b| b.iter(BigInt::from(black_box(u16::MAX)))
+            |b| b.iter(|| BigInt::from(black_box(u16::MAX)))
         )
         .bench_function(
             BenchmarkId::new("From<u32>", "0"),
@@ -27,7 +27,7 @@ pub fn bench_from(c: &mut Criterion) {
         )
         .bench_function(
             BenchmarkId::new("From<u32>", "MAX"),
-            |b| b.iter(BigInt::from(black_box(u32::MAX)))
+            |b| b.iter(|| BigInt::from(black_box(u32::MAX)))
         )
         .bench_function(
             BenchmarkId::new("From<u64>", "0"),
@@ -35,7 +35,7 @@ pub fn bench_from(c: &mut Criterion) {
         )
         .bench_function(
             BenchmarkId::new("From<u64>", "MAX"),
-            |b| b.iter(BigInt::from(black_box(u64::MAX)))
+            |b| b.iter(|| BigInt::from(black_box(u64::MAX)))
         )
         .bench_function(
             BenchmarkId::new("From<u128>", "0"),
@@ -43,7 +43,7 @@ pub fn bench_from(c: &mut Criterion) {
         )
         .bench_function(
             BenchmarkId::new("From<u128>", "MAX"),
-            |b| b.iter(BigInt::from(black_box(u128::MAX)))
+            |b| b.iter(|| BigInt::from(black_box(u128::MAX)))
         )
         .bench_function(
             BenchmarkId::new("From<usize>", "0"),
@@ -51,7 +51,7 @@ pub fn bench_from(c: &mut Criterion) {
         )
         .bench_function(
             BenchmarkId::new("From<usize>", "MAX"),
-            |b| b.iter(BigInt::from(black_box(usize::MAX)))
+            |b| b.iter(|| BigInt::from(black_box(usize::MAX)))
         );
 }
 
@@ -159,7 +159,7 @@ pub fn bench_shl(c: &mut Criterion) {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
+    config = Criterion::default(); // .with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
     targets = bench_from, bench_clone, bench_add, bench_sub, bench_mul, bench_div, bench_shl
 );
 criterion_main!(benches);

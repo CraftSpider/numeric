@@ -59,6 +59,7 @@ pub fn arr_to_int<T: PrimInt, U: PrimInt>(arr: &[T]) -> Option<U> {
     Some(out)
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;

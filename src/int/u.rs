@@ -243,7 +243,13 @@ impl<const N: usize> Mul for U<N> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        todo!()
+        let left = self.into_slice();
+        let right = rhs.into_slice();
+        #[cfg(debug_assertions)]
+        let out = BitSlice::mul_long_element_checked(left, right).unwrap().into_inner();
+        #[cfg(not(debug_assertions))]
+        let out = BitSlice::mul_long_element_wrapping(left, right).into_inner();
+        U(out)
     }
 }
 
@@ -310,7 +316,10 @@ impl<const N: usize> Shr<usize> for U<N> {
     type Output = Self;
 
     fn shr(self, rhs: usize) -> Self::Output {
-        todo!()
+        #[cfg(debug_assertions)]
+        return U(BitSlice::shr_wrap_and_mask_checked(BitSlice::new(self.0), rhs).unwrap().into_inner());
+        #[cfg(not(debug_assertions))]
+        return U(BitSlice::shr_wrap_and_mask_wrapping(BitSlice::new(self.0), rhs).into_inner());
     }
 }
 

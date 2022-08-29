@@ -29,7 +29,7 @@ where
     pub fn shr_bitwise(left: BitSlice<S, I>, right: usize) -> OwnedSlice<I> {
         let mut out = BitSlice::new(vec![I::zero(); left.len()]);
         for idx in (0..=left.bit_len()).rev() {
-            let new = left.get_bit(idx);
+            let new = left.get_bit_opt(idx).unwrap_or(false);
             if let Some(idx) = idx.checked_sub(right) {
                 out.set_bit_ignore(idx, new);
             }

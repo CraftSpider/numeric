@@ -360,6 +360,21 @@ mod tests {
     }
 
     #[test]
+    fn test_mul() {
+        let slice1 = BitSlice::<&[u8], _>::new(&[0b00000001]);
+        let slice2 = BitSlice::<&[u8], _>::new(&[0b00000001]);
+
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice1.clone(), slice2.clone()).inner(), &[0b00000001]);
+        assert_eq!(BitSlice::mul_long_element(slice1.clone(), slice2.clone()).inner(), &[0b00000001]);
+
+        let slice3 = BitSlice::<&[u8], _>::new(&[0b10]);
+        let slice4 = BitSlice::<&[u8], _>::new(&[0b10]);
+
+        assert_eq!(BitSlice::add_shift_mul_bitwise(slice3.clone(), slice4.clone()).inner(), &[0b00000100]);
+        assert_eq!(BitSlice::mul_long_element(slice3.clone(), slice4.clone()).inner(), &[0b00000100]);
+    }
+
+    #[test]
     fn test_div() {
         let slice1 = BitSlice::<&[u8], _>::new(&[0b10]);
         let slice2 = BitSlice::<&[u8], _>::new(&[0b01]);
@@ -440,5 +455,41 @@ mod tests {
         let slice = BitSlice::<&mut [u16], _>::new(val);
         let res = BitSlice::shl_wrap_and_mask_wrapping(slice, 33);
         assert_eq!(res.inner(), &[0b0101010101010100, 0b0101010101010101]);
+    }
+
+    #[test]
+    fn test_shr() {
+        let slice = BitSlice::<&[u16], _>::new(&[0b1010101010101010, 0b1010101010101010]);
+        let res = BitSlice::shr_bitwise(slice.clone(), 1);
+        assert_eq!(res.inner(), &[0b0101010101010101, 0b0101010101010101]);
+
+        let res = BitSlice::shr_wrap_and_mask(slice, 1);
+        assert_eq!(res.inner(), &[0b0101010101010101, 0b0101010101010101]);
+    }
+
+    #[test]
+    fn test_checked_shr() {
+        let val = &mut [0b1010101010101010, 0b1010101010101010];
+        let slice = BitSlice::<&mut [u16], _>::new(val);
+        let res = BitSlice::shr_wrap_and_mask_checked(slice, 1);
+        assert_eq!(res.map(|s| s.into_inner()), Some(&mut [0b0101010101010101u16, 0b0101010101010101] as &mut [_]));
+
+        let val = &mut [0b1010101010101010, 0b1010101010101010];
+        let slice = BitSlice::<&mut [u16], _>::new(val);
+        let res = BitSlice::shr_wrap_and_mask_checked(slice, 33);
+        assert_eq!(res, None);
+    }
+
+    #[test]
+    fn test_wrapping_shr() {
+        let val = &mut [0b1010101010101010, 0b1010101010101010];
+        let slice = BitSlice::<&mut [u16], _>::new(val);
+        let res = BitSlice::shr_wrap_and_mask_wrapping(slice, 1);
+        assert_eq!(res.inner(), &[0b0101010101010101, 0b0101010101010101]);
+
+        let val = &mut [0b1010101010101010, 0b1010101010101010];
+        let slice = BitSlice::<&mut [u16], _>::new(val);
+        let res = BitSlice::shr_wrap_and_mask_wrapping(slice, 33);
+        assert_eq!(res.inner(), &[0b0101010101010101, 0b0101010101010101]);
     }
 }

@@ -1,97 +1,144 @@
+//! Implementation of a numeric type that represents real values as whole fractions.
+
+#![allow(unused_variables)]
+
 use std::cmp::Ordering;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
-use num_traits::{Num, Bounded, Zero, One, NumCast, ToPrimitive};
+use num_traits::{Bounded, Num, NumCast, One, ToPrimitive, Zero};
 use num_traits::real::Real;
 use crate::traits::Integral;
 
+/// A real value represented as a whole fraction. With a bounded
+/// backing type, this type can represent all whole values from the backing's maximum to minimum,
+/// half step values from half maximum to half minimum, etc.
 #[derive(Copy, Clone)]
-pub struct Fixed<T>(T);
+pub struct Decimal<T>(T, T);
 
-impl<T> PartialEq for Fixed<T> {
-    fn eq(&self, other: &Self) -> bool {
+impl<T: Integral> Decimal<T> {
+    /// Create a new decimal with the default value - zero
+    #[must_use]
+    pub fn new() -> Decimal<T> {
+        Decimal(T::zero(), T::one())
+    }
+
+    /// Create a new decimal from a numerator and denominator
+    #[must_use]
+    pub fn from_num_denom(numerator: T, denominator: T) -> Decimal<T> {
+        Decimal(numerator, denominator).reduce()
+    }
+
+    #[must_use]
+    fn reduce(self) -> Decimal<T> {
         todo!()
+    }
+
+    /// Convert this value into a numerator/denominator pair
+    pub fn into_num_denom(self) -> (T, T) {
+        (self.0, self.1)
     }
 }
 
-impl<T: Eq> Eq for Fixed<T> {}
+impl<T: Integral> Default for Decimal<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-impl<T> PartialOrd for Fixed<T> {
+impl<T: Integral> PartialEq for Decimal<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
+    }
+}
+
+impl<T: Integral + Eq> Eq for Decimal<T> {}
+
+impl<T: Integral> PartialOrd for Decimal<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         todo!()
     }
 }
 
-impl<T: Ord> Ord for Fixed<T> {
+impl<T: Integral + Ord> Ord for Decimal<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         todo!()
     }
 }
 
-impl<T> Add for Fixed<T> {
-    type Output = Fixed<T>;
+impl<T: Integral> Add for Decimal<T> {
+    type Output = Decimal<T>;
 
     fn add(self, rhs: Self) -> Self::Output {
         todo!()
     }
 }
 
-impl<T> Sub for Fixed<T> {
-    type Output = Fixed<T>;
+impl<T: Integral> Sub for Decimal<T> {
+    type Output = Decimal<T>;
 
     fn sub(self, rhs: Self) -> Self::Output {
         todo!()
     }
 }
 
-impl<T> Mul for Fixed<T> {
-    type Output = Fixed<T>;
+impl<T: Integral> Mul for Decimal<T> {
+    type Output = Decimal<T>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         todo!()
     }
 }
 
-impl<T> Div for Fixed<T> {
-    type Output = Fixed<T>;
+impl<T: Integral> Div for Decimal<T> {
+    type Output = Decimal<T>;
 
     fn div(self, rhs: Self) -> Self::Output {
         todo!()
     }
 }
 
-impl<T> Rem for Fixed<T> {
-    type Output = Fixed<T>;
+impl<T: Integral> Rem for Decimal<T> {
+    type Output = Decimal<T>;
 
     fn rem(self, rhs: Self) -> Self::Output {
         todo!()
     }
 }
 
-impl<T: Neg<Output = T>> Neg for Fixed<T> {
-    type Output = Fixed<T>;
+impl<T: Integral + Neg<Output = T>> Neg for Decimal<T> {
+    type Output = Decimal<T>;
 
     fn neg(self) -> Self::Output {
-        Fixed(-self.0)
+        Decimal(-self.0, self.1)
     }
 }
 
-impl<T> Zero for Fixed<T> {
+impl<T: Integral> Zero for Decimal<T> {
     fn zero() -> Self {
-        todo!()
+        Decimal::new()
     }
 
     fn is_zero(&self) -> bool {
-        todo!()
+        *self == Decimal::new()
     }
 }
 
-impl<T> One for Fixed<T> {
+impl<T: Integral> One for Decimal<T> {
     fn one() -> Self {
         todo!()
     }
 }
 
-impl<T> Num for Fixed<T> {
+impl<T: Integral + Bounded> Bounded for Decimal<T> {
+    fn min_value() -> Self {
+        Decimal(T::min_value(), T::one())
+    }
+
+    fn max_value() -> Self {
+        Decimal(T::max_value(), T::one())
+    }
+}
+
+impl<T: Integral> Num for Decimal<T> {
     type FromStrRadixErr = ();
 
     fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
@@ -99,7 +146,7 @@ impl<T> Num for Fixed<T> {
     }
 }
 
-impl<T> ToPrimitive for Fixed<T> {
+impl<T: Integral> ToPrimitive for Decimal<T> {
     fn to_i64(&self) -> Option<i64> {
         todo!()
     }
@@ -109,37 +156,27 @@ impl<T> ToPrimitive for Fixed<T> {
     }
 }
 
-impl<T> NumCast for Fixed<T> {
+impl<T: Integral> NumCast for Decimal<T> {
     fn from<U: ToPrimitive>(n: U) -> Option<Self> {
         todo!()
     }
 }
 
-impl<T> Bounded for Fixed<T> {
+impl<T: Integral + Bounded + Neg<Output = T> + Copy> Real for Decimal<T> {
     fn min_value() -> Self {
-        todo!()
-    }
-
-    fn max_value() -> Self {
-        todo!()
-    }
-}
-
-impl<T: Copy + Neg<Output = T>> Real for Fixed<T> {
-    fn min_value() -> Self {
-        todo!()
+        <Self as Bounded>::min_value()
     }
 
     fn min_positive_value() -> Self {
-        todo!()
+        Decimal(T::one(), T::max_value())
     }
 
     fn epsilon() -> Self {
-        todo!()
+        Decimal(T::one(), T::max_value())
     }
 
     fn max_value() -> Self {
-        todo!()
+        <Self as Bounded>::max_value()
     }
 
     fn floor(self) -> Self {

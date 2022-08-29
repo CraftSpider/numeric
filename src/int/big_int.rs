@@ -353,7 +353,7 @@ impl_op!(sub(self, rhs) => {
 
 impl_op!(mul(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        BitSlice::add_shift_mul_bitwise(this, other)
+        BitSlice::mul_long_element(this, other)
     });
 
     BigInt::new_slice(&out.into_inner(), self.is_negative() != rhs.is_negative())
@@ -382,7 +382,7 @@ impl_op!(shl(self, rhs) => {
 
 impl_op!(shr(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, _| {
-        BitSlice::shr_bitwise(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported")).into_inner()
+        BitSlice::shr_wrap_and_mask(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported")).into_inner()
     });
     BigInt::new_slice(&out, self.is_negative())
 });

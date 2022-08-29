@@ -1,12 +1,13 @@
 //! Crate for implementations of numeric types - `BigInt`, `Decimal`, etc.
 
 #![feature(array_zip)]
+#![feature(array_methods)]
 
 #![cfg_attr(feature = "specialize", feature(min_specialization))]
 #![cfg_attr(feature = "__bench_priv", allow(unused))]
 
 #![warn(
-    missing_docs,
+    // missing_docs,
     elided_lifetimes_in_paths,
     explicit_outlives_requirements,
     missing_abi,
@@ -27,11 +28,38 @@
 mod macros;
 mod intern;
 bench_public! { mod utils; }
+
+/// Collection of various integer type implementations
+pub mod int {
+    pub mod big_int;
+    pub mod u;
+    pub mod i;
+
+    pub use big_int::BigInt;
+    pub use u::U;
+    pub use i::I;
+}
+
+/// Collection of various scalar 'real' value type implementation
+pub mod real {
+    pub mod decimal;
+    pub mod fixed;
+    pub mod f;
+
+    pub use decimal::Decimal;
+    pub use fixed::Fixed;
+    pub use f::F;
+}
+
+/// Collection of various mathematical compound type implementations - complex numbers, matrices,
+/// etc
+pub mod compound {
+    pub mod complex;
+    pub mod matrix;
+    pub mod vector;
+    pub mod bivec;
+    pub mod rotor;
+}
+
 pub mod traits;
 pub mod bit_slice;
-pub mod big_int;
-pub mod decimal;
-pub mod u;
-pub mod i;
-pub mod f;
-pub mod fixed;
