@@ -11,6 +11,11 @@ use num_traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, N
 /// Represented in two's complement, with the highest bit forming the sign bit
 pub struct I<const N: usize>([u8; N]);
 
+static_assert!(core::mem::size_of::<I<2>>() == 2);
+static_assert!(core::mem::size_of::<I<4>>() == 4);
+static_assert!(core::mem::size_of::<I<8>>() == 8);
+static_assert_traits!(I<4>: Send + Sync);
+
 impl<const N: usize> Copy for I<N> {}
 
 impl<const N: usize> Clone for I<N> {

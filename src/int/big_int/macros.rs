@@ -1,4 +1,21 @@
 
+macro_rules! impl_assign_for_int {
+    ($ty:ty) => {
+        impl_assign_for_int!($ty, +, AddAssign, add_assign);
+        impl_assign_for_int!($ty, -, SubAssign, sub_assign);
+        impl_assign_for_int!($ty, *, MulAssign, mul_assign);
+        impl_assign_for_int!($ty, /, DivAssign, div_assign);
+        impl_assign_for_int!($ty, %, RemAssign, rem_assign);
+    };
+    ($ty:ty, $op:tt, $trait:ident, $meth:ident) => {
+        impl core::ops::$trait<$ty> for BigInt {
+            fn $meth(&mut self, other: $ty) {
+                *self = &*self $op BigInt::from(other);
+            }
+        }
+    };
+}
+
 macro_rules! impl_ops_for_int {
     ($ty:ty) => {
         impl_ops_for_int!($ty, +, Add, add);
@@ -37,6 +54,22 @@ macro_rules! impl_for_int {
             }
         }
 
+        impl TryFrom<BigInt> for $signed {
+            type Error = OutOfRangeError;
+
+            fn try_from(bi: BigInt) -> Result<Self, Self::Error> {
+                <$signed as TryFrom<_>>::try_from(&bi)
+            }
+        }
+
+        impl TryFrom<BigInt> for $unsigned {
+            type Error = OutOfRangeError;
+
+            fn try_from(bi: BigInt) -> Result<Self, Self::Error> {
+                <$unsigned as TryFrom<_>>::try_from(&bi)
+            }
+        }
+
         impl TryFrom<&BigInt> for $signed {
             type Error = OutOfRangeError;
 
@@ -69,7 +102,8 @@ macro_rules! impl_for_int {
                 let other = other.abs();
 
                 self.with_slice(|this| {
-                    this == BitSlice::<_, usize>::new(int_to_arr(other as $unsigned))
+                    let arr = int_to_arr(other as $unsigned);
+                    this == BitSlice::<_, usize>::new(shrink_slice(&arr))
                 })
             }
         }
@@ -77,7 +111,8 @@ macro_rules! impl_for_int {
         impl PartialEq<$unsigned> for BigInt {
             fn eq(&self, other: &$unsigned) -> bool {
                 self.with_slice(|this| {
-                    this == BitSlice::<_, usize>::new(int_to_arr(*other))
+                    let arr = int_to_arr(*other);
+                    this == BitSlice::<_, usize>::new(shrink_slice(&arr))
                 })
             }
         }
@@ -96,6 +131,8 @@ macro_rules! impl_for_int {
 
         impl_ops_for_int!($signed);
         impl_ops_for_int!($unsigned);
+        impl_assign_for_int!($signed);
+        impl_assign_for_int!($unsigned);
     }
 }
 

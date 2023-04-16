@@ -99,6 +99,9 @@ impl TaggedOffset {
 /// many bytes the running computer can reasonably hold in memory.
 pub struct BigInt(TaggedOffset);
 
+static_assert!(core::mem::size_of::<BigInt>() == core::mem::size_of::<usize>());
+static_assert_traits!(BigInt: Send + Sync);
+
 impl BigInt {
     fn with_slices<R>(left: &BigInt, right: &BigInt, f: impl FnOnce(BitSlice<&[usize], usize>, BitSlice<&[usize], usize>) -> R) -> R {
         left.with_slice(|left| right.with_slice(|right| f(left, right)))
@@ -170,6 +173,24 @@ impl BigInt {
     #[must_use]
     pub fn is_interned(&self) -> bool {
         !self.0.tag().inline()
+    }
+
+    /// Generate an approximation of this value as a float
+    ///
+    /// If the value is large, this may return [`f64::INFINITY`] or [`f64::NEG_INFINITY`].
+    pub fn approx_float(&self) -> f64 {
+        const USIZE_MAX: f64 = usize::MAX as f64;
+        self.with_slice(|vals| {
+            vals.inner()
+                .iter()
+                .copied()
+                .enumerate()
+                .fold(0., |acc, (idx, val)| {
+                    let val = val as f64;
+                    let idx = idx as i32;
+                    acc + val * USIZE_MAX.powi(idx)
+                })
+        })
     }
 }
 
@@ -284,9 +305,13 @@ impl Ord for BigInt {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.0 == other.0 {
             return Ordering::Equal;
+        } else if self.is_negative() && other.is_positive() {
+            return Ordering::Less;
+        } else if self.is_positive() && other.is_negative() {
+            return Ordering::Greater;
         }
 
-        Self::with_slices(self, other, |this, other| {
+        let out = Self::with_slices(self, other, |this, other| {
             if this.len() != other.len() {
                 usize::cmp(&this.len(), &other.len())
             } else {
@@ -301,7 +326,13 @@ impl Ord for BigInt {
                     })
                     .unwrap_or(Ordering::Equal)
             }
-        })
+        });
+
+        if self.is_negative() {
+            out.reverse()
+        } else {
+            out
+        }
     }
 }
 
@@ -361,14 +392,14 @@ impl_op!(mul(self, rhs) => {
 
 impl_op!(div(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        BitSlice::long_div_bitwise(this, other).0.into_inner()
+        BitSlice::div_long_bitwise(this, other).0.into_inner()
     });
     BigInt::new_slice(&out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(rem(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        BitSlice::long_div_bitwise(this, other).1.into_inner()
+        BitSlice::div_long_bitwise(this, other).1.into_inner()
     });
     BigInt::new_slice(&out, self.is_negative() != rhs.is_negative())
 });
@@ -645,11 +676,56 @@ mod tests {
     }
 
     #[test]
+    fn test_rem() {
+        assert_eq!(BigInt::from(1) % BigInt::from(2), BigInt::from(1));
+        assert_eq!(BigInt::from(2) % BigInt::from(2), BigInt::from(0));
+        assert_eq!(BigInt::from(3) % BigInt::from(2), BigInt::from(1));
+        assert_eq!(BigInt::from(4) % BigInt::from(2), BigInt::from(0));
+    }
+
+    #[test]
     fn test_shl() {
         assert_eq!(BigInt::from(1) << BigInt::from(1), BigInt::from(2));
         assert_eq!(BigInt::from(2) << BigInt::from(1), BigInt::from(4));
         assert_eq!(BigInt::from(3) << BigInt::from(1), BigInt::from(6));
 
         assert_eq!(BigInt::from(usize::MAX) << BigInt::from(1), BigInt::from((usize::MAX as u128) * 2));
+    }
+
+    #[test]
+    fn test_eq() {
+        let a = BigInt::from(0);
+        let b = BigInt::from(1);
+
+        let c = BigInt::from(4) % BigInt::from(2);
+
+        assert_ne!(a, b);
+        assert_eq!(a, c);
+
+        assert_eq!(a, 0i32);
+        assert_eq!(b, 1i32);
+
+        assert_ne!(a, 1i32);
+        assert_ne!(b, 0i32);
+    }
+
+    #[test]
+    fn test_cmp() {
+        let a = BigInt::from(0);
+        let b = BigInt::from(1);
+        let c = BigInt::from(-1);
+
+        assert!(a < b);
+        assert!(a > c);
+
+        assert!(b > c);
+        assert!(c < b);
+
+        assert!(a < 1);
+        assert!(a > -1);
+
+        assert!(b > 0);
+
+        assert!(c < 0);
     }
 }

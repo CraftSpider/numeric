@@ -90,10 +90,8 @@ where
                     }
                 }
 
-                if carry != zero {
-                    if left.add_item(idx + right.slice().len(), carry) {
-                        new_overflow = true;
-                    }
+                if carry != zero && left.add_item(idx + right.slice().len(), carry) {
+                    new_overflow = true;
                 }
 
                 if new_overflow || overflow {

@@ -113,6 +113,61 @@ pub fn bench_sub(c: &mut Criterion) {
             });
 }
 
+pub fn bench_div(c: &mut Criterion) {
+    let one = BitSlice::new([1usize]);
+    let max = BitSlice::new([usize::MAX]);
+
+    c.benchmark_group("BitSlice::div*")
+        .bench_with_input(
+            BenchmarkId::new("div_bitwise", "[1], [1]"),
+            &one,
+            |b, one| {
+                b.iter(|| BitSlice::div_long_bitwise(black_box(one.clone()), black_box(one.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_bitwise", "[usize::MAX], [usize::MAX]"),
+            &max,
+            |b, max| {
+                b.iter(|| BitSlice::div_long_bitwise(black_box(max.clone()), black_box(max.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_element", "[1], [1]"),
+            &one,
+            |b, one| {
+                b.iter(|| BitSlice::div_long_element(black_box(one.clone()), black_box(one.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_element", "[usize::MAX], [usize::MAX]"),
+            &max,
+            |b, max| {
+                b.iter(|| BitSlice::div_long_element(black_box(max.clone()), black_box(max.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_element_checked", "[1], [1]"),
+            &one,
+            |b, one| {
+                b.iter(|| BitSlice::div_long_element_checked(black_box(one.clone()), black_box(one.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_element_checked", "[usize::MAX], [usize::MAX]"),
+            &max,
+            |b, max| {
+                b.iter(|| BitSlice::div_long_element_checked(black_box(max.clone()), black_box(max.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_element_wrapping", "[1], [1]"),
+            &one,
+            |b, one| {
+                b.iter(|| BitSlice::div_long_element_wrapping(black_box(one.clone()), black_box(one.clone())))
+            })
+        .bench_with_input(
+            BenchmarkId::new("div_element_wrapping", "[usize::MAX], [usize::MAX]"),
+            &max,
+            |b, max| {
+                b.iter(|| BitSlice::div_long_element_wrapping(black_box(max.clone()), black_box(max.clone())))
+            });
+}
+
 pub fn bench_shl(c: &mut Criterion) {
     let one = BitSlice::new([1usize]);
     let max = BitSlice::new([usize::MAX]);
@@ -171,6 +226,6 @@ pub fn bench_shl(c: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = bench_shl, bench_add, bench_sub
+    targets = bench_shl, bench_add, bench_sub, bench_div,
 );
 criterion_main!(benches);

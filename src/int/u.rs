@@ -10,6 +10,11 @@ use crate::bit_slice::BitSlice;
 /// N-byte bounded, unsigned integer. `U<1> == u8`, `U<16> == u128`, etc.
 pub struct U<const N: usize>([u8; N]);
 
+static_assert!(core::mem::size_of::<U<2>>() == 2);
+static_assert!(core::mem::size_of::<U<4>>() == 4);
+static_assert!(core::mem::size_of::<U<8>>() == 8);
+static_assert_traits!(U<4>: Send + Sync);
+
 impl<const N: usize> U<N> {
     /// Create a new instance containing the default value (0)
     #[inline]

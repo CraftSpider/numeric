@@ -11,7 +11,7 @@ specialize = []
 __bench_priv = []
 
 [dependencies]
-num-traits = "0.2"
+num-traits = "^0.2.13"
 once_cell = "1.13"
 
 [dev-dependencies]

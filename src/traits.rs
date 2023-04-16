@@ -11,28 +11,37 @@ pub trait Integral: Num + Shl<usize, Output = Self> + Shr<usize, Output = Self> 
 impl<T: PrimInt + Shl<usize, Output = Self> + Shr<usize, Output = Self>> Integral for T {}
 impl Integral for BigInt {}
 
-pub trait Real: Num {
-    fn sqrt(&self) -> Self;
-    fn logn(&self, base: Self) -> Self;
+pub trait Real: Num + Clone + PartialOrd {
+    fn pow(self, base: Self) -> Self;
+    fn sqrt(self) -> Self;
+    fn logn(self, base: Self) -> Self;
 }
 
 impl Real for f32 {
-    fn sqrt(&self) -> Self {
-        f32::sqrt(*self)
+    fn pow(self, base: f32) -> Self {
+        f32::powf(self, base)
     }
 
-    fn logn(&self, base: Self) -> Self {
-        f32::log(*self, base)
+    fn sqrt(self) -> Self {
+        f32::sqrt(self)
+    }
+
+    fn logn(self, base: Self) -> Self {
+        f32::log(self, base)
     }
 }
 
 impl Real for f64 {
-    fn sqrt(&self) -> Self {
-        f64::sqrt(*self)
+    fn pow(self, base: Self) -> Self {
+        f64::powf(self, base)
     }
 
-    fn logn(&self, base: Self) -> Self {
-        f64::log(*self, base)
+    fn sqrt(self) -> Self {
+        f64::sqrt(self)
+    }
+
+    fn logn(self, base: Self) -> Self {
+        f64::log(self, base)
     }
 }
 

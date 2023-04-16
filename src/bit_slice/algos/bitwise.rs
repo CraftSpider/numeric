@@ -146,7 +146,7 @@ where
     }
 
     /// Divide two slices, implemented as bitwise long division
-    pub fn long_div_bitwise<T>(num: BitSlice<S, I>, div: BitSlice<T, I>) -> (OwnedSlice<I>, OwnedSlice<I>)
+    pub fn div_long_bitwise<T>(num: BitSlice<S, I>, div: BitSlice<T, I>) -> (OwnedSlice<I>, OwnedSlice<I>)
     where
         OwnedSlice<I>: PartialOrd<BitSlice<T, I>>,
         T: Clone + AsRef<[I]>,

@@ -51,7 +51,7 @@ where
 impl<S, I> BitSlice<S, I>
 where
     S: AsRef<[I]> + AsMut<[I]>,
-    I: PrimInt + core::fmt::Binary,
+    I: PrimInt,
 {
     fn inner_shr_wrap_and_mask(mut left: BitSlice<S, I>, right: usize) -> BitSlice<S, I> {
         let bit_size = mem::size_of::<I>() * 8;
@@ -61,7 +61,7 @@ where
         let elem_mask: I = !(I::max_value() >> elem_shift);
         let zero = I::zero();
 
-        dbg!(arr_shift, elem_shift);
+        // dbg!(arr_shift, elem_shift);
 
         (0..left.slice().len())
             .for_each(|idx| {
@@ -70,14 +70,14 @@ where
                 let high = val << inverse_elem_shift;
                 let low = val >> elem_shift;
 
-                println!("Idx: {:?}", idx);
-                println!("Val: {:b}", val);
-                println!("High: {:b}, Low: {:b}", high, low);
+                // println!("Idx: {:?}", idx);
+                // println!("Val: {:b}", val);
+                // println!("High: {:b}, Low: {:b}", high, low);
 
                 if let Some(idx) = usize::checked_sub(idx, arr_shift) {
                     let high = (left.get_opt(idx).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
 
-                    println!("New High: {:b}", high);
+                    // println!("New High: {:b}", high);
 
                     left.set_ignore(
                         idx,
@@ -87,7 +87,7 @@ where
 
                 let low = (left.get_opt(idx + 1 - arr_shift).unwrap_or(zero) & elem_mask) | (low & !elem_mask);
 
-                println!("New Low: {:b}", low);
+                // println!("New Low: {:b}", low);
 
                 left.set_ignore(
                     idx + 1 - arr_shift,

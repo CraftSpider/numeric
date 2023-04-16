@@ -51,6 +51,12 @@ where
         self.0.as_ref()
     }
 
+    /// Get a `BitSlice<&[T]>` of this value
+    #[must_use]
+    pub fn as_slice(&self) -> BitSlice<&[I], I> {
+        BitSlice::new(self.0.as_ref())
+    }
+
     /// Get the length of this `BitSlice` in terms of `S`
     pub fn len(&self) -> usize {
         self.slice().len()
@@ -75,6 +81,12 @@ where
     #[inline(always)]
     pub fn slice_mut(&mut self) -> &mut [I] {
         self.0.as_mut()
+    }
+
+    /// Get a `BitSlice<&mut [T]>` of this value
+    #[must_use]
+    pub fn as_mut_slice(&mut self) -> BitSlice<&mut [I], I> {
+        BitSlice::new(self.0.as_mut())
     }
 }
 
@@ -188,20 +200,6 @@ where
     }
 }
 
-impl<T> BitSlice<Vec<T>, T> {
-    /// Get a `BitSlice<&[T]>` of this value
-    #[must_use]
-    pub fn as_slice(&self) -> BitSlice<&[T], T> {
-        BitSlice::new(&self.0)
-    }
-
-    /// Get a `BitSlice<&mut [T]>` of this value
-    #[must_use]
-    pub fn as_mut_slice(&mut self) -> BitSlice<&mut [T], T> {
-        BitSlice::new(&mut self.0)
-    }
-}
-
 impl<T> BitSlice<Vec<T>, T>
 where
     T: PrimInt,
@@ -232,14 +230,6 @@ where
         if val {
             *item = *item | (T::one() << bit);
         }
-    }
-}
-
-impl<T> BitSlice<&mut [T], T> {
-    /// Get a `BitSlice<&[T]>` of this value
-    #[must_use]
-    pub fn as_slice(&self) -> BitSlice<&[T], T> {
-        BitSlice::new(self.0)
     }
 }
 
@@ -379,22 +369,45 @@ mod tests {
         let slice1 = BitSlice::<&[u8], _>::new(&[0b10]);
         let slice2 = BitSlice::<&[u8], _>::new(&[0b01]);
 
-        assert_eq!(BitSlice::long_div_bitwise(slice1, slice2).0.inner(), &[0b10]);
+        assert_eq!(BitSlice::div_long_bitwise(slice1, slice2).0.inner(), &[0b10]);
 
         let slice3 = BitSlice::<&[u8], _>::new(&[0b10]);
         let slice4 = BitSlice::<&[u8], _>::new(&[0b10]);
 
-        assert_eq!(BitSlice::long_div_bitwise(slice3, slice4).0.inner(), &[0b01]);
+        assert_eq!(BitSlice::div_long_bitwise(slice3, slice4).0.inner(), &[0b01]);
 
         let slice5 = BitSlice::<&[u8], _>::new(&[0b00000000, 0b1]);
         let slice6 = BitSlice::<&[u8], _>::new(&[0b00000010]);
 
-        assert_eq!(BitSlice::long_div_bitwise(slice5, slice6).0.inner(), &[0b10000000, 0b0]);
+        assert_eq!(BitSlice::div_long_bitwise(slice5, slice6).0.inner(), &[0b10000000, 0b0]);
 
         let slice7 = BitSlice::<&[u8], _>::new(&[0b0, 0b0, 0b0, 0b1]);
         let slice8 = BitSlice::<&[u8], _>::new(&[0b10]);
 
-        assert_eq!(BitSlice::long_div_bitwise(slice7, slice8).0.inner(), &[0b0, 0b0, 0b10000000, 0b0]);
+        assert_eq!(BitSlice::div_long_bitwise(slice7, slice8).0.inner(), &[0b0, 0b0, 0b10000000, 0b0]);
+    }
+
+    #[test]
+    fn test_div_wrapping() {
+        let slice1 = BitSlice::<[u8; 1], _>::new([0b10]);
+        let slice2 = BitSlice::<&[u8], _>::new(&[0b01]);
+
+        assert_eq!(BitSlice::div_long_element_wrapping(slice1, slice2).inner(), &[0b10]);
+
+        let slice3 = BitSlice::<[u8; 1], _>::new([0b10]);
+        let slice4 = BitSlice::<&[u8], _>::new(&[0b10]);
+
+        assert_eq!(BitSlice::div_long_element_wrapping(slice3, slice4).inner(), &[0b01]);
+
+        let slice5 = BitSlice::<[u8; 2], _>::new([0b00000000, 0b1]);
+        let slice6 = BitSlice::<&[u8], _>::new(&[0b00000010]);
+
+        assert_eq!(BitSlice::div_long_element_wrapping(slice5, slice6).inner(), &[0b10000000, 0b0]);
+
+        let slice7 = BitSlice::<[u8; 4], _>::new([0b0, 0b0, 0b0, 0b1]);
+        let slice8 = BitSlice::<&[u8], _>::new(&[0b10]);
+
+        assert_eq!(BitSlice::div_long_element_wrapping(slice7, slice8).inner(), &[0b0, 0b0, 0b10000000, 0b0]);
     }
 
     #[test]
@@ -404,7 +417,7 @@ mod tests {
             let slice1 = BitSlice::<&[u8], _>::new(slice);
             let slice2 = BitSlice::<&[u8], _>::new(&[0b10]);
 
-            assert_eq!(BitSlice::long_div_bitwise(slice1, slice2).1.inner(), &[i % 2]);
+            assert_eq!(BitSlice::div_long_bitwise(slice1, slice2).1.inner(), &[i % 2]);
         }
 
         for i in 0..6 {
@@ -412,13 +425,13 @@ mod tests {
             let slice3 = BitSlice::<&[u8], _>::new(slice);
             let slice4 = BitSlice::<&[u8], _>::new(&[0b11]);
 
-            assert_eq!(BitSlice::long_div_bitwise(slice3, slice4).1.inner(), &[i % 3]);
+            assert_eq!(BitSlice::div_long_bitwise(slice3, slice4).1.inner(), &[i % 3]);
         }
 
         let slice5 = BitSlice::<&[u8], _>::new(&[0b00000001, 0b111]);
         let slice6 = BitSlice::<&[u8], _>::new(&[0b00000010]);
 
-        assert_eq!(BitSlice::long_div_bitwise(slice5, slice6).1.inner(), &[0b01]);
+        assert_eq!(BitSlice::div_long_bitwise(slice5, slice6).1.inner(), &[0b01]);
     }
 
     #[test]
