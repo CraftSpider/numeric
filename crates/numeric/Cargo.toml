@@ -1,0 +1,35 @@
+
+[package]
+name = "numeric"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+specialize = []
+# Not for consumers - internal feature used by benchmarks to access normally private modules
+__bench_priv = []
+
+[dependencies]
+numeric-traits = { path = "../numeric-traits" }
+num-traits = "^0.2.13"
+once_cell = "1.13"
+
+[dev-dependencies]
+criterion = { version = "0.4", features = ["html_reports"] }
+#pprof = { version = "0.10", features = ["flamegraph", "criterion"] }
+
+[[bench]]
+name = "big_int"
+harness = false
+
+[[bench]]
+name = "bit_slice"
+harness = false
+
+[[bench]]
+name = "utils"
+harness = false
+required-features = ["__bench_priv"]
+
