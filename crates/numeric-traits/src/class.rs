@@ -12,10 +12,10 @@ pub trait Numeric:
 }
 
 /// Trait for types that are unsigned. These types can only represent non-negative values
-pub trait Unsigned: Numeric {}
+pub trait Unsigned {}
 
 /// Trait for types that are signed. These types can represent both positive and negative values
-pub trait Signed: Numeric + Neg<Output = Self> {
+pub trait Signed: Neg<Output = Self> {
     /// Get the absolute value of this number. This is the positive form of the current value,
     /// or the distance of the value from 0
     fn abs(self) -> Self;
@@ -58,6 +58,28 @@ pub trait Real: Numeric {
     }
 }
 
+pub enum FloatClass {
+    Nan,
+    Infinite,
+    Zero,
+    Subnormal,
+    Normal,
+}
+
+/// Trait for types that are floating point - real numbers that specifically use the float format,
+/// and thus have `NaN` and `Inf` values.
+pub trait Float: Real {
+    fn nan() -> Self;
+    fn inf() -> Self;
+    fn neg_inf() -> Self;
+    fn epsilon() -> Self;
+
+    fn is_nan(&self) -> bool;
+    fn is_inf(&self) -> bool;
+    fn is_normal(&self) -> bool;
+    fn classify(&self) -> FloatClass;
+}
+
 /// Trait for types that are 'bounded' - they represent only a finite range of numbers, and thus
 /// have a minimum and maximum representable value.
 pub trait Bounded {
@@ -76,4 +98,9 @@ pub trait BoundedSigned: Bounded + Signed {
 
     /// The maximum value representable by this type that is less than 0
     fn max_negative() -> Self;
+}
+
+pub trait BoundedBit: Bounded {
+    fn leading_zeros(self) -> Self;
+    fn trailing_zeros(self) -> Self;
 }

@@ -1,6 +1,5 @@
-
 [package]
-name = "numeric"
+name = "numeric-reals"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,6 +7,3 @@ edition = "2021"
 
 [dependencies]
 numeric-traits = { path = "../numeric-traits" }
-numeric-ints = { path = "../numeric-ints" }
-numeric-reals = { path = "../numeric-reals" }
-numeric-compounds = { path = "../numeric-compounds" }

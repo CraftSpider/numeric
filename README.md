@@ -3,6 +3,7 @@
 
 - Replace TaggedOffset with a TaggedPtr into the linked list
 - Use fetch_add in interner adder to prevent race conditions
+- 
 
 # Even More Number Types
 

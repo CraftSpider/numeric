@@ -1,6 +1,13 @@
 [workspace]
 members = [
     "crates/numeric",
+    "crates/numeric-utils",
     "crates/numeric-traits",
-    "crates/numeric-types",
+    "crates/numeric-bits",
+    "crates/numeric-ints",
+    "crates/numeric-reals",
+    "crates/numeric-compounds",
 ]
+
+[profile.bench]
+debug = true
