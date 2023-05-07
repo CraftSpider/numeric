@@ -60,8 +60,29 @@ macro_rules! truncating_as {
     };
 }
 
-macro_rules! impl_int {
+macro_rules! checked_shift {
+    (usize) => {};
     ($ty:ty) => {
+        impl crate::ops::checked::CheckedShl<usize> for $ty {
+            type Output = $ty;
+
+            fn checked_shl(self, rhs: usize) -> Option<Self> {
+                <$ty>::checked_shl(self, rhs as u32)
+            }
+        }
+
+        impl crate::ops::checked::CheckedShr<usize> for $ty {
+            type Output = $ty;
+
+            fn checked_shr(self, rhs: usize) -> Option<Self> {
+                <$ty>::checked_shr(self, rhs as u32)
+            }
+        }
+    };
+}
+
+macro_rules! impl_int {
+    ($ty:tt) => {
         impl crate::class::Numeric for $ty {}
 
         impl crate::class::Integral for $ty {}
@@ -183,6 +204,56 @@ macro_rules! impl_int {
                 <$ty>::overflowing_mul(self, rhs)
             }
         }
+
+        impl crate::ops::checked::CheckedAdd for $ty {
+            type Output = $ty;
+
+            fn checked_add(self, rhs: Self) -> Option<Self> {
+                <$ty>::checked_add(self, rhs)
+            }
+        }
+
+        impl crate::ops::checked::CheckedSub for $ty {
+            type Output = $ty;
+
+            fn checked_sub(self, rhs: Self) -> Option<Self> {
+                <$ty>::checked_sub(self, rhs)
+            }
+        }
+
+        impl crate::ops::checked::CheckedMul for $ty {
+            type Output = $ty;
+
+            fn checked_mul(self, rhs: Self) -> Option<Self> {
+                <$ty>::checked_mul(self, rhs)
+            }
+        }
+
+        impl crate::ops::checked::CheckedDiv for $ty {
+            type Output = $ty;
+
+            fn checked_div(self, rhs: Self) -> Option<Self> {
+                <$ty>::checked_div(self, rhs)
+            }
+        }
+
+        impl crate::ops::checked::CheckedShl for $ty {
+            type Output = $ty;
+
+            fn checked_shl(self, rhs: Self) -> Option<Self> {
+                <$ty>::checked_shl(self, rhs as u32)
+            }
+        }
+
+        impl crate::ops::checked::CheckedShr for $ty {
+            type Output = $ty;
+
+            fn checked_shr(self, rhs: Self) -> Option<Self> {
+                <$ty>::checked_shr(self, rhs as u32)
+            }
+        }
+
+        checked_shift!($ty);
 
         truncating_as!($ty, u8);
         truncating_as!($ty, u16);

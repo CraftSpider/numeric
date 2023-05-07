@@ -41,6 +41,8 @@ macro_rules! impl_ops_for_int {
 
 macro_rules! impl_for_int {
     ($signed:ty, $unsigned:ty) => {
+        // From/TryFrom
+
         impl From<$signed> for BigInt {
             fn from(val: $signed) -> Self {
                 let neg = val.is_negative();
@@ -74,10 +76,12 @@ macro_rules! impl_for_int {
             type Error = OutOfRangeError;
 
             fn try_from(bi: &BigInt) -> Result<Self, Self::Error> {
-                if bi > &BigInt::from(Self::MAX) || bi < &BigInt::from(Self::MIN) {
-                    Err(OutOfRangeError)
+                if bi > &BigInt::from(Self::MAX) {
+                    Err(OutOfRangeError::above())
+                } else if  bi < &BigInt::from(Self::MIN) {
+                    Err(OutOfRangeError::below())
                 } else {
-                    bi.with_slice(|s| arr_to_int(s)).ok_or(OutOfRangeError)
+                    bi.with_slice(|s| arr_to_int(s)).ok_or_else(|| OutOfRangeError::above())
                 }
             }
         }
@@ -86,13 +90,64 @@ macro_rules! impl_for_int {
             type Error = OutOfRangeError;
 
             fn try_from(bi: &BigInt) -> Result<Self, Self::Error> {
-                if bi > &BigInt::from(Self::MAX) || bi < &BigInt::from(Self::MIN) {
-                    Err(OutOfRangeError)
+                if bi > &BigInt::from(Self::MAX) {
+                    Err(OutOfRangeError::above())
+                } else if  bi < &BigInt::from(Self::MIN) {
+                    Err(OutOfRangeError::below())
                 } else {
-                    bi.with_slice(|s| arr_to_int(s)).ok_or(OutOfRangeError)
+                    bi.with_slice(|s| arr_to_int(s)).ok_or_else(|| OutOfRangeError::above())
                 }
             }
         }
+
+        // Casts
+
+        impl numeric_traits::cast::FromTruncating<BigInt> for $unsigned {
+            fn truncate(val: BigInt) -> Self {
+                val.with_slice(|s| arr_to_int(s)).unwrap_or(<$unsigned>::MAX)
+            }
+        }
+
+        impl numeric_traits::cast::FromTruncating<BigInt> for $signed {
+            fn truncate(val: BigInt) -> Self {
+                val.with_slice(|s| arr_to_int(s)).unwrap_or(<$signed>::MAX) *
+                    if val.is_negative() { -1 } else { 1 }
+            }
+        }
+
+        impl numeric_traits::cast::FromChecked<BigInt> for $unsigned {
+            fn from_checked(val: BigInt) -> Option<Self> {
+                val.try_into().ok()
+            }
+        }
+
+        impl numeric_traits::cast::FromChecked<BigInt> for $signed {
+            fn from_checked(val: BigInt) -> Option<Self> {
+                val.try_into().ok()
+            }
+        }
+
+        impl numeric_traits::cast::FromSaturating<BigInt> for $unsigned {
+            fn saturate(val: BigInt) -> Self {
+                match val.try_into() {
+                    Ok(val) => val,
+                    Err(OutOfRangeError(Side::Above)) => Self::MAX,
+                    Err(OutOfRangeError(Side::Below)) => Self::MIN,
+                }
+            }
+        }
+
+        impl numeric_traits::cast::FromSaturating<BigInt> for $signed {
+            fn saturate(val: BigInt) -> Self {
+                match val.try_into() {
+                    Ok(val) => val,
+                    Err(OutOfRangeError(Side::Above)) => Self::MAX,
+                    Err(OutOfRangeError(Side::Below)) => Self::MIN,
+                }
+            }
+        }
+
+        // Comparison
 
         impl PartialEq<$signed> for BigInt {
             fn eq(&self, other: &$signed) -> bool {
@@ -128,6 +183,8 @@ macro_rules! impl_for_int {
                 Some(BigInt::cmp(self, &BigInt::from(*other)))
             }
         }
+
+        // Operations
 
         impl_ops_for_int!($signed);
         impl_ops_for_int!($unsigned);

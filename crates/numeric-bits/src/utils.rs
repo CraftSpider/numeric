@@ -1,6 +1,7 @@
 use std::ops::Deref;
 use numeric_traits::class::{Unsigned, Bounded, Integral};
 use numeric_traits::cast::{FromAll, FromChecked};
+use numeric_traits::ops::checked::CheckedShl;
 use numeric_traits::ops::core::NumAssignOps;
 
 pub trait IntSlice<T>: Deref<Target = [T]> {
@@ -79,11 +80,12 @@ where
     out
 }
 
-pub fn arr_to_int<T: Integral + Copy, U: Integral + NumAssignOps + FromChecked<T> + Copy>(arr: &[T]) -> Option<U> {
+pub fn arr_to_int<T: Integral + Copy, U: Integral + CheckedShl<usize, Output = U> + NumAssignOps + FromChecked<T> + Copy>(arr: &[T]) -> Option<U> {
+    let bit_len = core::mem::size_of::<T>() * 8;
     let mut out = U::zero();
     for (idx, &i) in arr.iter().enumerate() {
         let t = U::from_checked(i)?;
-        out += t << (idx * (usize::BITS as usize));
+        out += t.checked_shl(idx * bit_len)?;
     }
     Some(out)
 }
@@ -136,5 +138,8 @@ mod tests {
         assert_eq!(arr_to_int::<usize, u128>(&[0]), Some(0));
         assert_eq!(arr_to_int::<usize, u128>(&[1]), Some(1));
         assert_eq!(arr_to_int::<usize, u128>(&[usize::MAX]), Some(usize::MAX as u128));
+
+        assert_eq!(arr_to_int::<u8, usize>(&[0, 1, 2, 3]), Some(0x03020100));
+        assert_eq!(arr_to_int::<u8, usize>(&[u8::MAX]), Some(255));
     }
 }

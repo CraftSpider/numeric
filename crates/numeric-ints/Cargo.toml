@@ -9,4 +9,3 @@ edition = "2021"
 numeric-traits = { path = "../numeric-traits" }
 numeric-bits = { path = "../numeric-bits" }
 numeric-utils = { path = "../numeric-utils" }
-num-traits = "0.2"

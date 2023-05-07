@@ -5,9 +5,12 @@
 use std::cmp::Ordering;
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
 use numeric_utils::{static_assert, static_assert_traits};
-use num_traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, NumCast, One, PrimInt, Saturating, ToPrimitive, Unsigned, Zero};
+use numeric_traits::class::{Bounded, Numeric, Integral, Unsigned};
+use numeric_traits::identity::{Zero, One};
+use numeric_traits::ops::checked::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
+use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingSub, SaturatingMul};
 use numeric_bits::bit_slice::algos::{ElementAdd, ElementMul, ElementShl, ElementShr, ElementSub};
-use numeric_bits::bit_slice::BitSliceExt;
+use numeric_traits::ops::Pow;
 use numeric_utils::static_iter::{StaticIter, IntoStaticIter};
 
 /// N-byte bounded, unsigned integer. `U<1> == u8`, `U<16> == u128`, etc.
@@ -274,6 +277,22 @@ impl<const N: usize> BitXor for U<N> {
     }
 }
 
+impl<const N: usize> Shl for U<N> {
+    type Output = Self;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
+impl<const N: usize> Shr for U<N> {
+    type Output = Self;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
 impl<const N: usize> Shl<usize> for U<N> {
     type Output = Self;
 
@@ -295,30 +314,6 @@ impl<const N: usize> Shr<usize> for U<N> {
         #[cfg(not(debug_assertions))]
         ElementShr::shr_wrap_and_mask_wrapping(&mut self.0, rhs);
         self
-    }
-}
-
-impl<const N: usize> NumCast for U<N> {
-    fn from<T: ToPrimitive>(n: T) -> Option<Self> {
-        todo!()
-    }
-}
-
-impl<const N: usize> ToPrimitive for U<N> {
-    fn to_i64(&self) -> Option<i64> {
-        todo!()
-    }
-
-    fn to_i128(&self) -> Option<i128> {
-        todo!()
-    }
-
-    fn to_u64(&self) -> Option<u64> {
-        todo!()
-    }
-
-    fn to_u128(&self) -> Option<u128> {
-        todo!()
     }
 }
 
@@ -352,36 +347,66 @@ impl<const N: usize> Ord for U<N> {
     }
 }
 
+impl<const N: usize> Pow for U<N> {
+    type Output = Self;
+
+    fn pow(self, rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
 impl<const N: usize> CheckedAdd for U<N> {
-    fn checked_add(&self, v: &Self) -> Option<Self> {
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self> {
         todo!()
     }
 }
 
 impl<const N: usize> CheckedSub for U<N> {
-    fn checked_sub(&self, v: &Self) -> Option<Self> {
+    type Output = Self;
+
+    fn checked_sub(self, rhs: Self) -> Option<Self> {
         todo!()
     }
 }
 
 impl<const N: usize> CheckedMul for U<N> {
-    fn checked_mul(&self, v: &Self) -> Option<Self> {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self> {
         todo!()
     }
 }
 
 impl<const N: usize> CheckedDiv for U<N> {
-    fn checked_div(&self, v: &Self) -> Option<Self> {
+    type Output = Self;
+
+    fn checked_div(self, rhs: Self) -> Option<Self> {
         todo!()
     }
 }
 
-impl<const N: usize> Saturating for U<N> {
-    fn saturating_add(self, v: Self) -> Self {
+impl<const N: usize> SaturatingAdd for U<N> {
+    type Output = Self;
+
+    fn saturating_add(self, rhs: Self) -> Self {
         todo!()
     }
+}
 
-    fn saturating_sub(self, v: Self) -> Self {
+impl<const N: usize> SaturatingSub for U<N> {
+    type Output = Self;
+
+    fn saturating_sub(self, rhs: Self) -> Self {
+        todo!()
+    }
+}
+
+impl<const N: usize> SaturatingMul for U<N> {
+    type Output = Self;
+
+    fn saturating_mul(self, rhs: Self) -> Self {
         todo!()
     }
 }
@@ -392,7 +417,7 @@ impl<const N: usize> Zero for U<N> {
     }
 
     fn is_zero(&self) -> bool {
-        todo!()
+        self.0.into_static_iter().all(|b| b == 0)
     }
 }
 
@@ -400,80 +425,14 @@ impl<const N: usize> One for U<N> {
     fn one() -> Self {
         todo!()
     }
-}
 
-impl<const N: usize> PrimInt for U<N> {
-    fn count_ones(self) -> u32 {
-        self.0.iter_bits().fold(0, |count, b| if b { count + 1 } else { count })
-    }
-
-    fn count_zeros(self) -> u32 {
-        self.0.iter_bits().fold(0, |count, b| if b { count } else { count + 1 })
-    }
-
-    fn leading_zeros(self) -> u32 {
-        todo!()
-    }
-
-    fn trailing_zeros(self) -> u32 {
-        todo!()
-    }
-
-    fn rotate_left(self, n: u32) -> Self {
-        todo!()
-    }
-
-    fn rotate_right(self, n: u32) -> Self {
-        todo!()
-    }
-
-    fn signed_shl(self, n: u32) -> Self {
-        todo!()
-    }
-
-    fn signed_shr(self, n: u32) -> Self {
-        todo!()
-    }
-
-    fn unsigned_shl(self, n: u32) -> Self {
-        todo!()
-    }
-
-    fn unsigned_shr(self, n: u32) -> Self {
-        todo!()
-    }
-
-    fn swap_bytes(self) -> Self {
-        todo!()
-    }
-
-    fn from_be(x: Self) -> Self {
-        todo!()
-    }
-
-    fn from_le(x: Self) -> Self {
-        todo!()
-    }
-
-    fn to_be(self) -> Self {
-        todo!()
-    }
-
-    fn to_le(self) -> Self {
-        todo!()
-    }
-
-    fn pow(self, exp: u32) -> Self {
+    fn is_one(&self) -> bool {
         todo!()
     }
 }
 
-impl<const N: usize> Num for U<N> {
-    type FromStrRadixErr = ();
+impl<const N: usize> Numeric for U<N> {}
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        todo!()
-    }
-}
+impl<const N: usize> Integral for U<N> {}
 
 impl<const N: usize> Unsigned for U<N> {}

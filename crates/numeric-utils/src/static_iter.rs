@@ -59,16 +59,6 @@ pub trait StaticIter<const N: usize>: Sized {
     unsafe fn idx(&mut self, idx: usize) -> Self::Item;
 
     #[inline]
-    fn fold<T, F: FnMut(T, Self::Item) -> T>(mut self, mut start: T, mut func: F) -> T {
-        for idx in 0..N {
-            // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
-            let item = unsafe { self.idx(idx) };
-            start = func(start, item);
-        }
-        start
-    }
-
-    #[inline]
     fn map<T, F: FnMut(Self::Item) -> T>(self, func: F) -> Map<Self, F> {
         Map { inner: self, func }
     }
@@ -86,6 +76,27 @@ pub trait StaticIter<const N: usize>: Sized {
         Enumerate { inner: self }
     }
 
+    #[inline]
+    fn fold<T, F: FnMut(T, Self::Item) -> T>(mut self, mut start: T, mut func: F) -> T {
+        for idx in 0..N {
+            // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
+            let item = unsafe { self.idx(idx) };
+            start = func(start, item);
+        }
+        start
+    }
+
+    // TODO: This really wants to use `Try`
+    #[inline]
+    fn try_fold<T, E, F: FnMut(T, Self::Item) -> Result<T, E>>(mut self, mut start: T, mut func: F) -> Result<T, E> {
+        for idx in 0..N {
+            // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
+            let item = unsafe { self.idx(idx) };
+            start = func(start, item)?;
+        }
+        Ok(start)
+    }
+
     fn collect<C: StaticCollect<Self::Item, N>>(self) -> C {
         let out = self.enumerate().fold(
             C::uninit(),
@@ -95,6 +106,18 @@ pub trait StaticIter<const N: usize>: Sized {
             });
         // SAFETY: After the fold call, all values from 0..N will have been written
         unsafe { C::assume_init(out) }
+    }
+
+    fn any<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
+        self.try_fold((), |(), x| {
+            if func(x) { Err(()) } else { Ok(()) }
+        }) == Err(())
+    }
+
+    fn all<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
+        self.try_fold((), |(), x| {
+            if func(x) { Ok(()) } else { Err(()) }
+        }) == Ok(())
     }
 }
 

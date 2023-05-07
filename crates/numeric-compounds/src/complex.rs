@@ -1,9 +1,11 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use numeric_traits::identity::Zero;
-use numeric_traits::class::Real;
+use numeric_traits::identity::{Zero, One};
+use numeric_traits::class::{Numeric, Real};
+use numeric_traits::ops::core::NumOps;
+use numeric_traits::ops::Pow;
 
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq)]
 pub struct Complex<T> {
     real: T,
     imag: T,
@@ -29,6 +31,14 @@ impl<T: Zero> Complex<T> {
 
     pub fn from_imag(imag: T) -> Complex<T> {
         Complex { real: T::zero(), imag }
+    }
+
+    pub fn real(&self) -> &T {
+        &self.real
+    }
+
+    pub fn imag(&self) -> &T {
+        &self.imag
     }
 }
 
@@ -129,7 +139,7 @@ where
 
 impl<T> Div<T> for Complex<T>
 where
-    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Clone,
+    T: NumOps + Clone,
 {
     type Output = Complex<T>;
 
@@ -139,5 +149,47 @@ where
             (self.real.clone() * rhs.clone()) / divisor.clone(),
             (self.imag * rhs) / divisor,
         )
+    }
+}
+
+impl<T> Rem for Complex<T>
+where
+    T: NumOps + Clone,
+{
+    type Output = Complex<T>;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
+impl<T> Pow for Complex<T>
+where
+    T: Mul<Output = T> + Clone,
+{
+    type Output = Complex<T>;
+
+    fn pow(self, rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
+impl<T: PartialEq + Zero> Zero for Complex<T> {
+    fn zero() -> Self {
+        Self::new()
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+}
+
+impl<T: PartialEq + Zero + One> One for Complex<T> {
+    fn one() -> Self {
+        Complex::from_real(T::one())
+    }
+
+    fn is_one(&self) -> bool {
+        *self == Self::one()
     }
 }

@@ -7,8 +7,7 @@ use std::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use std::hint::unreachable_unchecked;
 use std::{fmt, ops, mem};
 use std::borrow::Borrow;
-use num_traits::{FromPrimitive, ToPrimitive};
-use numeric_traits::cast::FromStrRadix;
+use numeric_traits::cast::{FromChecked, FromStrRadix};
 use numeric_traits::ops::Pow;
 use numeric_traits::class::{Signed, Numeric, Integral};
 use numeric_traits::identity::{Zero, One};
@@ -197,8 +196,7 @@ impl BigInt {
         let mut scratch = self.clone();
 
         while scratch > 0 {
-            let digit = (scratch.clone() % base)
-                .to_u8()
+            let digit = u8::from_checked(scratch.clone() % base)
                 .expect("Mod base should always be less than 255");
             digits.push(digit);
             scratch /= base;
@@ -385,10 +383,26 @@ impl Ord for BigInt {
     }
 }
 
+#[derive(Debug)]
+enum Side {
+    Above,
+    Below,
+}
+
 /// The error for when you try to convert a `BigInt` with a value that is too large or small for
 /// the type being converted into.
 #[derive(Debug)]
-pub struct OutOfRangeError;
+pub struct OutOfRangeError(Side);
+
+impl OutOfRangeError {
+    fn above() -> Self {
+        Self(Side::Above)
+    }
+
+    fn below() -> Self {
+        Self(Side::Below)
+    }
+}
 
 const fn arr_size<T>() -> usize {
     (mem::size_of::<T>() / mem::size_of::<usize>()) + 1
@@ -669,26 +683,6 @@ impl Signed for BigInt {
 
     fn is_negative(&self) -> bool {
         self.0.tag().negative()
-    }
-}
-
-impl ToPrimitive for BigInt {
-    fn to_i64(&self) -> Option<i64> {
-        self.try_into().ok()
-    }
-
-    fn to_u64(&self) -> Option<u64> {
-        self.try_into().ok()
-    }
-}
-
-impl FromPrimitive for BigInt {
-    fn from_i64(n: i64) -> Option<Self> {
-        Some(BigInt::from(n))
-    }
-
-    fn from_u64(n: u64) -> Option<Self> {
-        Some(BigInt::from(n))
     }
 }
 
