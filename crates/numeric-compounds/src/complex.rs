@@ -1,7 +1,7 @@
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use numeric_traits::identity::{Zero, One};
-use numeric_traits::class::{Numeric, Real};
+use numeric_traits::class::Real;
 use numeric_traits::ops::core::NumOps;
 use numeric_traits::ops::Pow;
 
@@ -158,7 +158,7 @@ where
 {
     type Output = Complex<T>;
 
-    fn rem(self, rhs: Self) -> Self::Output {
+    fn rem(self, _: Self) -> Self::Output {
         todo!()
     }
 }
@@ -169,7 +169,7 @@ where
 {
     type Output = Complex<T>;
 
-    fn pow(self, rhs: Self) -> Self::Output {
+    fn pow(self, _: Self) -> Self::Output {
         todo!()
     }
 }

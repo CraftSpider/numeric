@@ -1,6 +1,25 @@
 use std::mem::MaybeUninit;
 use crate::static_iter::adapter::{Enumerate, Map, Zip};
 
+struct DropGuard<F: FnOnce()> {
+    on_drop: Option<F>,
+}
+
+impl<F: FnOnce()> DropGuard<F> {
+    fn new(on_drop: F) -> DropGuard<F> {
+        DropGuard { on_drop: Some(on_drop) }
+    }
+}
+
+impl<F> Drop for DropGuard<F>
+where
+    F: FnOnce(),
+{
+    fn drop(&mut self) {
+        (self.on_drop.take().unwrap())()
+    }
+}
+
 pub trait StaticCollect<T, const N: usize> {
     type Uninit;
 
