@@ -55,12 +55,14 @@ pub trait BitSliceExt {
     }
 
     /// Get the value of an element at a given index, panicking if the index is out of range
+    #[inline]
     fn get(&self, idx: usize) -> Self::Bit {
         self.get_opt(idx).expect("get index in-bounds")
     }
 
     /// Get the value of an element at a given index, returning `None` if the index is out of
     /// range
+    #[inline]
     fn get_opt(&self, idx: usize) -> Option<Self::Bit> {
         self.slice().get(idx).copied()
     }
@@ -70,11 +72,13 @@ pub trait BitSliceExt {
     /// # Panics
     ///
     /// If `idx` is outside the range of this slice
+    #[inline]
     fn get_bit(&self, idx: usize) -> bool {
         self.get_bit_opt(idx).expect("get_bit index in-bounds")
     }
 
     /// Get the value of a bit at a given index, returning `None` if the index is out of range
+    #[inline]
     fn get_bit_opt(&self, idx: usize) -> Option<bool> {
         let (idx, bit) = Self::idx_bit(idx);
         self.slice().get(idx).copied().map(|val| {
@@ -87,6 +91,7 @@ pub trait BitSliceExt {
     /// # Panics
     ///
     /// If `idx` is outside the range of this slice
+    #[inline]
     fn set(&mut self, idx: usize, val: Self::Bit) {
         self.set_opt(idx, val).unwrap_or_else(|| {
             panic!("Attempt to write value at index {} out of bounds", idx)
@@ -94,6 +99,7 @@ pub trait BitSliceExt {
     }
 
     /// Set a single value by index on this slice, returning `None` if the index is out of range
+    #[inline]
     #[must_use]
     fn set_opt(&mut self, idx: usize, val: Self::Bit) -> Option<()> {
         self.slice_mut().get_mut(idx).map(|cur| {
@@ -106,6 +112,7 @@ pub trait BitSliceExt {
     /// # Panics
     ///
     /// If `idx` is outside the range of this slice
+    #[inline]
     fn set_bit(&mut self, idx: usize, val: bool) {
         self.set_bit_opt(idx, val).unwrap_or_else(|| {
             let (idx, bit) = Self::idx_bit(idx);
@@ -114,6 +121,7 @@ pub trait BitSliceExt {
     }
 
     /// Set a single bit by index on this slice, returning `None` if the index is out of range
+    #[inline]
     fn set_bit_opt(&mut self, idx: usize, val: bool) -> Option<()> {
         let (idx, bit) = Self::idx_bit(idx);
         self.slice_mut()
@@ -139,6 +147,7 @@ pub trait BitSliceExt {
     }
 
     /// Get an iterator over the bit values of this slice
+    #[inline]
     fn iter_bits(&self) -> BitIter<'_, Self::Bit> {
         BitIter::new(self.slice())
     }

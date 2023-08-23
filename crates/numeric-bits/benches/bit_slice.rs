@@ -1,13 +1,51 @@
 use std::cmp::Ordering;
-use numeric_core::bit_slice::algos::{BitwiseOps, ElementAdd, ElementCmp, ElementDiv, ElementShl, ElementSub};
+use numeric_bits::bit_slice::algos::{BitwiseOps, ElementAdd, ElementCmp, ElementDiv, ElementShl, ElementSub};
 use criterion::{criterion_main, criterion_group, Criterion, black_box, BenchmarkId};
 use pprof::criterion::{PProfProfiler, Output};
+use numeric_bits::bit_slice::BitSliceExt;
 
 pub struct MathMeths {
     tr: &'static str,
     name: &'static str,
     big_bit: fn(&[usize], &[usize]) -> Vec<usize>,
     big_elem: fn(&[usize], &[usize]) -> Vec<usize>,
+}
+
+pub fn bench_iter(c: &mut Criterion) {
+    let end = &[0x00000001u32];
+    let start = &[0x80000000u32];
+    let alternating = &[0x66666666u32];
+    let long = &[0u32, 0, 0, 0, 0, 0, 0, 1];
+    
+    c.benchmark_group("BitSliceExt::iter_bits")
+        .bench_function(
+            BenchmarkId::new("all(==1)", "[0x00000001]"),
+            |b| b.iter(|| black_box(end).iter_bits().all(|v| v == true)),
+        )
+        .bench_function(
+            BenchmarkId::new("all(==1)", "[0x80000000]"),
+            |b| b.iter(|| black_box(start).iter_bits().all(|v| v == true)),
+        )
+        .bench_function(
+            BenchmarkId::new("all(==0)", "[0, 0, 0, 0, 0, 0, 0, 1]"),
+            |b| b.iter(|| black_box(long).iter_bits().all(|v| v == false)),
+        )
+        .bench_function(
+            BenchmarkId::new("sum", "[0x00000001]"),
+            |b| b.iter(|| black_box(end).iter_bits().map(usize::from).sum::<usize>()),
+        )
+        .bench_function(
+            BenchmarkId::new("sum", "[0x80000000]"),
+            |b| b.iter(|| black_box(start).iter_bits().map(usize::from).sum::<usize>()),
+        )
+        .bench_function(
+            BenchmarkId::new("sum", "[0x66666666]"),
+            |b| b.iter(|| black_box(alternating).iter_bits().map(usize::from).sum::<usize>()),
+        )
+        .bench_function(
+            BenchmarkId::new("sum", "[0, 0, 0, 0, 0, 0, 0, 1]"),
+            |b| b.iter(|| black_box(long).iter_bits().map(usize::from).sum::<usize>()),
+        );
 }
 
 pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
@@ -281,6 +319,6 @@ pub fn bench_shl(c: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = bench_shl, bench_add, bench_sub, bench_div, bench_cmp
+    targets = bench_shl, bench_add, bench_sub, bench_div, bench_cmp, bench_iter
 );
 criterion_main!(benches);

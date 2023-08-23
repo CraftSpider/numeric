@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 numeric-traits = { path = "../numeric-traits" }
 numeric-utils = { path = "../numeric-utils" }
+numeric-bits = { path = "../numeric-bits" }
