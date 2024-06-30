@@ -8,7 +8,8 @@ members = [
     "crates/ints",
     "crates/reals",
     "crates/compounds",
-    "crates/static-iter", "crates/bench-util",
+    "crates/static-iter",
+    "crates/bench-util",
 ]
 
 [profile.bench]

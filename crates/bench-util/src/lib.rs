@@ -1,4 +1,6 @@
 use criterion::Criterion;
+#[cfg(unix)]
+use pprof::criterion::{Output, PProfProfiler};
 
 pub fn make_criterion() -> Criterion {
     let c = Criterion::default();

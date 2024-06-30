@@ -2,7 +2,6 @@
 
 use std::cmp::Ordering;
 use std::ops::{Add, Neg, Sub};
-use numeric_utils::
 
 /// N-byte posit value.
 ///
@@ -21,7 +20,7 @@ use numeric_utils::
 pub struct P<const N: usize>([u8; N]);
 
 impl<const N: usize> P<N> {
-    const FRAC_LEN: usize = N*8 - 5;
+    const FRAC_LEN: usize = N * 8 - 5;
 
     pub const fn new() -> P<N> {
         P([0; N])
@@ -31,7 +30,7 @@ impl<const N: usize> P<N> {
         self.0[0] & 0x1 != 0
     }
 
-    pub const fn is_nar(self) -> bool {
+    pub fn is_nar(self) -> bool {
         self.0[0] == 0x1 && self.0[1..].iter().all(|&b| b == 0)
     }
 }
@@ -43,7 +42,7 @@ impl<const N: usize> PartialOrd for P<N> {
 }
 
 impl<const N: usize> Ord for P<N> {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(&self, _: &Self) -> Ordering {
         todo!()
     }
 }
@@ -60,7 +59,7 @@ impl<const N: usize> Neg for P<N> {
 impl<const N: usize> Add for P<N> {
     type Output = P<N>;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, _: Self) -> Self::Output {
         todo!()
     }
 }
@@ -68,7 +67,7 @@ impl<const N: usize> Add for P<N> {
 impl<const N: usize> Sub for P<N> {
     type Output = P<N>;
 
-    fn sub(self, rhs: Self) -> Self::Output {
+    fn sub(self, _: Self) -> Self::Output {
         todo!()
     }
 }
