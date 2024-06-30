@@ -1,4 +1,4 @@
-[target.'cfg(feature = "cargo-clippy")']
+[target.'cfg(clippy)']
 rustflags = [
     "-Welided_lifetimes_in_paths",
     "-Wexplicit_outlives_requirements",
@@ -8,6 +8,7 @@ rustflags = [
     "-Wsemicolon_in_expressions_from_macros",
     "-Wunused_import_braces",
     "-Wunused_lifetimes",
+#    "-Wmissing_docs",
     "-Wclippy::missing_panics_doc",
     "-Wclippy::doc_markdown",
     "-Wclippy::ptr_as_ptr",
@@ -15,7 +16,13 @@ rustflags = [
     "-Wclippy::unreadable_literal",
     "-Wclippy::undocumented_unsafe_blocks",
     "-Wclippy::type_repetition_in_bounds",
+    "-Wclippy::cast_lossless",
+    "-Wclippy::ptr_as_ptr",
+    "-Wclippy::ptr_cast_constness",
     # TEMP ITEMS
-    "-Wclippy::nursery",
+#    "-Wclippy::cast_possible_truncation",
+#    "-Wclippy::cast_possible_wrap",
+#    "-Wclippy::cast_precision_loss",
+#    "-Wclippy::cast_sign_loss",
     "-Aclippy::use_self",
 ]

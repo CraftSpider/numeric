@@ -4,10 +4,13 @@ name = "numeric"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["std"]
+std = ["numeric-traits/std", "numeric-ints/std", "numeric-reals/std", "numeric-compounds/std"]
+rand = ["numeric-ints/rand"]
 
 [dependencies]
-numeric-traits = { path = "../numeric-traits" }
-numeric-ints = { path = "../numeric-ints" }
-numeric-reals = { path = "../numeric-reals" }
-numeric-compounds = { path = "../numeric-compounds" }
+numeric-traits = { path = "../traits" }
+numeric-ints = { path = "../ints" }
+numeric-reals = { path = "../reals" }
+numeric-compounds = { path = "../compounds" }

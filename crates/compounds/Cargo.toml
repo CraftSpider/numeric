@@ -1,0 +1,22 @@
+[package]
+name = "numeric-compounds"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["std"]
+std = ["numeric-utils/std", "numeric-ints/std", "numeric-traits/std"]
+
+[dependencies]
+numeric-static-iter = { path = "../static-iter" }
+numeric-utils = { path = "../utils" }
+numeric-traits = { path = "../traits" }
+numeric-ints = { path = "../ints" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+numeric-bench-util = { path = "../bench-util" }
+
+[[bench]]
+name = "matrix"
+harness = false
