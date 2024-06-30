@@ -1,7 +1,7 @@
+use crate::matrix::{DynMatrix, Matrix};
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
-use crate::matrix::{DynMatrix, Matrix};
 
 macro_rules! ref_common {
     ($ty:ty) => {
@@ -10,14 +10,17 @@ macro_rules! ref_common {
 
             fn index(&self, index: (usize, usize)) -> &Self::Output {
                 if index.0 > self.rows || index.1 > self.cols {
-                    panic!("Index out of range for matrix of size {}x{}: ({},{})", self.rows, self.cols, index.0, index.1);
+                    panic!(
+                        "Index out of range for matrix of size {}x{}: ({},{})",
+                        self.rows, self.cols, index.0, index.1
+                    );
                 }
 
                 // SAFETY: Internal pointer guaranteed valid for reads up to rows * cols
                 unsafe { &*self.data.as_ptr().add(index.0 * self.cols + index.1) }
             }
         }
-    }
+    };
 }
 
 pub struct MatrixRef<'a, T> {
@@ -84,14 +87,19 @@ ref_common!(MatrixMut<'a, T>);
 impl<T> IndexMut<(usize, usize)> for MatrixMut<'_, T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         if index.0 > self.rows || index.1 > self.cols {
-            panic!("Index out of range for matrix of size {}x{}: ({},{})", self.rows, self.cols, index.0, index.1);
+            panic!(
+                "Index out of range for matrix of size {}x{}: ({},{})",
+                self.rows, self.cols, index.0, index.1
+            );
         }
 
         unsafe { &mut *self.data.as_ptr().add(index.0 * self.cols + index.1) }
     }
 }
 
-impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>> for MatrixMut<'a, T> {
+impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>>
+    for MatrixMut<'a, T>
+{
     fn from(value: &'a mut Matrix<T, ROW, COL>) -> Self {
         MatrixMut::new(value.as_mut_ptr(), ROW, COL)
     }

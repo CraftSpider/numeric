@@ -5,14 +5,14 @@
 use core::array;
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
-use numeric_utils::{static_assert, static_assert_traits};
-use numeric_traits::class::{Bounded, Numeric, Integral, Unsigned};
-use numeric_traits::identity::{Zero, One};
-use numeric_traits::ops::checked::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
-use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingSub, SaturatingMul};
 use numeric_bits::algos::{ElementAdd, ElementMul, ElementShl, ElementShr, ElementSub};
+use numeric_static_iter::{IntoStaticIter, StaticIter};
+use numeric_traits::class::{Bounded, Integral, Numeric, Unsigned};
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
+use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingMul, SaturatingSub};
 use numeric_traits::ops::Pow;
-use numeric_static_iter::{StaticIter, IntoStaticIter};
+use numeric_utils::{static_assert, static_assert_traits};
 
 #[cfg(feature = "rand")]
 mod rand_impl;
@@ -251,7 +251,9 @@ impl<const N: usize> BitAnd for U<N> {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        let new = self.0.into_static_iter()
+        let new = self
+            .0
+            .into_static_iter()
             .zip(rhs.0.into_static_iter())
             .map(|(l, r)| l & r)
             .collect();
@@ -263,7 +265,9 @@ impl<const N: usize> BitOr for U<N> {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        let new = self.0.into_static_iter()
+        let new = self
+            .0
+            .into_static_iter()
             .zip(rhs.0.into_static_iter())
             .map(|(l, r)| l | r)
             .collect();
@@ -275,7 +279,9 @@ impl<const N: usize> BitXor for U<N> {
     type Output = Self;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
-        let new = self.0.into_static_iter()
+        let new = self
+            .0
+            .into_static_iter()
             .zip(rhs.0.into_static_iter())
             .map(|(l, r)| l ^ r)
             .collect();
@@ -304,7 +310,7 @@ impl<const N: usize> Shl<usize> for U<N> {
 
     fn shl(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementShl::shl_wrap_and_mask_checked(&mut self.0, rhs).unwrap();
+        ElementShl::shl_checked(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
         ElementShl::shl_wrap_and_mask_wrapping(&mut self.0, rhs);
         self

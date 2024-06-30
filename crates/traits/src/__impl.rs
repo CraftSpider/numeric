@@ -46,7 +46,7 @@ macro_rules! saturating_as {
                 val as $into
             }
         }
-    }
+    };
 }
 
 macro_rules! truncating_as {
@@ -391,9 +391,7 @@ macro_rules! impl_float {
             }
         }
 
-        impl crate::class::RealSigned for $ty {
-
-        }
+        impl crate::class::RealSigned for $ty {}
 
         impl crate::class::Bounded for $ty {
             #[inline]
@@ -630,7 +628,6 @@ mod _usize {
     );
 }
 
-
 #[cfg(target_pointer_width = "32")]
 mod _usize {
     saturate_uint_impl!(
@@ -823,7 +820,6 @@ mod _isize {
         s_greater = [],
     );
 }
-
 
 #[cfg(target_pointer_width = "32")]
 mod _isize {

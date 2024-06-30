@@ -1,10 +1,10 @@
+use crate::vector::Vector;
 use core::array;
 use core::ops::{Add, Index, IndexMut, Mul, Sub};
 use core::ptr::NonNull;
+use numeric_static_iter::{zip_all, IntoStaticIter, StaticIter};
 use numeric_traits::class::RealSigned;
-use numeric_static_iter::{IntoStaticIter, StaticIter, zip_all};
 use numeric_traits::identity::{One, Zero};
-use crate::vector::Vector;
 
 pub type SquareMatrix<T, const N: usize> = Matrix<T, N, N>;
 
@@ -62,10 +62,12 @@ impl<T: RealSigned, const N: usize> SquareMatrix<T, N> {
         // doing a full row-reduction.
         match N {
             1 => self[(0, 0)].clone(),
-            2 => self[(0, 0)].clone() * self[(1, 1)].clone() - self[(1, 0)].clone() * self[(0, 1)].clone(),
+            2 => {
+                self[(0, 0)].clone() * self[(1, 1)].clone()
+                    - self[(1, 0)].clone() * self[(0, 1)].clone()
+            }
             _ => {
-                let (reduced, factor) = self.clone()
-                    .gauss_elim();
+                let (reduced, factor) = self.clone().gauss_elim();
 
                 reduced.diag().product() / factor
             }
@@ -89,14 +91,12 @@ where
     type Output = Matrix<T::Output, ROW, COL>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        let map_rows = |l: [T; COL], r: [T; COL]| {
-            l.into_static_iter()
-                .zip(r)
-                .map(|(i, j)| i + j)
-                .collect()
-        };
+        let map_rows =
+            |l: [T; COL], r: [T; COL]| l.into_static_iter().zip(r).map(|(i, j)| i + j).collect();
 
-        let rows = self.0.into_static_iter()
+        let rows = self
+            .0
+            .into_static_iter()
             .zip(rhs.0)
             .map(|(i, j)| map_rows(i, j))
             .collect();
@@ -111,14 +111,12 @@ where
     type Output = Matrix<T::Output, ROW, COL>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let map_rows = |l: [T; COL], r: [T; COL]| {
-            l.into_static_iter()
-                .zip(r)
-                .map(|(i, j)| i - j)
-                .collect()
-        };
+        let map_rows =
+            |l: [T; COL], r: [T; COL]| l.into_static_iter().zip(r).map(|(i, j)| i - j).collect();
 
-        let rows = self.0.into_static_iter()
+        let rows = self
+            .0
+            .into_static_iter()
             .zip(rhs.0)
             .map(|(i, j)| map_rows(i, j))
             .collect();
@@ -127,20 +125,23 @@ where
     }
 }
 
-impl<T, const ROW: usize, const COL: usize, const COL2: usize> Mul<Matrix<T, COL, COL2>> for Matrix<T, ROW, COL>
+impl<T, const ROW: usize, const COL: usize, const COL2: usize> Mul<Matrix<T, COL, COL2>>
+    for Matrix<T, ROW, COL>
 where
     T: Add<Output = T> + Mul<Output = T> + Clone,
 {
     type Output = Matrix<T, ROW, COL2>;
 
     fn mul(self, rhs: Matrix<T, COL, COL2>) -> Self::Output {
-        let rows = array::from_fn(|i| array::from_fn(|j| {
-            let mut out = self[(i, 0)].clone() * rhs[(0, j)].clone();
-            for k in 1..COL {
-                out = out + self[(i, k)].clone() * rhs[(k, j)].clone();
-            }
-            out
-        }));
+        let rows = array::from_fn(|i| {
+            array::from_fn(|j| {
+                let mut out = self[(i, 0)].clone() * rhs[(0, j)].clone();
+                for k in 1..COL {
+                    out = out + self[(i, k)].clone() * rhs[(k, j)].clone();
+                }
+                out
+            })
+        });
         Matrix::new(rows)
     }
 }
@@ -151,7 +152,8 @@ impl<T: Zero, const ROW: usize, const COL: usize> Zero for Matrix<T, ROW, COL> {
     }
 
     fn is_zero(&self) -> bool {
-        (&self.0).into_static_iter()
+        (&self.0)
+            .into_static_iter()
             .all(|r| r.into_static_iter().all(|v| v.is_zero()))
     }
 }
@@ -160,28 +162,21 @@ impl<T: Zero, const ROW: usize, const COL: usize> Zero for Matrix<T, ROW, COL> {
 /// the diagonals, not a matrix filled with ones.
 impl<T: Zero + One, const ROW: usize, const COL: usize> One for Matrix<T, ROW, COL> {
     fn one() -> Self {
-        let rows = array::from_fn(|i| array::from_fn(|j| {
-            if i == j {
-                T::one()
-            } else {
-                T::zero()
-            }
-        }));
+        let rows =
+            array::from_fn(|i| array::from_fn(|j| if i == j { T::one() } else { T::zero() }));
         Matrix::new(rows)
     }
 
     fn is_one(&self) -> bool {
-        (&self.0).into_static_iter()
-            .enumerate()
-            .all(|(i, row)| {
-                row.into_static_iter()
-                    .enumerate()
-                    .all(|(j, val)| if i == j {
-                        val.is_one()
-                    } else {
-                        val.is_zero()
-                    })
+        (&self.0).into_static_iter().enumerate().all(|(i, row)| {
+            row.into_static_iter().enumerate().all(|(j, val)| {
+                if i == j {
+                    val.is_one()
+                } else {
+                    val.is_zero()
+                }
             })
+        })
     }
 }
 
@@ -200,25 +195,15 @@ impl<T, const ROW: usize, const COL: usize> IndexMut<(usize, usize)> for Matrix<
 }
 
 #[cfg(test)]
-mod tests  {
+mod tests {
     use super::*;
 
     #[test]
     fn test_mul() {
-        let a = Matrix::new([
-            [1, 2, 3],
-            [4, 5, 6],
-        ]);
-        let b = Matrix::new([
-            [7, 8],
-            [9, 10],
-            [11, 12],
-        ]);
+        let a = Matrix::new([[1, 2, 3], [4, 5, 6]]);
+        let b = Matrix::new([[7, 8], [9, 10], [11, 12]]);
 
-        let expected = Matrix::new([
-            [58, 64],
-            [139, 154],
-        ]);
+        let expected = Matrix::new([[58, 64], [139, 154]]);
         assert_eq!(a * b, expected);
     }
 
@@ -235,39 +220,24 @@ mod tests  {
             [1., 0., 4., 2.],
             [0., 1., 1., 0.],
             [0., 0., 0., 4.],
-            [0., 0., 0., 0.]
+            [0., 0., 0., 0.],
         ]);
         assert_eq!(a.row_reduce(), expected);
 
-        let b = Matrix::new([
-            [2., -3., 1.],
-            [2., 0., -1.],
-            [1., 4., 5.],
-        ]);
+        let b = Matrix::new([[2., -3., 1.], [2., 0., -1.], [1., 4., 5.]]);
 
-        let expected = Matrix::new([
-            [1., 4., 5.],
-            [0., -11., -9.],
-            [0., 0., -4.454545454545454],
-        ]);
+        let expected = Matrix::new([[1., 4., 5.], [0., -11., -9.], [0., 0., -4.454545454545454]]);
 
         assert_eq!(b.row_reduce(), expected);
     }
 
     #[test]
     fn test_determinant() {
-        let a = Matrix::new([
-            [1., 2.],
-            [3., 4.],
-        ]);
+        let a = Matrix::new([[1., 2.], [3., 4.]]);
 
         assert_eq!(a.determinant(), -2.);
 
-        let b = Matrix::<f64, 3, 3>::new([
-            [2., -3., 1.],
-            [2., 0., -1.],
-            [1., 4., 5.],
-        ]);
+        let b = Matrix::<f64, 3, 3>::new([[2., -3., 1.], [2., 0., -1.], [1., 4., 5.]]);
         assert_eq!(b.determinant().round(), 49.);
     }
 }

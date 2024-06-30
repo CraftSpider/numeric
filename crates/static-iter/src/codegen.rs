@@ -1,15 +1,18 @@
- use crate::*;
+
+use crate::*;
 
 #[inline(never)]
 pub fn zip_add<const N: usize>(a: [i32; N], b: [i32; N]) -> [i32; N] {
-    a.into_static_iter().zip(b.into_static_iter())
+    a.into_static_iter()
+        .zip(b.into_static_iter())
         .map(|(l, r)| l + r)
         .collect()
 }
 
 #[inline(never)]
 pub fn zip_mul<const N: usize>(a: [i32; N], b: [i32; N]) -> [i32; N] {
-    a.into_static_iter().zip(b.into_static_iter())
+    a.into_static_iter()
+        .zip(b.into_static_iter())
         .map(|(l, r)| l * r)
         .collect()
 }

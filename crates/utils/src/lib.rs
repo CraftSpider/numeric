@@ -1,14 +1,13 @@
-
 #![cfg_attr(not(test), no_std)]
 
 #[cfg(feature = "std")]
 extern crate alloc;
 
-mod macros;
-#[cfg(feature = "std")]
-mod linked;
 #[cfg(feature = "std")]
 pub mod intern;
+#[cfg(feature = "std")]
+mod linked;
+mod macros;
 
 #[cfg(feature = "std")]
 pub use intern::Interner;
@@ -19,9 +18,13 @@ pub(crate) mod tests {
 
     pub const THREAD_COUNT: usize = {
         #[cfg(miri)]
-        { 100 }
+        {
+            100
+        }
         #[cfg(not(miri))]
-        { 100 }
+        {
+            100
+        }
     };
 
     pub fn run_threaded<T, C, F>(ctx: C, f: F) -> T

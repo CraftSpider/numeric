@@ -1,9 +1,9 @@
 #![no_std]
 
+use adapter::{Enumerate, Map, Zip};
 use core::mem::MaybeUninit;
 use core::ops::{Add, Mul};
 use core::ptr;
-use adapter::{Enumerate, Map, Zip};
 use numeric_traits::identity::{One, Zero};
 
 struct DropGuard<F: FnOnce()> {
@@ -12,7 +12,9 @@ struct DropGuard<F: FnOnce()> {
 
 impl<F: FnOnce()> DropGuard<F> {
     fn new(on_drop: F) -> DropGuard<F> {
-        DropGuard { on_drop: Some(on_drop) }
+        DropGuard {
+            on_drop: Some(on_drop),
+        }
     }
 }
 
@@ -91,7 +93,10 @@ pub trait StaticIter<const N: usize>: Sized {
     where
         I: IntoStaticIter<N>,
     {
-        Zip { left: self, right: other.into_static_iter() }
+        Zip {
+            left: self,
+            right: other.into_static_iter(),
+        }
     }
 
     #[inline]
@@ -111,7 +116,11 @@ pub trait StaticIter<const N: usize>: Sized {
 
     // TODO: This really wants to use `Try`
     #[inline]
-    fn try_fold<T, E, F: FnMut(T, Self::Item) -> Result<T, E>>(mut self, mut start: T, mut func: F) -> Result<T, E> {
+    fn try_fold<T, E, F: FnMut(T, Self::Item) -> Result<T, E>>(
+        mut self,
+        mut start: T,
+        mut func: F,
+    ) -> Result<T, E> {
         for idx in 0..N {
             // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
             let item = unsafe { self.idx(idx) };
@@ -121,26 +130,20 @@ pub trait StaticIter<const N: usize>: Sized {
     }
 
     fn collect<C: StaticCollect<Self::Item, N>>(self) -> C {
-        let out = self.enumerate().fold(
-            C::uninit(),
-            |mut out, (idx, val)| {
-                C::write(&mut out, idx, val);
-                out
-            });
+        let out = self.enumerate().fold(C::uninit(), |mut out, (idx, val)| {
+            C::write(&mut out, idx, val);
+            out
+        });
         // SAFETY: After the fold call, all values from 0..N will have been written
         unsafe { C::assume_init(out) }
     }
 
     fn any<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
-        self.try_fold((), |(), x| {
-            if func(x) { Err(()) } else { Ok(()) }
-        }) == Err(())
+        self.try_fold((), |(), x| if func(x) { Err(()) } else { Ok(()) }) == Err(())
     }
 
     fn all<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
-        self.try_fold((), |(), x| {
-            if func(x) { Ok(()) } else { Err(()) }
-        }) == Ok(())
+        self.try_fold((), |(), x| if func(x) { Ok(()) } else { Err(()) }) == Ok(())
     }
 
     // TODO: Move this and sum to an extension in numeric-traits? Makes static_iter stand alone
@@ -148,18 +151,14 @@ pub trait StaticIter<const N: usize>: Sized {
     where
         Self::Item: Zero + Add<Output = Self::Item>,
     {
-        self.fold(Self::Item::zero(), |acc, val| {
-            acc + val
-        })
+        self.fold(Self::Item::zero(), |acc, val| acc + val)
     }
 
     fn product(self) -> Self::Item
     where
         Self::Item: One + Mul<Output = Self::Item>,
     {
-        self.fold(Self::Item::one(), |acc, val| {
-            acc * val
-        })
+        self.fold(Self::Item::one(), |acc, val| acc * val)
     }
 }
 
@@ -194,7 +193,9 @@ where
     type Iter = ArrayZipIter<T::Iter, N, M>;
 
     fn into_zip_iter(self) -> Self::Iter {
-        ArrayZipIter { arrs: self.map(T::into_static_iter) }
+        ArrayZipIter {
+            arrs: self.map(T::into_static_iter),
+        }
     }
 }
 
@@ -204,7 +205,7 @@ pub struct ArrayZipIter<T, const N: usize, const M: usize> {
 
 impl<T, const N: usize, const M: usize> StaticIter<M> for ArrayZipIter<T, N, M>
 where
-    T: StaticIter<M>
+    T: StaticIter<M>,
 {
     type Item = [T::Item; N];
 
@@ -248,7 +249,8 @@ mod tests {
 
     #[test]
     fn test_zip_add() {
-        let res: [i32; 4] = [1, 2, 3, 4].into_static_iter()
+        let res: [i32; 4] = [1, 2, 3, 4]
+            .into_static_iter()
             .zip([5, 6, 7, 8].into_static_iter())
             .map(|(l, r)| l + r)
             .collect();

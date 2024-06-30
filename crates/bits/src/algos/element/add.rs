@@ -1,9 +1,9 @@
-use numeric_traits::identity::{One, Zero};
-use numeric_traits::ops::overflowing::OverflowingAdd;
-#[cfg(feature = "std")]
-use alloc::{vec, vec::Vec};
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
+#[cfg(feature = "std")]
+use alloc::{vec, vec::Vec};
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::overflowing::OverflowingAdd;
 
 pub trait ElementAdd: BitSliceExt {
     #[cfg(feature = "std")]
@@ -114,45 +114,24 @@ mod tests {
 
     #[test]
     fn test_simple() {
-        assert_eq!(
-            ElementAdd::add(&[0u32], &[0]),
-            &[0],
-        );
+        assert_eq!(ElementAdd::add(&[0u32], &[0]), &[0],);
 
-        assert_eq!(
-            ElementAdd::add(&[0u32], &[1]),
-            &[1],
-        );
+        assert_eq!(ElementAdd::add(&[0u32], &[1]), &[1],);
 
-        assert_eq!(
-            ElementAdd::add(&[1u32], &[0]),
-            &[1],
-        );
+        assert_eq!(ElementAdd::add(&[1u32], &[0]), &[1],);
 
-        assert_eq!(
-            ElementAdd::add(&[1u32], &[1]),
-            &[2],
-        );
+        assert_eq!(ElementAdd::add(&[1u32], &[1]), &[2],);
     }
 
     #[test]
     fn test_long() {
-        assert_eq!(
-            ElementAdd::add(&[0u32], &[0, 1]),
-            &[0, 1],
-        );
+        assert_eq!(ElementAdd::add(&[0u32], &[0, 1]), &[0, 1],);
 
-        assert_eq!(
-            ElementAdd::add(&[1u32], &[0, 1]),
-            &[1, 1],
-        );
+        assert_eq!(ElementAdd::add(&[1u32], &[0, 1]), &[1, 1],);
     }
 
     #[test]
     fn test_carry() {
-        assert_eq!(
-            ElementAdd::add(&[u32::MAX], &[1]),
-            &[0, 1],
-        );
+        assert_eq!(ElementAdd::add(&[u32::MAX], &[1]), &[0, 1],);
     }
 }

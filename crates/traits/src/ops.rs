@@ -5,8 +5,8 @@ pub mod checked;
 pub mod core;
 pub mod overflowing;
 pub mod saturating;
-pub mod wrapping;
 pub mod widening;
+pub mod wrapping;
 
 /// The power, or exponent, operator. Generally represented as `xⁿ`.
 pub trait Pow<Rhs = Self> {

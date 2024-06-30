@@ -1,23 +1,28 @@
-use std::fmt::Debug;
-use std::hint::black_box;
-use std::array;
-use std::ops::{Add, AddAssign, Mul};
-use criterion::{BenchmarkGroup, BenchmarkId, Criterion, criterion_group, criterion_main};
 use criterion::measurement::Measurement;
+use criterion::{criterion_group, criterion_main, BenchmarkGroup, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
 use numeric_compounds::matrix::Matrix;
 use numeric_traits::identity::{One, Zero};
+use std::array;
+use std::fmt::Debug;
+use std::hint::black_box;
+use std::ops::{Add, AddAssign, Mul};
 
-fn make_matrices<T: Zero + One + Clone + AddAssign, const N: usize>() -> (Matrix<T, N, N>, Matrix<T, N, N>) {
+fn make_matrices<T: Zero + One + Clone + AddAssign, const N: usize>(
+) -> (Matrix<T, N, N>, Matrix<T, N, N>) {
     let mut cur = T::zero();
-    let l = Matrix::new(array::from_fn(|_| array::from_fn(|_| {
-        cur += T::one();
-        cur.clone()
-    })));
-    let r = Matrix::new(array::from_fn(|_| array::from_fn(|_| {
-        cur += T::one();
-        cur.clone()
-    })));
+    let l = Matrix::new(array::from_fn(|_| {
+        array::from_fn(|_| {
+            cur += T::one();
+            cur.clone()
+        })
+    }));
+    let r = Matrix::new(array::from_fn(|_| {
+        array::from_fn(|_| {
+            cur += T::one();
+            cur.clone()
+        })
+    }));
     (l, r)
 }
 
@@ -47,13 +52,16 @@ macro_rules! multi_bench {
     };
 }
 
-fn inner_bench_add<M: Measurement, T: Add + Clone + Debug, const N: usize>(g: &mut BenchmarkGroup<M>, l: Matrix<T, N, N>, r: Matrix<T, N, N>) {
+fn inner_bench_add<M: Measurement, T: Add + Clone + Debug, const N: usize>(
+    g: &mut BenchmarkGroup<M>,
+    l: Matrix<T, N, N>,
+    r: Matrix<T, N, N>,
+) {
     g.bench_with_input(
         BenchmarkId::from_parameter(format!("{N}")),
         &(l, r),
-        |b, (l, r)| b.iter(|| {
-            black_box(l.clone()) + black_box(r.clone())
-    }));
+        |b, (l, r)| b.iter(|| black_box(l.clone()) + black_box(r.clone())),
+    );
 }
 
 fn bench_add(c: &mut Criterion) {
@@ -62,13 +70,20 @@ fn bench_add(c: &mut Criterion) {
     multi_bench!(c, f64, inner_bench_add, "Matrix<f64, _, _>::add");
 }
 
-fn inner_bench_mul<M: Measurement, T: Add<Output = T> + Mul<Output = T> + Clone + Zero + Debug, const N: usize>(g: &mut BenchmarkGroup<M>, l: Matrix<T, N, N>, r: Matrix<T, N, N>) {
+fn inner_bench_mul<
+    M: Measurement,
+    T: Add<Output = T> + Mul<Output = T> + Clone + Zero + Debug,
+    const N: usize,
+>(
+    g: &mut BenchmarkGroup<M>,
+    l: Matrix<T, N, N>,
+    r: Matrix<T, N, N>,
+) {
     g.bench_with_input(
         BenchmarkId::from_parameter(format!("{N}")),
         &(l, r),
-        |b, (l, r)| b.iter(|| {
-        black_box(l.clone()) * black_box(r.clone())
-    }));
+        |b, (l, r)| b.iter(|| black_box(l.clone()) * black_box(r.clone())),
+    );
 }
 
 fn bench_mul(c: &mut Criterion) {

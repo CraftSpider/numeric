@@ -1,8 +1,8 @@
+use crate::algos::{ElementCmp, ElementShl, ElementSub};
+use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "std")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::Zero;
-use crate::algos::{ElementCmp, ElementShl, ElementSub};
-use crate::bit_slice::BitSliceExt;
 
 pub trait BitwiseDiv: BitSliceExt {
     #[cfg(feature = "std")]
@@ -31,10 +31,7 @@ pub trait BitwiseDiv: BitSliceExt {
     }
 }
 
-impl<T> BitwiseDiv for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> BitwiseDiv for T where T: ?Sized + BitSliceExt {}
 
 #[cfg(test)]
 mod tests {
@@ -60,7 +57,10 @@ mod tests {
         let slice7: &[u8] = &[0b0, 0b0, 0b0, 0b1];
         let slice8: &[u8] = &[0b10];
 
-        assert_eq!(BitwiseDiv::div_long(slice7, slice8).0, &[0b0, 0b0, 0b10000000, 0b0]);
+        assert_eq!(
+            BitwiseDiv::div_long(slice7, slice8).0,
+            &[0b0, 0b0, 0b10000000, 0b0]
+        );
     }
 
     #[test]

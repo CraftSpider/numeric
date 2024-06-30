@@ -1,7 +1,7 @@
 use core::ops::{Add, Div, Mul, Rem, Sub};
 
-use numeric_traits::identity::{Zero, One};
 use numeric_traits::class::Real;
+use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::NumOps;
 use numeric_traits::ops::Pow;
 
@@ -27,11 +27,17 @@ impl<T> Complex<T> {
 
 impl<T: Zero> Complex<T> {
     pub fn from_real(real: T) -> Complex<T> {
-        Complex { real, imag: T::zero() }
+        Complex {
+            real,
+            imag: T::zero(),
+        }
     }
 
     pub fn from_imag(imag: T) -> Complex<T> {
-        Complex { real: T::zero(), imag }
+        Complex {
+            real: T::zero(),
+            imag,
+        }
     }
 }
 
@@ -99,7 +105,7 @@ where
     fn mul(self, rhs: Self) -> Self::Output {
         Complex::new(
             self.real.clone() * rhs.real.clone() - self.imag.clone() * rhs.imag.clone(),
-            self.real * rhs.imag + rhs.real * self.imag
+            self.real * rhs.imag + rhs.real * self.imag,
         )
     }
 }
@@ -124,7 +130,8 @@ where
     fn div(self, rhs: Self) -> Self::Output {
         let divisor = rhs.real.clone() * rhs.real.clone() + rhs.imag.clone() * rhs.imag.clone();
         Complex::new(
-            (self.real.clone() * rhs.real.clone() + self.imag.clone() * rhs.imag.clone()) / divisor.clone(),
+            (self.real.clone() * rhs.real.clone() + self.imag.clone() * rhs.imag.clone())
+                / divisor.clone(),
             (self.imag * rhs.real - self.real * rhs.imag) / divisor,
         )
     }

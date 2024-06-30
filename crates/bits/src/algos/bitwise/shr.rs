@@ -1,8 +1,8 @@
+use crate::bit_slice::BitSliceExt;
+use crate::utils::IntSlice;
 use alloc::vec;
 use alloc::vec::Vec;
 use numeric_traits::identity::Zero;
-use crate::bit_slice::BitSliceExt;
-use crate::utils::IntSlice;
 
 pub trait BitwiseShr: BitSliceExt {
     #[cfg(feature = "std")]
@@ -19,10 +19,7 @@ pub trait BitwiseShr: BitSliceExt {
     }
 }
 
-impl<T> BitwiseShr for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> BitwiseShr for T where T: ?Sized + BitSliceExt {}
 
 #[cfg(test)]
 mod tests {
@@ -31,7 +28,10 @@ mod tests {
     #[test]
     fn test_shr() {
         let slice: &[u16] = &[0b1010101010101010, 0b1010101010101010];
-        assert_eq!(BitwiseShr::shr(slice, 1), &[0b0101010101010101, 0b0101010101010101]);
+        assert_eq!(
+            BitwiseShr::shr(slice, 1),
+            &[0b0101010101010101, 0b0101010101010101]
+        );
 
         let slice: &[u8] = &[0b0, 0b11111111];
         assert_eq!(BitwiseShr::shr(slice, 8), &[0b11111111]);

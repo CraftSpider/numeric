@@ -1,8 +1,8 @@
+use alloc::boxed::Box;
 use core::marker::PhantomData;
 use core::ops::Index;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
-use alloc::boxed::Box;
 
 pub struct Node<T> {
     next: AtomicPtr<Node<T>>,
@@ -56,7 +56,9 @@ pub struct UnsyncLinked<T> {
 
 impl<T> UnsyncLinked<T> {
     pub const fn new() -> UnsyncLinked<T> {
-        UnsyncLinked { head: AtomicPtr::new(ptr::null_mut()) }
+        UnsyncLinked {
+            head: AtomicPtr::new(ptr::null_mut()),
+        }
     }
 
     fn tail(&self) -> (*mut Node<T>, usize) {
@@ -89,7 +91,10 @@ impl<T> UnsyncLinked<T> {
     /// Returns the new length of the list
     pub fn push(&self, val: T) -> usize {
         let new = Node::new(val);
-        match self.head.compare_exchange(ptr::null_mut(), new, Ordering::AcqRel, Ordering::Acquire) {
+        match self
+            .head
+            .compare_exchange(ptr::null_mut(), new, Ordering::AcqRel, Ordering::Acquire)
+        {
             Ok(_) => 1,
             Err(_) => {
                 let (mut tail, len) = self.tail();
@@ -109,14 +114,16 @@ impl<T> UnsyncLinked<T> {
             return None;
         }
         for _ in 0..idx {
-            cur_node = Node::get_next_opt(cur_node)?
-                .load(Ordering::Relaxed);
+            cur_node = Node::get_next_opt(cur_node)?.load(Ordering::Relaxed);
         }
         Some(Node::get_val(cur_node))
     }
 
     pub fn iter(&self) -> Iter<'_, T> {
-        Iter { cur: &self.head, phantom: PhantomData }
+        Iter {
+            cur: &self.head,
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -170,8 +177,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::{run_threaded, THREAD_COUNT};
     use super::*;
+    use crate::tests::{run_threaded, THREAD_COUNT};
     use std::thread;
     use std::time::Duration;
 

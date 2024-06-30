@@ -1,7 +1,7 @@
 use super::U;
-use rand::prelude::{Rng, Distribution};
-use rand::{Error, Fill};
 use rand::distributions::Standard;
+use rand::prelude::{Distribution, Rng};
+use rand::{Error, Fill};
 
 impl<const N: usize> Fill for U<N> {
     fn try_fill<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), Error> {

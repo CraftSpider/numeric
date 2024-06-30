@@ -1,5 +1,5 @@
-use core::mem::MaybeUninit;
 use super::{IntoStaticIter, StaticIter};
+use core::mem::MaybeUninit;
 
 impl<T, const N: usize> IntoStaticIter<N> for [T; N] {
     type Item = T;
@@ -40,8 +40,7 @@ impl<T, const N: usize> StaticIter<N> for IntoIter<T, N> {
 
     #[inline]
     unsafe fn idx(&mut self, idx: usize) -> Self::Item {
-        core::mem::replace(self.inner.get_unchecked_mut(idx), MaybeUninit::uninit())
-            .assume_init()
+        core::mem::replace(self.inner.get_unchecked_mut(idx), MaybeUninit::uninit()).assume_init()
     }
 }
 
@@ -64,4 +63,3 @@ impl<'a, T, const N: usize> StaticIter<N> for RefIter<'a, T, N> {
         &self.inner[idx]
     }
 }
-

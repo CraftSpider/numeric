@@ -22,7 +22,10 @@ struct Interned<T> {
 impl<T> Interned<T> {
     #[inline]
     fn new_uninit() -> Interned<T> {
-        Interned { refs: AtomicUsize::new(0), val: UnsafeCell::new(None) }
+        Interned {
+            refs: AtomicUsize::new(0),
+            val: UnsafeCell::new(None),
+        }
     }
 
     #[inline]
@@ -73,12 +76,14 @@ where
 {
     #[must_use]
     pub const fn new() -> Interner<T> {
-        Interner { inner: UnsyncLinked::new() }
+        Interner {
+            inner: UnsyncLinked::new(),
+        }
     }
 
     pub fn with_capacity(capacity: usize) -> Interner<T> {
         let list = UnsyncLinked::new();
-        for _ in 0..((capacity+CHUNK_SIZE-1) / 32) {
+        for _ in 0..((capacity + CHUNK_SIZE - 1) / 32) {
             list.push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
         }
         Interner { inner: list }
@@ -87,7 +92,7 @@ where
     fn find<U>(list: &UnsyncLinked<[Interned<T>; CHUNK_SIZE]>, val: &U) -> Find<(usize, usize)>
     where
         U: ?Sized + PartialEq,
-        T: Borrow<U>
+        T: Borrow<U>,
     {
         for (idx, i) in list.iter().enumerate() {
             for (idx2, i) in i.iter().enumerate() {
@@ -107,19 +112,16 @@ where
     #[inline]
     fn incr_inner(interned: &Interned<T>) {
         let val = interned.refs.fetch_add(1, Ordering::AcqRel);
-        debug_assert_ne!(
-            val, usize::MAX,
-            "Too many instances of a single value!"
-        );
+        debug_assert_ne!(val, usize::MAX, "Too many instances of a single value!");
     }
 
     #[inline]
     fn decr_inner(interned: &Interned<T>) {
-        let _ = interned.refs.fetch_update(
-            Ordering::AcqRel,
-            Ordering::Acquire,
-            |val| val.checked_sub(1)
-        );
+        let _ = interned
+            .refs
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |val| {
+                val.checked_sub(1)
+            });
     }
 
     #[inline(always)]
@@ -150,7 +152,9 @@ where
                 loc1 * 32 + loc2
             }
             Find::None => {
-                let len = self.inner.push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
+                let len = self
+                    .inner
+                    .push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
                 Self::incr_inner(&self.inner[len - 1][0]);
                 // SAFETY: Slot is empty, we're making it live, we are the only ones with access
                 unsafe { self.inner[len - 1][0].set_val(val.into()) };
@@ -170,8 +174,7 @@ where
     }
 
     pub fn get(&self, offset: InternId) -> &T {
-        self.try_get(offset)
-            .expect("Expected valid offset")
+        self.try_get(offset).expect("Expected valid offset")
     }
 
     pub fn incr(&self, offset: InternId) {
@@ -199,8 +202,8 @@ impl<T: Clone + PartialEq> Default for Interner<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::run_threaded;
     use super::*;
+    use crate::tests::run_threaded;
 
     #[test]
     fn test_multi_thread() {
@@ -208,10 +211,13 @@ mod tests {
         // correctness issue, but makes this test harder.
         let interner = Interner::<usize>::with_capacity(10);
 
-        run_threaded(move || interner, |interner, idx| {
-            let pos = interner.add(idx % 10);
-            assert!(pos.0 < 10, "pos too big: {}", pos.0);
-        });
+        run_threaded(
+            move || interner,
+            |interner, idx| {
+                let pos = interner.add(idx % 10);
+                assert!(pos.0 < 10, "pos too big: {}", pos.0);
+            },
+        );
     }
 
     #[test]
@@ -251,10 +257,6 @@ mod tests {
 
         let pos1 = interner.add(-1);
         interner.decr(pos1.clone());
-        assert!(matches!(
-            interner.try_get(pos1),
-            None
-        ));
+        assert!(matches!(interner.try_get(pos1), None));
     }
 }
-

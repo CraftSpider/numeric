@@ -5,9 +5,9 @@
 #[cfg(feature = "std")]
 extern crate alloc;
 
-pub mod complex;
-pub mod matrix;
-pub mod vector;
 #[cfg(feature = "std")]
 pub mod bivec;
+pub mod complex;
+pub mod matrix;
 pub mod rotor;
+pub mod vector;

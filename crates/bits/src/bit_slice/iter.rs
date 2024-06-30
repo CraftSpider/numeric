@@ -1,5 +1,5 @@
-use core::iter::FusedIterator;
 use crate::bit_slice::BitLike;
+use core::iter::FusedIterator;
 
 /// See `BitSlice::iter_bits`
 pub struct BitIter<'a, I> {
@@ -52,11 +52,13 @@ where
 {
     fn len(&self) -> usize {
         let remaining = self.iter.len();
-        I::BIT_LEN * remaining + if self.cur.is_some() { I::BIT_LEN - self.idx } else { 0 }
+        I::BIT_LEN * remaining
+            + if self.cur.is_some() {
+                I::BIT_LEN - self.idx
+            } else {
+                0
+            }
     }
 }
 
-impl<I> FusedIterator for BitIter<'_, I>
-where
-    I: BitLike,
-{}
+impl<I> FusedIterator for BitIter<'_, I> where I: BitLike {}

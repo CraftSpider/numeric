@@ -1,5 +1,7 @@
-
-use core::num::{NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize};
+use core::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
+};
 
 macro_rules! impl_nz {
     ($ty:ty) => {
@@ -26,13 +28,13 @@ macro_rules! impl_nz {
                 <$ty>::MIN
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_unz {
     ($ty:ty) => {
         impl crate::class::Unsigned for $ty {}
-    }
+    };
 }
 
 macro_rules! impl_snz {
@@ -61,7 +63,7 @@ macro_rules! impl_snz {
                 -<Self as crate::identity::One>::one()
             }
         }
-    }
+    };
 }
 
 impl_nz!(NonZeroU8);

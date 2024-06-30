@@ -2,22 +2,25 @@
 //!
 //! Small values are stored inline, large values are stored in a refcounted interner.
 
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::hint::unreachable_unchecked;
-use core::{fmt, ops, mem, num};
-use core::borrow::Borrow;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use numeric_traits::cast::{FromChecked, FromStrRadix};
-use numeric_traits::ops::Pow;
-use numeric_traits::class::{Signed, Numeric, Integral};
-use numeric_traits::identity::{Zero, One};
-use numeric_utils::{Interner, static_assert, static_assert_traits};
-use numeric_bits::algos::{ElementAdd, ElementSub, ElementMul, ElementShl, ElementShr, ElementBitand, ElementBitor, ElementBitxor, ElementNot, BitwiseDiv};
+use core::{fmt, mem, num, ops};
+use numeric_bits::algos::{
+    BitwiseDiv, ElementAdd, ElementBitand, ElementBitor, ElementBitxor, ElementMul, ElementNot,
+    ElementShl, ElementShr, ElementSub,
+};
 use numeric_bits::bit_slice::BitSliceExt;
 use numeric_bits::utils::*;
+use numeric_traits::cast::{FromChecked, FromStrRadix};
+use numeric_traits::class::{Integral, Numeric, Signed};
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::Pow;
 use numeric_utils::intern::InternId;
+use numeric_utils::{static_assert, static_assert_traits, Interner};
 
 #[macro_use]
 mod macros;
@@ -164,7 +167,14 @@ impl BigInt {
 
     #[inline]
     const fn new_inline(val: usize, neg: bool) -> BigInt {
-        BigInt(TaggedOffset::new(val, if val != 0 && neg { Tag::InlineNeg } else { Tag::Inline }))
+        BigInt(TaggedOffset::new(
+            val,
+            if val != 0 && neg {
+                Tag::InlineNeg
+            } else {
+                Tag::Inline
+            },
+        ))
     }
 
     fn new_intern<V>(val: V, neg: bool) -> BigInt
@@ -172,7 +182,10 @@ impl BigInt {
         V: Borrow<[usize]> + Into<Box<[usize]>>,
     {
         let offset = INT_STORE.add::<_, [usize]>(val);
-        BigInt(TaggedOffset::new(offset.into_usize(), if neg { Tag::Neg } else { Tag::None }))
+        BigInt(TaggedOffset::new(
+            offset.into_usize(),
+            if neg { Tag::Neg } else { Tag::None },
+        ))
     }
 
     fn new_slice<V>(val: V, neg: bool) -> BigInt
@@ -283,7 +296,7 @@ impl Binary for BigInt {
 impl UpperHex for BigInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const DIGITS: &[char] = &[
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
         ];
 
         if self.is_negative() {
@@ -297,7 +310,7 @@ impl UpperHex for BigInt {
 impl LowerHex for BigInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const DIGITS: &[char] = &[
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
         ];
 
         if self.is_negative() {
@@ -369,11 +382,9 @@ impl Ord for BigInt {
             } else {
                 this.iter()
                     .zip(other.iter())
-                    .find_map(|(l, r)| {
-                        match l.cmp(r) {
-                            Ordering::Equal => None,
-                            other => Some(other),
-                        }
+                    .find_map(|(l, r)| match l.cmp(r) {
+                        Ordering::Equal => None,
+                        other => Some(other),
                     })
                     .unwrap_or(Ordering::Equal)
             }
@@ -627,12 +638,15 @@ impl RadixChars {
         match radix {
             0..=36 => {
                 let chars = &INSENS_CHARS[..(radix as usize)];
-                chars.iter()
+                chars
+                    .iter()
                     .enumerate()
-                    .find_map(|(idx, &c2)| if c2 == c.to_ascii_lowercase() {
-                        Some(u32::try_from(idx).unwrap())
-                    } else {
-                        None
+                    .find_map(|(idx, &c2)| {
+                        if c2 == c.to_ascii_lowercase() {
+                            Some(u32::try_from(idx).unwrap())
+                        } else {
+                            None
+                        }
                     })
                     .ok_or(FromStrError::InvalidChar(c))
             }
@@ -735,12 +749,18 @@ mod tests {
         assert_eq!(BigInt::from(1).to_string(), "1");
         assert_eq!(BigInt::from(10).to_string(), "10");
         assert_eq!(BigInt::from(111).to_string(), "111");
-        assert_eq!(BigInt::from(18446744073709551616u128).to_string(), "18446744073709551616");
+        assert_eq!(
+            BigInt::from(18446744073709551616u128).to_string(),
+            "18446744073709551616"
+        );
     }
 
     #[test]
     fn test_from_str() {
-        assert_eq!(BigInt::from_str_radix("123", 10).unwrap(), BigInt::from(123));
+        assert_eq!(
+            BigInt::from_str_radix("123", 10).unwrap(),
+            BigInt::from(123)
+        );
         assert_eq!(BigInt::from_str_radix("FF", 16).unwrap(), BigInt::from(255));
     }
 
@@ -756,7 +776,10 @@ mod tests {
         assert_eq!(BigInt::from(-1) + BigInt::from(1), BigInt::from(0));
         assert_eq!(BigInt::from(1) + BigInt::from(-1), BigInt::from(0));
 
-        assert_eq!(BigInt::from(usize::MAX) + BigInt::from(usize::MAX), BigInt::from((usize::MAX as u128) * 2))
+        assert_eq!(
+            BigInt::from(usize::MAX) + BigInt::from(usize::MAX),
+            BigInt::from((usize::MAX as u128) * 2)
+        )
     }
 
     #[test]
@@ -788,7 +811,8 @@ mod tests {
         assert_eq!(BigInt::from(-2) / BigInt::from(-2), BigInt::from(1));
         assert_eq!(BigInt::from(1) / BigInt::from(3), BigInt::from(0));
         assert_eq!(
-            BigInt::new_slice(&[0usize, 0, 1] as &[_], false) / BigInt::new_slice(&[2usize] as &[_], false),
+            BigInt::new_slice(&[0usize, 0, 1] as &[_], false)
+                / BigInt::new_slice(&[2usize] as &[_], false),
             BigInt::new_slice(&[0usize, (usize::MAX / 2) + 1] as &[_], false),
         );
     }
@@ -808,7 +832,10 @@ mod tests {
         assert_eq!(BigInt::from(2) << BigInt::from(1), BigInt::from(4));
         assert_eq!(BigInt::from(3) << BigInt::from(1), BigInt::from(6));
 
-        assert_eq!(BigInt::from(usize::MAX) << BigInt::from(1), BigInt::from((usize::MAX as u128) * 2));
+        assert_eq!(
+            BigInt::from(usize::MAX) << BigInt::from(1),
+            BigInt::from((usize::MAX as u128) * 2)
+        );
     }
 
     #[test]

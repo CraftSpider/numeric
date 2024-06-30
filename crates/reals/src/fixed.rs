@@ -6,8 +6,8 @@ use core::cmp::Ordering;
 use core::fmt::{self, Write};
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 use numeric_traits::cast::FromTruncating;
-use numeric_traits::identity::{Zero, One};
-use numeric_traits::class::{Numeric, Bounded, Integral, Real, BoundedSigned, Signed};
+use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Real, Signed};
+use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
 
 fn mask<T: Integral, const N: usize>() -> T {
@@ -54,9 +54,7 @@ where
         let ten = T::truncate(10);
         // TODO: This can overflow. Find a non-overflowing method
         //       Maybe shift, print upper, then do this to the fractional part
-        let mut whole = self.0.clone()
-            * ten.clone().pow(T::truncate(N))
-            / two.pow(T::truncate(N));
+        let mut whole = self.0.clone() * ten.clone().pow(T::truncate(N)) / two.pow(T::truncate(N));
         let mut idx = 0;
 
         let mut buf = String::new();
@@ -84,7 +82,12 @@ where
     T: Integral + fmt::Binary,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:b}.{:b}", self.clone().trunc().0, self.clone().fract().0)
+        write!(
+            f,
+            "{:b}.{:b}",
+            self.clone().trunc().0,
+            self.clone().fract().0
+        )
     }
 }
 
@@ -239,7 +242,11 @@ impl<T: Integral, const N: usize> Real for Fixed<T, N> {
     fn round(self) -> Self {
         let half = Self::one() / (Self::one() + Self::one());
         let f = self.clone().fract();
-        let f = if f >= Self::zero() { f } else { Self::one() - f };
+        let f = if f >= Self::zero() {
+            f
+        } else {
+            Self::one() - f
+        };
         if f > half {
             self.ceil()
         } else {
@@ -299,7 +306,13 @@ mod tests {
     fn fixed_fract() {
         assert_eq!(Fixed::<_, 1>::from_val(2).fract(), Fixed::from_val(0));
         assert_eq!(Fixed::<_, 1>::from_raw(0b11).fract(), Fixed::from_raw(0b01));
-        assert_eq!(Fixed::<_, 1>::from_raw(-0b11).fract(), Fixed::from_raw(-0b01));
-        assert_eq!(Fixed::<_, 2>::from_raw(-0b110).fract(), Fixed::from_raw(-0b010));
+        assert_eq!(
+            Fixed::<_, 1>::from_raw(-0b11).fract(),
+            Fixed::from_raw(-0b01)
+        );
+        assert_eq!(
+            Fixed::<_, 2>::from_raw(-0b110).fract(),
+            Fixed::from_raw(-0b010)
+        );
     }
 }

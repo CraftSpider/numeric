@@ -7,14 +7,14 @@
 #[cfg(feature = "std")]
 extern crate alloc;
 
-mod i;
-mod u;
 #[cfg(feature = "std")]
 mod big_int;
+mod i;
+mod u;
 // #[cfg(test)]
 // mod tests;
 
 #[cfg(feature = "std")]
 pub use big_int::BigInt;
-pub use u::U;
 pub use i::I;
+pub use u::U;

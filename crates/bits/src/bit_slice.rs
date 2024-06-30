@@ -1,8 +1,8 @@
 //! A type for bitwise operations on slices of integers
 
 use core::mem;
-use numeric_traits::identity::{One, Zero};
 use numeric_traits::class::{BoundedBit, Integral};
+use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingOps;
 
 mod iter;
@@ -13,20 +13,29 @@ use numeric_traits::ops::widening::WideningMul;
 
 #[inline]
 fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
-    (
-        idx / T::Bit::BIT_LEN,
-        idx % T::Bit::BIT_LEN,
-    )
+    (idx / T::Bit::BIT_LEN, idx % T::Bit::BIT_LEN)
 }
 
 /// Trait for types that can be used as 'bit containers'. This means integers that support the
 /// common bit ops, in addition to being copyable and bounded.
-pub trait BitLike: Integral + NumAssignOps + BitAssignOps + BoundedBit + OverflowingOps + WideningMul + Ord + Copy {
+pub trait BitLike:
+    Integral + NumAssignOps + BitAssignOps + BoundedBit + OverflowingOps + WideningMul + Ord + Copy
+{
     /// The length of this type in bits.
     const BIT_LEN: usize;
 }
 
-impl<T: Integral + NumAssignOps + BitAssignOps + BoundedBit + OverflowingOps + WideningMul + Ord + Copy> BitLike for T {
+impl<
+        T: Integral
+            + NumAssignOps
+            + BitAssignOps
+            + BoundedBit
+            + OverflowingOps
+            + WideningMul
+            + Ord
+            + Copy,
+    > BitLike for T
+{
     const BIT_LEN: usize = mem::size_of::<T>() * 8;
 }
 
@@ -83,9 +92,10 @@ pub trait BitSliceExt {
     /// Get the value of a bit at a given index, returning `None` if the index is out of range
     fn get_bit_opt(&self, idx: usize) -> Option<bool> {
         let (idx, bit) = idx_bit::<Self>(idx);
-        self.slice().get(idx).copied().map(|val| {
-            val & (<Self::Bit as One>::one() << bit) != <Self::Bit as Zero>::zero()
-        })
+        self.slice()
+            .get(idx)
+            .copied()
+            .map(|val| val & (<Self::Bit as One>::one() << bit) != <Self::Bit as Zero>::zero())
     }
 
     /// Set a single value by index on this slice, panicking if the index is out of range
@@ -94,9 +104,8 @@ pub trait BitSliceExt {
     ///
     /// If `idx` is outside the range of this slice
     fn set(&mut self, idx: usize, val: Self::Bit) {
-        self.set_opt(idx, val).unwrap_or_else(|| {
-            panic!("Attempt to write value at index {} out of bounds", idx)
-        })
+        self.set_opt(idx, val)
+            .unwrap_or_else(|| panic!("Attempt to write value at index {} out of bounds", idx))
     }
 
     /// Set a single value by index on this slice, returning `None` if the index is out of range
@@ -122,14 +131,12 @@ pub trait BitSliceExt {
     /// Set a single bit by index on this slice, returning `None` if the index is out of range
     fn set_bit_opt(&mut self, idx: usize, val: bool) -> Option<()> {
         let (idx, bit) = idx_bit::<Self>(idx);
-        self.slice_mut()
-            .get_mut(idx)
-            .map(|item| {
-                *item &= !(Self::Bit::one() << bit);
-                if val {
-                    *item |= Self::Bit::one() << bit;
-                }
-            })
+        self.slice_mut().get_mut(idx).map(|item| {
+            *item &= !(Self::Bit::one() << bit);
+            if val {
+                *item |= Self::Bit::one() << bit;
+            }
+        })
     }
 
     /// Set a single value by index on this slice, doing nothing if the index is out of range

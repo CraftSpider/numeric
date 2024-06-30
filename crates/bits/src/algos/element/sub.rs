@@ -1,10 +1,10 @@
-use numeric_traits::identity::{One, Zero};
-use numeric_traits::ops::overflowing::OverflowingSub;
 use crate::algos::element::ElementNot;
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
 #[cfg(feature = "std")]
 use alloc::{vec, vec::Vec};
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::overflowing::OverflowingSub;
 
 pub trait ElementSub: BitSliceExt {
     #[cfg(feature = "std")]
@@ -112,10 +112,7 @@ pub trait ElementSub: BitSliceExt {
     }
 }
 
-impl<T> ElementSub for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> ElementSub for T where T: ?Sized + BitSliceExt {}
 
 #[cfg(test)]
 mod tests {
@@ -123,48 +120,24 @@ mod tests {
 
     #[test]
     fn test_simple() {
-        assert_eq!(
-            ElementSub::sub(&[0u32], &[0]),
-            (vec![0], false),
-        );
+        assert_eq!(ElementSub::sub(&[0u32], &[0]), (vec![0], false),);
 
-        assert_eq!(
-            ElementSub::sub(&[1u32], &[0]),
-            (vec![1], false),
-        );
+        assert_eq!(ElementSub::sub(&[1u32], &[0]), (vec![1], false),);
 
-        assert_eq!(
-            ElementSub::sub(&[0u32], &[1]),
-            (vec![1], true),
-        );
+        assert_eq!(ElementSub::sub(&[0u32], &[1]), (vec![1], true),);
 
-        assert_eq!(
-            ElementSub::sub(&[1u32], &[1]),
-            (vec![0], false),
-        );
+        assert_eq!(ElementSub::sub(&[1u32], &[1]), (vec![0], false),);
     }
 
     #[test]
     fn test_carry() {
-        assert_eq!(
-            ElementSub::sub(&[0u32, 1], &[1]),
-            (vec![u32::MAX], false),
-        )
+        assert_eq!(ElementSub::sub(&[0u32, 1], &[1]), (vec![u32::MAX], false),)
     }
 
     #[test]
     fn test_long() {
-        assert_eq!(
-            ElementSub::sub(&[0u32, 1], &[0, 1]),
-            (vec![0], false),
-        );
-        assert_eq!(
-            ElementSub::sub(&[1u32, 1], &[1]),
-            (vec![0, 1], false),
-        );
-        assert_eq!(
-            ElementSub::sub(&[1u32, 1], &[0, 1]),
-            (vec![1], false),
-        );
+        assert_eq!(ElementSub::sub(&[0u32, 1], &[0, 1]), (vec![0], false),);
+        assert_eq!(ElementSub::sub(&[1u32, 1], &[1]), (vec![0, 1], false),);
+        assert_eq!(ElementSub::sub(&[1u32, 1], &[0, 1]), (vec![1], false),);
     }
 }

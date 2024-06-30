@@ -4,13 +4,13 @@
 
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use numeric_utils::{static_assert, static_assert_traits};
-use numeric_traits::class::{Bounded, Signed, BoundedSigned, Numeric, Integral};
-use numeric_traits::ops::checked::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
-use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingSub, SaturatingMul};
-use numeric_traits::identity::{One, Zero};
-use numeric_traits::ops::Pow;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
+use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Signed};
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
+use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingMul, SaturatingSub};
+use numeric_traits::ops::Pow;
+use numeric_utils::{static_assert, static_assert_traits};
 
 #[cfg(feature = "rand")]
 mod rand_impl;
@@ -287,6 +287,4 @@ impl<const N: usize> Signed for I<N> {
     }
 }
 
-impl<const N: usize> Integral for I<N> {
-
-}
+impl<const N: usize> Integral for I<N> {}

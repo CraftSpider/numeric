@@ -1,4 +1,3 @@
-
 use alloc::vec::Vec;
 
 // Bivector contains dC2 components - one for each pair of axes in the dimension
@@ -8,9 +7,9 @@ use alloc::vec::Vec;
 // 3 -> 3
 // 4 -> 6
 
-use numeric_traits::class::RealSigned;
 use crate::matrix::Matrix;
 use crate::vector::Vector;
+use numeric_traits::class::RealSigned;
 
 // TODO: Put this in some algorithms location
 const fn choose_n(mut n: usize, mut r: usize) -> usize {
@@ -48,15 +47,18 @@ impl<T: RealSigned, const DIM: usize> BiVector<T, DIM> {
         // the component for that space.
         let mut comps = Vec::with_capacity(choose_n(DIM, 2));
         for i in 0..DIM {
-            for j in (i+1)..DIM {
-                let comp = Matrix::new([
-                    [a[i].clone(), b[i].clone()],
-                    [a[j].clone(), b[j].clone()],
-                ]).determinant();
+            for j in (i + 1)..DIM {
+                let comp =
+                    Matrix::new([[a[i].clone(), b[i].clone()], [a[j].clone(), b[j].clone()]])
+                        .determinant();
                 comps.push(comp);
             }
         }
-        assert_eq!(comps.len(), Self::COMPS, "INVALID BIVECTOR STATE: THIS IS A BUG");
+        assert_eq!(
+            comps.len(),
+            Self::COMPS,
+            "INVALID BIVECTOR STATE: THIS IS A BUG"
+        );
         BiVector(comps)
     }
 }

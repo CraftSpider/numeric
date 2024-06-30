@@ -1,4 +1,3 @@
-
 macro_rules! gauss_elim {
     ($self:ident, $cols:expr, $rows:expr, $data:expr) => {
         /// Uses Gaussian Elimination to put the matrix in triangular row-echelon form,
@@ -54,5 +53,5 @@ macro_rules! row_reduce {
         pub fn row_reduce(self) -> Self {
             self.gauss_elim().0
         }
-    }
+    };
 }

@@ -1,9 +1,9 @@
-use numeric_traits::identity::{One, Zero};
 use crate::algos::{ElementAdd, ElementCmp, ElementShl, ElementSub};
 use crate::bit_slice::{BitLike, BitSliceExt};
 use crate::utils::IntSlice;
 #[cfg(feature = "std")]
 use alloc::{vec, vec::Vec};
+use numeric_traits::identity::{One, Zero};
 
 pub trait ElementDiv: BitSliceExt {
     #[cfg(feature = "std")]
@@ -56,32 +56,32 @@ pub trait ElementDiv: BitSliceExt {
     }
 
     /*
-        // Make sure left * right <= bits
-        let k = usize::max(left.bit_len(), right.bit_len());
-        println!("k: {k}");
-        let pow = 2usize.pow((k+1) as u32);
-        let bits = BitSlice::new(int_to_arr(pow));
-        println!("bits: {bits:?}");
+       // Make sure left * right <= bits
+       let k = usize::max(left.bit_len(), right.bit_len());
+       println!("k: {k}");
+       let pow = 2usize.pow((k+1) as u32);
+       let bits = BitSlice::new(int_to_arr(pow));
+       println!("bits: {bits:?}");
 
-        // Get an initial guess. For now this can be whatever
-        // This should be able to fit at least `bits`
-        let mut x = left.clone();
-        println!("x: {x:?}");
+       // Get an initial guess. For now this can be whatever
+       // This should be able to fit at least `bits`
+       let mut x = left.clone();
+       println!("x: {x:?}");
 
-        for _ in 0..k {
-            // x+1 = x * (2^(k+1) - x * B) >> k
-            let b = right.as_slice();
-            println!("b: {b:?}");
-            let bx = BitSlice::mul_long_element_wrapping(x.clone(), b);
-            println!("bx: {bx:?}");
-            let sub = BitSlice::sub_element_wrapping(bits.clone(), bx);
-            println!("sub: {sub:?}");
-            x = BitSlice::shr_wrap_and_mask_wrapping(BitSlice::mul_long_element_wrapping(x, sub), k);
-            println!("x: {x:?}");
-        }
+       for _ in 0..k {
+           // x+1 = x * (2^(k+1) - x * B) >> k
+           let b = right.as_slice();
+           println!("b: {b:?}");
+           let bx = BitSlice::mul_long_element_wrapping(x.clone(), b);
+           println!("bx: {bx:?}");
+           let sub = BitSlice::sub_element_wrapping(bits.clone(), bx);
+           println!("sub: {sub:?}");
+           x = BitSlice::shr_wrap_and_mask_wrapping(BitSlice::mul_long_element_wrapping(x, sub), k);
+           println!("x: {x:?}");
+       }
 
-        (BitSlice::shr_wrap_and_mask_wrapping(BitSlice::mul_long_element_wrapping(left, x), k), false)
-     */
+       (BitSlice::shr_wrap_and_mask_wrapping(BitSlice::mul_long_element_wrapping(left, x), k), false)
+    */
 
     /// divtiply two slices, implemented as checked long division
     fn div_long_checked<'a, T>(left: &'a mut Self, right: &T) -> Option<&'a mut Self>
@@ -105,10 +105,7 @@ pub trait ElementDiv: BitSliceExt {
     }
 }
 
-impl<T> ElementDiv for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> ElementDiv for T where T: ?Sized + BitSliceExt {}
 
 /*
 #[cfg(test)]

@@ -1,4 +1,3 @@
-
 pub trait CheckedAdd<Rhs = Self> {
     type Output;
 
@@ -40,12 +39,13 @@ pub trait CheckedOps<Rhs = Self, Out = Self>:
     + CheckedSub<Rhs, Output = Out>
     + CheckedMul<Rhs, Output = Out>
     + CheckedDiv<Rhs, Output = Out>
-{}
+{
+}
 
-impl<T, Rhs, Out> CheckedOps<Rhs, Out> for T
-where
+impl<T, Rhs, Out> CheckedOps<Rhs, Out> for T where
     T: CheckedAdd<Rhs, Output = Out>
-    + CheckedSub<Rhs, Output = Out>
-    + CheckedMul<Rhs, Output = Out>
-    + CheckedDiv<Rhs, Output = Out>
-{}
+        + CheckedSub<Rhs, Output = Out>
+        + CheckedMul<Rhs, Output = Out>
+        + CheckedDiv<Rhs, Output = Out>
+{
+}

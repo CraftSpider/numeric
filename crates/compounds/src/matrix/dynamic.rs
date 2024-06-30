@@ -1,5 +1,5 @@
-use core::ops::{Index, IndexMut};
 use alloc::vec::Vec;
+use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
 use numeric_traits::class::RealSigned;
 
@@ -22,11 +22,7 @@ impl<T> DynMatrix<T> {
             );
         }
 
-        DynMatrix {
-            data,
-            rows,
-            cols,
-        }
+        DynMatrix { data, rows, cols }
     }
 
     pub(crate) fn as_ptr(&self) -> NonNull<T> {
@@ -51,8 +47,8 @@ impl<T> DynMatrix<T> {
         }
         let l = usize::min(a, b);
         let r = usize::max(a, b);
-        let (start, end) = self.data.split_at_mut(r*self.cols);
-        let start = &mut start[l*self.cols..(l+1)*self.cols];
+        let (start, end) = self.data.split_at_mut(r * self.cols);
+        let start = &mut start[l * self.cols..(l + 1) * self.cols];
         let end = &mut end[..self.cols];
         start.swap_with_slice(end);
     }
@@ -65,11 +61,7 @@ impl<T: RealSigned> DynMatrix<T> {
 
 impl<T, const ROW: usize, const COL: usize> From<[[T; COL]; ROW]> for DynMatrix<T> {
     fn from(value: [[T; COL]; ROW]) -> Self {
-        DynMatrix::new(
-            value.into_iter().flatten().collect(),
-            ROW,
-            COL,
-        )
+        DynMatrix::new(value.into_iter().flatten().collect(), ROW, COL)
     }
 }
 
@@ -142,7 +134,7 @@ mod tests {
             [1., 0., 4., 2.],
             [0., 1., 1., 0.],
             [0., 0., 0., 4.],
-            [0., 0., 0., 0.]
+            [0., 0., 0., 0.],
         ]);
         assert_eq!(a.row_reduce(), expected);
     }

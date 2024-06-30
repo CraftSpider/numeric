@@ -1,10 +1,10 @@
-use numeric_traits::identity::{One, Zero};
-use numeric_traits::ops::overflowing::OverflowingAdd;
-use numeric_traits::ops::widening::WideningMul;
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
 #[cfg(feature = "std")]
 use alloc::{vec, vec::Vec};
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::overflowing::OverflowingAdd;
+use numeric_traits::ops::widening::WideningMul;
 
 pub trait ElementMul: BitSliceExt {
     #[cfg(feature = "std")]
@@ -16,22 +16,19 @@ pub trait ElementMul: BitSliceExt {
         let zero = Self::Bit::zero();
         let mut out = vec![zero; left.len() + right.len()];
 
-        left.slice()
-            .iter()
-            .enumerate()
-            .for_each(|(idx, &l)| {
-                let mut carry = zero;
+        left.slice().iter().enumerate().for_each(|(idx, &l)| {
+            let mut carry = zero;
 
-                for (offset, &r) in right.slice().iter().enumerate() {
-                    let (low, high) = Self::Bit::widening_mul(l, r, carry);
-                    carry = high;
-                    out.add_item(idx + offset, low);
-                }
+            for (offset, &r) in right.slice().iter().enumerate() {
+                let (low, high) = Self::Bit::widening_mul(l, r, carry);
+                carry = high;
+                out.add_item(idx + offset, low);
+            }
 
-                if carry != zero {
-                    out.add_item(idx + right.slice().len(), carry);
-                }
-            });
+            if carry != zero {
+                out.add_item(idx + right.slice().len(), carry);
+            }
+        });
 
         IntSlice::shrink(out)
     }
@@ -63,7 +60,8 @@ pub trait ElementMul: BitSliceExt {
     {
         let zero = Self::Bit::zero();
 
-        let overflow = right.slice()
+        let overflow = right
+            .slice()
             .iter()
             .enumerate()
             .rev()
@@ -113,10 +111,7 @@ pub trait ElementMul: BitSliceExt {
     }
 }
 
-impl<T> ElementMul for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> ElementMul for T where T: ?Sized + BitSliceExt {}
 
 #[cfg(test)]
 mod tests {

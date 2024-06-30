@@ -4,8 +4,8 @@
 
 use core::cmp::Ordering;
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
-use numeric_traits::identity::{Zero, One};
-use numeric_traits::class::{Integral, Numeric, Real, Bounded, BoundedSigned, Signed};
+use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Real, Signed};
+use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
 
 /// A real value represented as a whole fraction. With a bounded

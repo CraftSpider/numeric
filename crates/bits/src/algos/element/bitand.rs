@@ -1,7 +1,7 @@
-use numeric_traits::identity::Zero;
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "std")]
 use alloc::{vec, vec::Vec};
+use numeric_traits::identity::Zero;
 
 pub trait ElementBitand: BitSliceExt {
     #[cfg(feature = "std")]
@@ -24,7 +24,4 @@ pub trait ElementBitand: BitSliceExt {
     }
 }
 
-impl<T> ElementBitand for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> ElementBitand for T where T: ?Sized + BitSliceExt {}

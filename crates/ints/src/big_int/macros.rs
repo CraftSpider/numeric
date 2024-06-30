@@ -1,4 +1,3 @@
-
 macro_rules! impl_assign_for_int {
     ($ty:ty) => {
         impl_assign_for_int!($ty, +, AddAssign, add_assign);
@@ -46,13 +45,21 @@ macro_rules! impl_for_int {
         impl From<$signed> for BigInt {
             fn from(val: $signed) -> Self {
                 let neg = val.is_negative();
-                BigInt::new_slice::<&[usize]>(&int_to_arr::<$unsigned, usize, { arr_size::<$unsigned>() }>(val.abs() as $unsigned), neg)
+                BigInt::new_slice::<&[usize]>(
+                    &int_to_arr::<$unsigned, usize, { arr_size::<$unsigned>() }>(
+                        val.abs() as $unsigned
+                    ),
+                    neg,
+                )
             }
         }
 
         impl From<$unsigned> for BigInt {
             fn from(val: $unsigned) -> Self {
-                BigInt::new_slice::<&[usize]>(&int_to_arr::<$unsigned, usize, { arr_size::<$unsigned>() }>(val), false)
+                BigInt::new_slice::<&[usize]>(
+                    &int_to_arr::<$unsigned, usize, { arr_size::<$unsigned>() }>(val),
+                    false,
+                )
             }
         }
 
@@ -78,10 +85,11 @@ macro_rules! impl_for_int {
             fn try_from(bi: &BigInt) -> Result<Self, Self::Error> {
                 if bi > &BigInt::from(Self::MAX) {
                     Err(OutOfRangeError::above())
-                } else if  bi < &BigInt::from(Self::MIN) {
+                } else if bi < &BigInt::from(Self::MIN) {
                     Err(OutOfRangeError::below())
                 } else {
-                    bi.with_slice(|s| arr_to_int(s)).ok_or_else(|| OutOfRangeError::above())
+                    bi.with_slice(|s| arr_to_int(s))
+                        .ok_or_else(|| OutOfRangeError::above())
                 }
             }
         }
@@ -92,10 +100,11 @@ macro_rules! impl_for_int {
             fn try_from(bi: &BigInt) -> Result<Self, Self::Error> {
                 if bi > &BigInt::from(Self::MAX) {
                     Err(OutOfRangeError::above())
-                } else if  bi < &BigInt::from(Self::MIN) {
+                } else if bi < &BigInt::from(Self::MIN) {
                     Err(OutOfRangeError::below())
                 } else {
-                    bi.with_slice(|s| arr_to_int(s)).ok_or_else(|| OutOfRangeError::above())
+                    bi.with_slice(|s| arr_to_int(s))
+                        .ok_or_else(|| OutOfRangeError::above())
                 }
             }
         }
@@ -104,14 +113,15 @@ macro_rules! impl_for_int {
 
         impl numeric_traits::cast::FromTruncating<BigInt> for $unsigned {
             fn truncate(val: BigInt) -> Self {
-                val.with_slice(|s| arr_to_int(s)).unwrap_or(<$unsigned>::MAX)
+                val.with_slice(|s| arr_to_int(s))
+                    .unwrap_or(<$unsigned>::MAX)
             }
         }
 
         impl numeric_traits::cast::FromTruncating<BigInt> for $signed {
             fn truncate(val: BigInt) -> Self {
-                val.with_slice(|s| arr_to_int(s)).unwrap_or(<$signed>::MAX) *
-                    if val.is_negative() { -1 } else { 1 }
+                val.with_slice(|s| arr_to_int(s)).unwrap_or(<$signed>::MAX)
+                    * if val.is_negative() { -1 } else { 1 }
             }
         }
 
@@ -190,7 +200,7 @@ macro_rules! impl_for_int {
         impl_ops_for_int!($unsigned);
         impl_assign_for_int!($signed);
         impl_assign_for_int!($unsigned);
-    }
+    };
 }
 
 macro_rules! impl_op {

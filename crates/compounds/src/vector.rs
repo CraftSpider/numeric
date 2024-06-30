@@ -1,11 +1,11 @@
-use core::array;
-use core::ops::{Index, IndexMut};
-use numeric_traits::identity::Zero;
-use numeric_traits::class::{Numeric, Real, RealSigned};
-use numeric_static_iter::{IntoStaticIter, StaticIter};
 #[cfg(feature = "std")]
 use crate::bivec::BiVector;
 use crate::matrix::Matrix;
+use core::array;
+use core::ops::{Index, IndexMut};
+use numeric_static_iter::{IntoStaticIter, StaticIter};
+use numeric_traits::class::{Numeric, Real, RealSigned};
+use numeric_traits::identity::Zero;
 
 pub type Vec2<T> = Vector<T, 2>;
 pub type Vec3<T> = Vector<T, 3>;

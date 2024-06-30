@@ -1,10 +1,7 @@
-
 /// Generic trait for types implementing wrapping numeric operations.
 /// This is automatically implemented for types which implement the wrapping math traits
 pub trait WrappingOps<Rhs = Self, Out = Self>:
-    WrappingAdd<Rhs, Output = Out>
-    + WrappingSub<Rhs, Output = Out>
-    + WrappingMul<Rhs, Output = Out>
+    WrappingAdd<Rhs, Output = Out> + WrappingSub<Rhs, Output = Out> + WrappingMul<Rhs, Output = Out>
 {
 }
 

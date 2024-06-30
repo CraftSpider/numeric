@@ -1,15 +1,15 @@
-use core::hint::unreachable_unchecked;
+use crate::bit_slice::{BitSliceExt, BitVecExt};
 #[cfg(feature = "std")]
 use alloc::{vec, vec::Vec};
+use core::hint::unreachable_unchecked;
 use numeric_traits::identity::Zero;
-use crate::bit_slice::{BitSliceExt, BitVecExt};
 
 pub trait BitwiseAdd: BitSliceExt {
     #[cfg(feature = "std")]
     /// Add two slices, implemented as a bitwise add-and-carry
     fn add<T>(left: &Self, right: &T) -> Vec<Self::Bit>
     where
-        T: ?Sized + BitSliceExt<Bit = Self::Bit>
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let bit_len = usize::max(left.bit_len(), right.bit_len());
@@ -92,7 +92,4 @@ pub trait BitwiseAdd: BitSliceExt {
     }
 }
 
-impl<T> BitwiseAdd for T
-where
-    T: ?Sized + BitSliceExt,
-{}
+impl<T> BitwiseAdd for T where T: ?Sized + BitSliceExt {}

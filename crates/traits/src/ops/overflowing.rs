@@ -1,4 +1,3 @@
-
 pub trait OverflowingOps<Rhs = Self, Out = Self>:
     OverflowingAdd<Rhs, Output = Out>
     + OverflowingSub<Rhs, Output = Out>
@@ -6,12 +5,12 @@ pub trait OverflowingOps<Rhs = Self, Out = Self>:
 {
 }
 
-impl<Rhs, Out, T> OverflowingOps<Rhs, Out> for T
-where
+impl<Rhs, Out, T> OverflowingOps<Rhs, Out> for T where
     T: OverflowingAdd<Rhs, Output = Out>
-    + OverflowingSub<Rhs, Output = Out>
-    + OverflowingMul<Rhs, Output = Out>
-{}
+        + OverflowingSub<Rhs, Output = Out>
+        + OverflowingMul<Rhs, Output = Out>
+{
+}
 
 pub trait OverflowingAdd<Rhs = Self> {
     type Output;

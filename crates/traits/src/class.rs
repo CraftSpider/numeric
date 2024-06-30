@@ -72,7 +72,10 @@ pub trait Real: Numeric {
 
     /// The cube root of this number
     fn cbrt(self) -> Self {
-        Self::pow(self, Self::one() / (Self::one() + Self::one() + Self::one()))
+        Self::pow(
+            self,
+            Self::one() / (Self::one() + Self::one() + Self::one()),
+        )
     }
 }
 

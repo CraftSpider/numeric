@@ -1,15 +1,14 @@
-
 #[macro_use]
 mod macros;
-mod r#static;
 #[cfg(feature = "std")]
 mod dynamic;
 mod refs;
+mod r#static;
 
-pub use r#static::{Matrix, SquareMatrix};
 #[cfg(feature = "std")]
 pub use dynamic::DynMatrix;
-pub use refs::{MatrixRef, MatrixMut};
+pub use r#static::{Matrix, SquareMatrix};
+pub use refs::{MatrixMut, MatrixRef};
 
 // TODO:
 //   - Matrix refs? MatRef/MatMut would be just (*T, usize, usize), allow passing any size without
