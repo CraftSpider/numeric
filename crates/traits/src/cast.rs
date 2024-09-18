@@ -24,6 +24,19 @@ pub trait FromChecked<T>: Sized {
     fn from_checked(val: T) -> Option<Self>;
 }
 
+pub trait IntoChecked<T> {
+    fn into_checked(self) -> Option<T>;
+}
+
+impl<T, U> IntoChecked<U> for T
+where
+    U: FromChecked<T>,
+{
+    fn into_checked(self) -> Option<U> {
+        U::from_checked(self)
+    }
+}
+
 /// Trait for numeric types that can be converted between, rounding to the nearest valid value if
 /// the provided instance is out of range. For integer conversions, this means becoming `T::MIN` or
 /// `T::MAX` if the other integer is out-of-range. For floats, this means rounding to the nearest
@@ -31,11 +44,37 @@ pub trait FromChecked<T>: Sized {
 pub trait FromSaturating<T> {
     /// Create this type from an instance of another, returning the nearest value if it cannot be
     /// represented exactly.
-    fn saturate(val: T) -> Self;
+    fn saturate_from(val: T) -> Self;
+}
+
+pub trait IntoSaturating<T> {
+    fn saturate(self) -> T;
+}
+
+impl<T, U> IntoSaturating<U> for T
+where
+    U: FromSaturating<T>,
+{
+    fn saturate(self) -> U {
+        U::saturate_from(self)
+    }
 }
 
 pub trait FromTruncating<T> {
-    fn truncate(val: T) -> Self;
+    fn truncate_from(val: T) -> Self;
+}
+
+pub trait IntoTruncating<T> {
+    fn truncate(self) -> T;
+}
+
+impl<T, U> IntoTruncating<U> for T
+where
+    U: FromTruncating<T>,
+{
+    fn truncate(self) -> U {
+        U::truncate_from(self)
+    }
 }
 
 pub trait FromApproximating<T> {

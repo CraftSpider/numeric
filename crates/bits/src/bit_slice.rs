@@ -41,7 +41,7 @@ impl<
 
 /// Trait for things that can be considered slices of bits. This includes slices obviously, as well
 /// as vectors and other slice-like containers.
-pub trait BitSliceExt {
+pub trait BitSliceExt: core::fmt::Debug {
     /// The bit container type contained in this slice
     type Bit: BitLike;
 

@@ -4,7 +4,7 @@
 //!
 //! `numeric` is a collection of number-related types and implementations. This includes an efficient
 //! implementation of a big integer, vector and matrix math, implementations for fixed-point
-//! and decimal fraction real numbers, and more.
+//! and rational real numbers, and more.
 //!
 
 pub mod int {

@@ -8,7 +8,7 @@ use numeric_traits::identity::Zero;
 pub trait ElementShr: BitSliceExt {
     #[cfg(feature = "std")]
     /// Shift a slice left by `usize` items, implemented as a series of shifts and masks
-    fn shr_wrap_and_mask(left: &Self, right: usize) -> Vec<Self::Bit> {
+    fn shr(left: &Self, right: usize) -> Vec<Self::Bit> {
         let arr_shift = (right / Self::Bit::BIT_LEN) + 1;
         let elem_shift = right % Self::Bit::BIT_LEN;
         let inverse_elem_shift = (Self::Bit::BIT_LEN - elem_shift) % Self::Bit::BIT_LEN;
@@ -51,37 +51,27 @@ pub trait ElementShr: BitSliceExt {
             let high = val << inverse_elem_shift;
             let low = val >> elem_shift;
 
-            // println!("Idx: {:?}", idx);
-            // println!("Val: {:b}", val);
-            // println!("High: {:b}, Low: {:b}", high, low);
-
             if let Some(idx) = usize::checked_sub(idx, arr_shift) {
                 let high = (left.get_opt(idx).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
-
-                // println!("New High: {:b}", high);
 
                 left.set_ignore(idx, high);
             }
 
-            let low = (left.get_opt(idx + 1 - arr_shift).unwrap_or(zero) & elem_mask)
-                | (low & !elem_mask);
+            if let Some(idx) = usize::checked_sub(idx + 1, arr_shift) {
+                let low = (left.get_opt(idx).unwrap_or(zero) & elem_mask) | (low & !elem_mask);
 
-            // println!("New Low: {:b}", low);
-
-            left.set_ignore(idx + 1 - arr_shift, low);
+                left.set_ignore(idx, low);
+            }
         });
-
-        // We need to zero-out items we shifted out of
-        if let Some(item) = left.slice_mut().last_mut() {
-            *item = zero & elem_mask | *item & !elem_mask;
-        }
+        let empty = left.len() - arr_shift + 1;
+        left.slice_mut()[empty..].fill(zero);
 
         left
     }
 
     /// Shift a slice left by `usize` items, implemented as a series of shifts and masks, returning
     /// None if the shift value is greater than the number of bits in the left-hand side.
-    fn shr_wrap_and_mask_checked(left: &mut Self, right: usize) -> Option<&mut Self> {
+    fn shr_checked(left: &mut Self, right: usize) -> Option<&mut Self> {
         if right > left.bit_len() {
             return None;
         }
@@ -91,7 +81,7 @@ pub trait ElementShr: BitSliceExt {
 
     /// Shift a slice left by `usize` items, implemented as a series of shifts and masks, masking
     /// the shift value if it is greater than the number of bits in the left-hand side.
-    fn shr_wrap_and_mask_wrapping(left: &mut Self, right: usize) -> &mut Self {
+    fn shr_wrapping(left: &mut Self, right: usize) -> &mut Self {
         let bit_len = left.bit_len();
         let num_zeroes = (bit_len.leading_zeros() as usize) + 1;
         Self::inner_shr_wrap_and_mask(left, right & usize::MAX >> num_zeroes)

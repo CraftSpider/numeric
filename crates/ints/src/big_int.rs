@@ -502,7 +502,7 @@ impl_op!(shl(self, rhs) => {
 
 impl_op!(shr(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, _| {
-        ElementShr::shr_wrap_and_mask(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+        ElementShr::shr(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     BigInt::new_slice(out, self.is_negative())
 });

@@ -49,7 +49,7 @@ pub trait ElementAdd: BitSliceExt {
     /// Add two slices, implemented as wrapping element-wise add and carry with overflow check
     fn add_overflowing<'a, T>(left: &'a mut Self, right: &T) -> (&'a mut Self, bool)
     where
-        T: BitSliceExt<Bit = Self::Bit>,
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = Self::Bit::zero();
@@ -87,7 +87,7 @@ pub trait ElementAdd: BitSliceExt {
     /// Add two slices, implemented as checked element-wise add and carry
     fn add_checked<'a, T>(left: &'a mut Self, right: &T) -> Option<&'a mut Self>
     where
-        T: BitSliceExt<Bit = Self::Bit>,
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
     {
         let (out, carry) = ElementAdd::add_overflowing(left, right);
         if carry {
@@ -100,7 +100,7 @@ pub trait ElementAdd: BitSliceExt {
     /// Add two slices, implemented as wrapping element-wise add and carry
     fn add_wrapping<'a, T>(left: &'a mut Self, right: &T) -> &'a mut Self
     where
-        T: BitSliceExt<Bit = Self::Bit>,
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
     {
         ElementAdd::add_overflowing(left, right).0
     }

@@ -15,7 +15,7 @@ toolbox for many kinds of mathematical work in Rust.
   - `F<N>` - N-byte floating point value
   - `P<N>` - N-byte posit value
   - `Fixed<T, N>` - N-**bit** fixed point value stored as integer `T`
-  - `Decimal<T>` - Real value number stored as integer `T / T`
+  - `Rat<T>` - Real value number stored as integer `T / T`
 - Compounds, Matrices, and more
   - All `T` represent a numeric type of minimal bounds to be useful.
   - `Vec<T, N>` - N long vector

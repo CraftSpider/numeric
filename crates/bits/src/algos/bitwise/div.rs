@@ -18,16 +18,124 @@ pub trait BitwiseDiv: BitSliceExt {
         let mut remainder = vec![Self::Bit::zero(); len];
 
         for idx in (0..bit_len).rev() {
-            remainder = ElementShl::shl(&remainder, 1);
+            ElementShl::shl_wrapping(&mut remainder, 1);
             remainder.set_bit(0, num.get_bit(idx));
             if ElementCmp::cmp(&remainder, div).is_ge() {
-                // Ignore the bool - subtract will never overflow
-                remainder = ElementSub::sub(&remainder, div).0;
+                // Subtract will never overflow
+                ElementSub::sub_wrapping(&mut remainder, div);
                 quotient.set_bit(idx, true);
             }
         }
 
         (quotient, remainder)
+    }
+
+    /// Divide two slices, implemented as long division with overflow check
+    fn div_long_overflowing<'a, T>(
+        num: &'a mut Self,
+        div: &T,
+        remainder: &mut [Self::Bit],
+    ) -> (&'a mut Self, bool)
+    where
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+    {
+        let bit_len = usize::max(num.bit_len(), div.bit_len());
+        for idx in (0..bit_len).rev() {
+            ElementShl::shl_wrapping(remainder, 1);
+            remainder.set_bit(0, num.get_bit(idx));
+            if ElementCmp::cmp(remainder, div).is_ge() {
+                // Subtract will never overflow
+                ElementSub::sub_wrapping(remainder, div);
+                num.set_bit(idx, true);
+            } else {
+                num.set_bit(idx, false);
+            }
+        }
+
+        (num, false)
+    }
+
+    /// divide two slices, implemented as checked long division
+    fn div_long_checked<'a, T>(
+        left: &'a mut Self,
+        right: &T,
+        scratch: &mut [Self::Bit],
+    ) -> Option<&'a mut Self>
+    where
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+    {
+        let (out, carry) = BitwiseDiv::div_long_overflowing(left, right, scratch);
+        if carry {
+            None
+        } else {
+            Some(out)
+        }
+    }
+
+    /// Divide two slices, implemented as wrapping long division
+    fn div_long_wrapping<'a, T>(
+        left: &'a mut Self,
+        right: &T,
+        scratch: &mut [Self::Bit],
+    ) -> &'a mut Self
+    where
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+    {
+        BitwiseDiv::div_long_overflowing(left, right, scratch).0
+    }
+
+    /// Divide two slices, implemented as long division with overflow check
+    fn rem_long_overflowing<'a, T>(
+        num: &'a mut Self,
+        div: &T,
+        remainder: &mut [Self::Bit],
+    ) -> (&'a mut Self, bool)
+    where
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+    {
+        let bit_len = usize::max(num.bit_len(), div.bit_len());
+
+        for idx in (0..bit_len).rev() {
+            ElementShl::shl_wrapping(remainder, 1);
+            remainder.set_bit(0, num.get_bit(idx));
+            if ElementCmp::cmp(remainder, div).is_ge() {
+                // Subtract will never overflow
+                ElementSub::sub_wrapping(remainder, div);
+            } else {
+            }
+        }
+        num.slice_mut().copy_from_slice(remainder);
+
+        (num, false)
+    }
+
+    /// divide two slices, implemented as checked long division
+    fn rem_long_checked<'a, T>(
+        left: &'a mut Self,
+        right: &T,
+        scratch: &mut [Self::Bit],
+    ) -> Option<&'a mut Self>
+    where
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+    {
+        let (out, carry) = BitwiseDiv::rem_long_overflowing(left, right, scratch);
+        if carry {
+            None
+        } else {
+            Some(out)
+        }
+    }
+
+    /// Divide two slices, implemented as wrapping long division
+    fn rem_long_wrapping<'a, T>(
+        left: &'a mut Self,
+        right: &T,
+        scratch: &mut [Self::Bit],
+    ) -> &'a mut Self
+    where
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+    {
+        BitwiseDiv::rem_long_overflowing(left, right, scratch).0
     }
 }
 
@@ -82,6 +190,41 @@ mod tests {
         let slice5: &[u8] = &[0b00000001, 0b111];
         let slice6 = &[0b00000010];
 
-        assert_eq!(BitwiseDiv::div_long(slice5, slice6).1, &[0b01]);
+        assert_eq!(BitwiseDiv::div_long(slice5, slice6).1, &[0b01, 0b0]);
+    }
+
+    #[test]
+    fn test_div_wrapping() {
+        let mut data = [0b10u8];
+        let slice2: &[u8] = &[0b01];
+
+        assert_eq!(
+            BitwiseDiv::div_long_wrapping(&mut data, slice2, &mut [0; 1]),
+            &[0b10]
+        );
+
+        let mut data = [0b10u8];
+        let slice4: &[u8] = &[0b10];
+
+        assert_eq!(
+            BitwiseDiv::div_long_wrapping(&mut data, slice4, &mut [0]),
+            &[0b01]
+        );
+
+        let mut data = [0b00000000u8, 0b1];
+        let slice6: &[u8] = &[0b00000010];
+
+        assert_eq!(
+            BitwiseDiv::div_long_wrapping(&mut data, slice6, &mut [0; 2]),
+            &[0b10000000, 0b0]
+        );
+
+        let mut data = [0b0u8, 0b0, 0b0, 0b1];
+        let slice8: &[u8] = &[0b10];
+
+        assert_eq!(
+            BitwiseDiv::div_long_wrapping(&mut data, slice8, &mut [0; 4]),
+            &[0b0, 0b0, 0b10000000, 0b0]
+        );
     }
 }

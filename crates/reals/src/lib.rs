@@ -2,11 +2,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod decimal;
 pub mod f;
 pub mod fixed;
 pub mod p;
+pub mod rat;
 
-pub use decimal::Decimal;
 pub use f::F;
 pub use fixed::Fixed;
+pub use rat::Rat;

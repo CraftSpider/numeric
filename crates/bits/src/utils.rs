@@ -1,5 +1,5 @@
 use core::ops::Deref;
-use numeric_traits::cast::{FromAll, FromChecked};
+use numeric_traits::cast::{FromAll, FromChecked, IntoTruncating};
 use numeric_traits::class::{Bounded, Integral, Unsigned};
 use numeric_traits::ops::checked::CheckedShl;
 use numeric_traits::ops::core::NumAssignOps;
@@ -10,25 +10,7 @@ pub trait IntSlice<T>: Deref<Target = [T]> {
 
 impl<T: Integral + Copy> IntSlice<T> for &[T] {
     fn shrink(self) -> Self {
-        // TODO: For some reason the below impl is slower, despite having no panics
-        //       and less asm. Branch prediction is the best bet why so far.
-        // while let Some((last, rest @ [_, ..])) = val.split_last() {
-        //     if *last != T::zero() {
-        //         break
-        //     }
-        //     val = rest;
-        // }
-        // val
-
-        let mut idx = 0;
-        for i in (0..self.len()).rev() {
-            // This ensures no bounds checks ever get generated
-            // SAFETY: We iterate up to length
-            if unsafe { *self.get_unchecked(i) } != T::zero() {
-                idx = i;
-                break;
-            }
-        }
+        let idx = self.iter().rposition(|val| *val != T::zero()).unwrap_or(0);
         &self[..=idx]
     }
 }
@@ -36,9 +18,8 @@ impl<T: Integral + Copy> IntSlice<T> for &[T] {
 #[cfg(feature = "std")]
 impl<T: Integral + Copy> IntSlice<T> for alloc::vec::Vec<T> {
     fn shrink(mut self) -> Self {
-        while self.len() > 1 && self.last() == Some(&T::zero()) {
-            self.pop();
-        }
+        let idx = self.iter().rposition(|val| *val != T::zero()).unwrap_or(0);
+        self.drain(idx + 1..);
         self
     }
 }
@@ -57,7 +38,7 @@ where
         None => {
             // This is fine to truncate - if our value didn't fit in a `T`, we should
             // have succeeded our earlier check
-            let max: T = T::truncate(U::max_value()) + T::one();
+            let max: T = T::truncate_from(U::max_value()) + T::one();
 
             let mut left = val;
             for item in &mut out {
@@ -70,7 +51,7 @@ where
                         let rem: T = left % max;
                         left = left / max;
                         // Modulo U::max_value() + 1 - Will always be <= U::max_value();
-                        *item = U::truncate(rem);
+                        *item = rem.truncate();
                     }
                 }
             }
@@ -86,7 +67,7 @@ pub fn arr_to_int<
 >(
     arr: &[T],
 ) -> Option<U> {
-    let bit_len = core::mem::size_of::<T>() * 8;
+    let bit_len = size_of::<T>() * 8;
     let mut out = U::zero();
     for (idx, &i) in arr.iter().enumerate() {
         let t = U::from_checked(i)?;
@@ -95,9 +76,21 @@ pub fn arr_to_int<
     Some(out)
 }
 
+pub const fn const_reverse<const N: usize>(mut bytes: [u8; N]) -> [u8; N] {
+    let mut idx = 0;
+    while idx < N / 2 {
+        let tmp = bytes[idx];
+        bytes[idx] = bytes[bytes.len() - idx - 1];
+        bytes[bytes.len() - idx - 1] = tmp;
+        idx += 1;
+    }
+    bytes
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn test_shrink_slice() {
@@ -114,6 +107,23 @@ mod tests {
         assert_eq!(IntSlice::shrink(&[1, 0, 0] as &[_]), &[1]);
 
         assert_eq!(IntSlice::shrink(&[1, 0, 1] as &[_]), &[1, 0, 1]);
+    }
+
+    #[test]
+    fn test_shrink_vec() {
+        assert_eq!(IntSlice::shrink(vec![0]), &[0]);
+        assert_eq!(IntSlice::shrink(vec![0, 0]), &[0]);
+        assert_eq!(IntSlice::shrink(vec![0, 0, 0]), &[0]);
+        assert_eq!(IntSlice::shrink(vec![0, 1]), &[0, 1]);
+        assert_eq!(IntSlice::shrink(vec![0, 1, 1]), &[0, 1, 1]);
+
+        assert_eq!(IntSlice::shrink(vec![1]), &[1]);
+        assert_eq!(IntSlice::shrink(vec![1, 1]), &[1, 1]);
+        assert_eq!(IntSlice::shrink(vec![1, 1, 1]), &[1, 1, 1]);
+        assert_eq!(IntSlice::shrink(vec![1, 0]), &[1]);
+        assert_eq!(IntSlice::shrink(vec![1, 0, 0]), &[1]);
+
+        assert_eq!(IntSlice::shrink(vec![1, 0, 1]), &[1, 0, 1]);
     }
 
     #[test]

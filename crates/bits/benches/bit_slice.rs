@@ -11,14 +11,19 @@ pub struct MathMeths {
     name: &'static str,
     big_bit: fn(&[usize], &[usize]) -> Vec<usize>,
     big_elem: fn(&[usize], &[usize]) -> Vec<usize>,
+    checked_elem: for<'a> fn(&'a mut [usize], &[usize]) -> Option<&'a mut [usize]>,
+    wrapping_elem: for<'a> fn(&'a mut [usize], &[usize]) -> &'a mut [usize],
 }
 
 pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
     let one = &[1usize];
     let max = &[usize::MAX];
+    let max_8 = &[usize::MAX; 8];
 
-    let big_bit_name = format!("BitwiseOps::{}", meth.name);
-    let big_elem_name = format!("{}::{}", meth.tr, meth.name);
+    let big_bit_name = format!("Bitwise{}::{}", meth.tr, meth.name);
+    let big_elem_name = format!("Element{}::{}", meth.tr, meth.name);
+    let elem_checked_name = format!("Element{}::{}_checked", meth.tr, meth.name);
+    let elem_wrapping_name = format!("Element{}::{}_wrapping", meth.tr, meth.name);
 
     c.benchmark_group(format!("BitSliceExt::{}*", meth.name))
         .bench_function(BenchmarkId::new(&big_bit_name, "[1], [1]"), |b| {
@@ -46,6 +51,40 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
         .bench_function(
             BenchmarkId::new(&big_elem_name, "[usize::MAX], [usize::MAX]"),
             |b| b.iter(|| (meth.big_elem)(black_box(max), black_box(max))),
+        )
+        .bench_function(
+            BenchmarkId::new(&big_elem_name, "[usize::MAX; 8], [usize::MAX; 8]"),
+            |b| b.iter(|| (meth.big_elem)(black_box(max_8), black_box(max_8))),
+        )
+        .bench_function(BenchmarkId::new(&elem_checked_name, "[1], [1]"), |b| {
+            let mut left = [1];
+            b.iter(|| {
+                (meth.checked_elem)(black_box(&mut left), black_box(one));
+            })
+        })
+        .bench_function(
+            BenchmarkId::new(&elem_checked_name, "[usize::MAX], [usize::MAX]"),
+            |b| {
+                let mut left = [usize::MAX];
+                b.iter(|| {
+                    (meth.checked_elem)(black_box(&mut left), black_box(max));
+                })
+            },
+        )
+        .bench_function(BenchmarkId::new(&elem_wrapping_name, "[1], [1]"), |b| {
+            let mut left = [1];
+            b.iter(|| {
+                (meth.wrapping_elem)(black_box(&mut left), black_box(one));
+            })
+        })
+        .bench_function(
+            BenchmarkId::new(&elem_wrapping_name, "[usize::MAX], [usize::MAX]"),
+            |b| {
+                let mut left = [usize::MAX];
+                b.iter(|| {
+                    (meth.wrapping_elem)(black_box(&mut left), black_box(max));
+                })
+            },
         );
 }
 
@@ -120,10 +159,12 @@ pub fn bench_add(c: &mut Criterion) {
     bench_common(
         c,
         MathMeths {
-            tr: "ElementAdd",
+            tr: "Add",
             name: "add",
             big_bit: BitwiseAdd::add,
             big_elem: ElementAdd::add,
+            checked_elem: ElementAdd::add_checked,
+            wrapping_elem: ElementAdd::add_wrapping,
         },
     );
 
@@ -164,10 +205,12 @@ pub fn bench_sub(c: &mut Criterion) {
     bench_common(
         c,
         MathMeths {
-            tr: "ElementSub",
+            tr: "Sub",
             name: "sub",
             big_bit: |l, r| BitwiseSub::sub(l, r).0,
             big_elem: |l, r| ElementSub::sub(l, r).0,
+            checked_elem: ElementSub::sub_checked,
+            wrapping_elem: ElementSub::sub_wrapping,
         },
     );
 
@@ -204,10 +247,12 @@ pub fn bench_div(c: &mut Criterion) {
     bench_common(
         c,
         MathMeths {
-            tr: "ElementDiv",
+            tr: "Div",
             name: "div",
             big_bit: |l, r| BitwiseDiv::div_long(l, r).0,
             big_elem: |l, r| ElementDiv::div_long(l, r).0,
+            checked_elem: ElementDiv::div_long_checked,
+            wrapping_elem: ElementDiv::div_long_wrapping,
         },
     );
 

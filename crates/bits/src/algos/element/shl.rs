@@ -31,8 +31,9 @@ pub trait ElementShl: BitSliceExt {
 
                 out.set_ignore(idx + arr_shift, high);
 
-                let low = (out.get_opt(idx + arr_shift - 1).unwrap_or(zero) & elem_mask)
-                    | (low & !elem_mask);
+                // We don't need to consider the existing value of the output. `low` always goes
+                // into it before `high` since we're iterating backwards.
+                let low = low & !elem_mask;
 
                 out.set_ignore(idx + arr_shift - 1, low);
             });
@@ -58,11 +59,11 @@ pub trait ElementShl: BitSliceExt {
 
             left.set_ignore(idx + arr_shift, high);
 
-            let low = (left.get_opt(idx + arr_shift - 1).unwrap_or(zero) & elem_mask)
-                | (low & !elem_mask);
+            let low = low & !elem_mask;
 
             left.set_ignore(idx + arr_shift - 1, low);
         });
+        left.slice_mut()[..arr_shift - 1].fill(zero);
 
         left
     }
@@ -81,7 +82,7 @@ pub trait ElementShl: BitSliceExt {
     /// the shift value if it is greater than the number of bits in the left-hand side.
     fn shl_wrapping(left: &mut Self, right: usize) -> &mut Self {
         let bit_len = left.bit_len();
-        let num_zeroes = usize::truncate(bit_len.leading_zeros()) + 1;
+        let num_zeroes = usize::truncate_from(bit_len.leading_zeros()) + 1;
         Self::inner_shl_wrap_and_mask(left, right & usize::MAX >> num_zeroes)
     }
 }
@@ -100,9 +101,33 @@ mod tests {
     }
 
     #[test]
-    fn test_wrap() {
+    fn test_overflow() {
         let slice = &[0b1010101010101010u16, 0b1010101010101010];
         let res = ElementShl::shl(slice, 1);
         assert_eq!(res, &[0b0101010101010100, 0b0101010101010101, 0b1]);
+        assert_eq!(ElementShl::shl(&[0b1u8], 8), &[0b0, 0b1])
+    }
+
+    #[test]
+    fn test_wrapping_simple() {
+        let mut data = [0u8];
+        assert_eq!(ElementShl::shl_wrapping(&mut data, 1), &[0]);
+        let mut data = [0b01u8];
+        assert_eq!(ElementShl::shl_wrapping(&mut data, 1), &[0b10]);
+        let mut data = [0b0101u8];
+        assert_eq!(ElementShl::shl_wrapping(&mut data, 1), &[0b1010]);
+    }
+
+    #[test]
+    fn test_wrapping_overflow() {
+        let mut data = [0b1010101010101010u16, 0b1010101010101010];
+        assert_eq!(
+            ElementShl::shl_wrapping(&mut data, 1),
+            &[0b0101010101010100, 0b0101010101010101],
+        );
+        let mut data = [0b10000000u8, 0b10000000];
+        assert_eq!(ElementShl::shl_wrapping(&mut data, 1), &[0b0, 0b1]);
+        let mut data = [0b1u8, 0b0];
+        assert_eq!(ElementShl::shl_wrapping(&mut data, 8), &[0b0, 0b1])
     }
 }

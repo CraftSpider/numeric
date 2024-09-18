@@ -37,6 +37,23 @@ fn bench_shrink_slice(c: &mut Criterion) {
                     &[0usize, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] as &[usize],
                 ))
             })
+        })
+        .bench_function(BenchmarkId::new("<usize>", "vec![0; 16]"), |b| {
+            b.iter(|| IntSlice::shrink(black_box(vec![0usize; 16])))
+        })
+        .bench_function(BenchmarkId::new("<usize>", "vec![1, 0;15]"), |b| {
+            b.iter(|| {
+                IntSlice::shrink(black_box(vec![
+                    1usize, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                ]))
+            })
+        })
+        .bench_function(BenchmarkId::new("<usize>", "vec![0;15, 1]"), |b| {
+            b.iter(|| {
+                IntSlice::shrink(black_box(vec![
+                    0usize, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                ]))
+            })
         });
 }
 

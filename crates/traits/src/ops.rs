@@ -31,6 +31,15 @@ pub trait Factorial {
     fn factorial(self) -> Self::Output;
 }
 
+/// The greatest-common-denominator (sometimes called 'greatest common factor' or 'greatest common
+/// multiple') operation. Gets the largest integer `N` such that for `a` and `b`, `a / N` and
+/// `b / N` are integers.
+pub trait Gcd<Rhs = Self> {
+    type Output;
+
+    fn gcd(self, other: Rhs) -> Self::Output;
+}
+
 /// The common trigonometric operators. These can be understood geometrically as
 /// various values for a given angle in relation to the unit circle (a circle of radius 1).
 /// Each of the common functions has an

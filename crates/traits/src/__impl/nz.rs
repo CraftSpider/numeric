@@ -49,7 +49,7 @@ macro_rules! impl_snz {
             }
 
             fn is_negative(&self) -> bool {
-                // TODO: Change one nonzero_negation_ops stabilizes
+                // TODO: Change once nonzero_negation_ops stabilizes
                 self.get().is_negative()
             }
         }

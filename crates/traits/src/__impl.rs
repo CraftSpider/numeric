@@ -42,7 +42,7 @@ macro_rules! saturating_as {
     ($into:ty, $from:ty) => {
         impl crate::cast::FromSaturating<$from> for $into {
             #[inline]
-            fn saturate(val: $from) -> Self {
+            fn saturate_from(val: $from) -> Self {
                 val as $into
             }
         }
@@ -53,7 +53,7 @@ macro_rules! truncating_as {
     ($into:ty, $from:ty) => {
         impl crate::cast::FromTruncating<$from> for $into {
             #[inline]
-            fn truncate(val: $from) -> Self {
+            fn truncate_from(val: $from) -> Self {
                 val as $into
             }
         }
@@ -509,7 +509,7 @@ macro_rules! saturate_uint_impl {
         $(
         impl crate::cast::FromSaturating<$u_less> for $ty {
             #[inline]
-            fn saturate(val: $u_less) -> Self {
+            fn saturate_from(val: $u_less) -> Self {
                 val as $ty
             }
         }
@@ -517,7 +517,7 @@ macro_rules! saturate_uint_impl {
 
         $(
         impl crate::cast::FromSaturating<$u_greater> for $ty {
-            fn saturate(val: $u_greater) -> Self {
+            fn saturate_from(val: $u_greater) -> Self {
                 if val > <$ty>::MAX as $u_greater {
                     <$ty>::MAX
                 } else {
@@ -529,7 +529,7 @@ macro_rules! saturate_uint_impl {
 
         $(
         impl crate::cast::FromSaturating<$s_less> for $ty {
-            fn saturate(val: $s_less) -> Self {
+            fn saturate_from(val: $s_less) -> Self {
                 if val < 0 {
                     <$ty>::MIN
                 } else {
@@ -541,7 +541,7 @@ macro_rules! saturate_uint_impl {
 
         $(
         impl crate::cast::FromSaturating<$s_greater> for $ty {
-            fn saturate(val: $s_greater) -> Self {
+            fn saturate_from(val: $s_greater) -> Self {
                 if val < 0 {
                     <$ty>::MIN
                 } else if val > <$ty>::MAX as $s_greater {
@@ -705,7 +705,7 @@ macro_rules! saturate_sint_impl {
         $(
         impl crate::cast::FromSaturating<$u_less> for $ty {
             #[inline]
-            fn saturate(val: $u_less) -> Self {
+            fn saturate_from(val: $u_less) -> Self {
                 val as $ty
             }
         }
@@ -713,7 +713,7 @@ macro_rules! saturate_sint_impl {
 
         $(
         impl crate::cast::FromSaturating<$u_greater> for $ty {
-            fn saturate(val: $u_greater) -> Self {
+            fn saturate_from(val: $u_greater) -> Self {
                 if val > <$ty>::MAX as $u_greater {
                     <$ty>::MAX
                 } else {
@@ -726,7 +726,7 @@ macro_rules! saturate_sint_impl {
         $(
         impl crate::cast::FromSaturating<$s_less> for $ty {
             #[inline]
-            fn saturate(val: $s_less) -> Self {
+            fn saturate_from(val: $s_less) -> Self {
                 val as $ty
             }
         }
@@ -734,7 +734,7 @@ macro_rules! saturate_sint_impl {
 
         $(
         impl crate::cast::FromSaturating<$s_greater> for $ty {
-            fn saturate(val: $s_greater) -> Self {
+            fn saturate_from(val: $s_greater) -> Self {
                 if val > <$ty>::MAX as $s_greater {
                     <$ty>::MAX
                 } else if val < <$ty>::MIN as $s_greater {

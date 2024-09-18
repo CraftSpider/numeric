@@ -93,7 +93,7 @@ pub trait ElementSub: BitSliceExt {
     /// Subtract two slices, implemented as checked element-wise subtract and borrow
     fn sub_checked<'a, T>(left: &'a mut Self, right: &T) -> Option<&'a mut Self>
     where
-        T: BitSliceExt<Bit = Self::Bit>,
+        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
     {
         let (out, carry) = ElementSub::sub_overflowing(left, right);
         if carry {

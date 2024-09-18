@@ -50,11 +50,12 @@ where
     T: Integral + fmt::Debug + FromTruncating<usize>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let two = T::truncate(2);
-        let ten = T::truncate(10);
+        let two = T::truncate_from(2);
+        let ten = T::truncate_from(10);
         // TODO: This can overflow. Find a non-overflowing method
         //       Maybe shift, print upper, then do this to the fractional part
-        let mut whole = self.0.clone() * ten.clone().pow(T::truncate(N)) / two.pow(T::truncate(N));
+        let mut whole =
+            self.0.clone() * ten.clone().pow(T::truncate_from(N)) / two.pow(T::truncate_from(N));
         let mut idx = 0;
 
         let mut buf = String::new();

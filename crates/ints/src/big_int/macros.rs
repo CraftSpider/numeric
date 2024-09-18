@@ -112,14 +112,14 @@ macro_rules! impl_for_int {
         // Casts
 
         impl numeric_traits::cast::FromTruncating<BigInt> for $unsigned {
-            fn truncate(val: BigInt) -> Self {
+            fn truncate_from(val: BigInt) -> Self {
                 val.with_slice(|s| arr_to_int(s))
                     .unwrap_or(<$unsigned>::MAX)
             }
         }
 
         impl numeric_traits::cast::FromTruncating<BigInt> for $signed {
-            fn truncate(val: BigInt) -> Self {
+            fn truncate_from(val: BigInt) -> Self {
                 val.with_slice(|s| arr_to_int(s)).unwrap_or(<$signed>::MAX)
                     * if val.is_negative() { -1 } else { 1 }
             }
@@ -138,7 +138,7 @@ macro_rules! impl_for_int {
         }
 
         impl numeric_traits::cast::FromSaturating<BigInt> for $unsigned {
-            fn saturate(val: BigInt) -> Self {
+            fn saturate_from(val: BigInt) -> Self {
                 match val.try_into() {
                     Ok(val) => val,
                     Err(OutOfRangeError(Side::Above)) => Self::MAX,
@@ -148,7 +148,7 @@ macro_rules! impl_for_int {
         }
 
         impl numeric_traits::cast::FromSaturating<BigInt> for $signed {
-            fn saturate(val: BigInt) -> Self {
+            fn saturate_from(val: BigInt) -> Self {
                 match val.try_into() {
                     Ok(val) => val,
                     Err(OutOfRangeError(Side::Above)) => Self::MAX,

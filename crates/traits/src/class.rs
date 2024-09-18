@@ -33,7 +33,7 @@ pub trait Signed: Neg<Output = Self> {
 /// Trait for types that are 'integer like'. These types should only represent whole numbers,
 /// and are expected to support bitwise and shifting operations. An example of a type implementing
 /// this trait would be [`u64`] or [`i64`].
-pub trait Integral: Numeric + BitOps + ShiftOps + ShiftOps<usize> {}
+pub trait Integral: Numeric + BitOps + ShiftOps + ShiftOps<usize> + core::fmt::Debug {}
 
 /// Trait for types that are 'real-number like'. These types represent the real numbers,
 /// and _generally_ don't support bitwise operations. An example of a type implementing this
