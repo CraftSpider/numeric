@@ -5,6 +5,9 @@ edition = "2021"
 
 [features]
 std = ["numeric-traits/std"]
+ints = ["numeric-ints"]
 
 [dependencies]
 numeric-traits = { path = "../traits" }
+numeric-utils = { path = "../utils" }
+numeric-ints = { path = "../ints", optional = true }

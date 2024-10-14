@@ -1,7 +1,7 @@
 //! N-byte bounded posit (projective reals) value
 
-use std::cmp::Ordering;
-use std::ops::{Add, Neg, Sub};
+use core::cmp::Ordering;
+use core::ops::{Add, Neg, Sub};
 
 /// N-byte posit value.
 ///

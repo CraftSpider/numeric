@@ -1,6 +1,6 @@
 //! Various scalar 'real' value type implementation
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
 pub mod f;
 pub mod fixed;

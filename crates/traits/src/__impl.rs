@@ -1,3 +1,12 @@
+// TODO: This is the unstable std::cmp::minmax
+fn minmax<T: Ord>(v1: T, v2: T) -> [T; 2] {
+    if v1 <= v2 {
+        [v1, v2]
+    } else {
+        [v2, v1]
+    }
+}
+
 macro_rules! impl_bytes {
     ($ty:ty) => {
         const _: () = {
@@ -138,6 +147,22 @@ macro_rules! impl_int {
 
             fn pow(self, rhs: Self) -> Self::Output {
                 <$ty>::pow(self, rhs as u32)
+            }
+        }
+
+        impl crate::ops::Gcd for $ty {
+            type Output = $ty;
+
+            fn gcd(self, rhs: Self) -> Self::Output {
+                if self == 0 && rhs == 0 {
+                    return 0;
+                }
+
+                let [mut min, mut max] = minmax(self, rhs);
+                while min != 0 {
+                    (min, max) = (max % min, min);
+                }
+                max
             }
         }
 
@@ -928,3 +953,16 @@ checked_impl!(i128);
 checked_impl!(isize);
 
 mod nz;
+
+#[cfg(test)]
+mod tests {
+    use crate::ops::Gcd;
+
+    #[test]
+    fn test_gcd() {
+        assert_eq!(0.gcd(0), 0);
+
+        assert_eq!(48.gcd(18), 6);
+        assert_eq!(18.gcd(48), 6);
+    }
+}

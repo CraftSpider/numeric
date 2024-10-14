@@ -1,9 +1,8 @@
-use core::ops::{Add, Div, Mul, Rem, Sub};
+use core::ops::{Add, Div, Mul, Sub};
 
 use numeric_traits::class::Real;
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::NumOps;
-use numeric_traits::ops::Pow;
 
 #[derive(Default, Clone, PartialEq)]
 pub struct Complex<T> {
@@ -152,27 +151,7 @@ where
     }
 }
 
-impl<T> Rem for Complex<T>
-where
-    T: NumOps + Clone,
-{
-    type Output = Complex<T>;
-
-    fn rem(self, _: Self) -> Self::Output {
-        todo!()
-    }
-}
-
-impl<T> Pow for Complex<T>
-where
-    T: NumOps + Clone,
-{
-    type Output = Complex<T>;
-
-    fn pow(self, _: Self) -> Self::Output {
-        todo!()
-    }
-}
+// TODO: Rem and Pow
 
 impl<T: PartialEq + Zero> Zero for Complex<T> {
     fn zero() -> Self {

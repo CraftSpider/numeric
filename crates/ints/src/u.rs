@@ -16,6 +16,7 @@ use numeric_traits::class::{Bounded, Integral, Numeric, Unsigned};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
 use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingMul, SaturatingSub};
+use numeric_traits::ops::wrapping::{WrappingAdd, WrappingSub};
 use numeric_traits::ops::Pow;
 use numeric_utils::{static_assert, static_assert_traits};
 
@@ -53,10 +54,11 @@ impl<const N: usize> U<N> {
     /// Create a value from raw bytes, laid out in the native endianness
     #[must_use]
     pub const fn from_ne_bytes(bytes: [u8; N]) -> U<N> {
-        #[cfg(target_endian = "little")]
-        return Self::from_le_bytes(bytes);
-        #[cfg(target_endian = "big")]
-        return Self::from_be_bytes(bytes);
+        if cfg!(target_endian = "little") {
+            Self::from_le_bytes(bytes)
+        } else {
+            Self::from_be_bytes(bytes)
+        }
     }
 
     /// Convert this value to raw bytes, laid out in little-endian order
@@ -74,10 +76,11 @@ impl<const N: usize> U<N> {
     /// Convert this value to raw bytes, laid out in the native endianness
     #[must_use]
     pub const fn to_ne_bytes(self) -> [u8; N] {
-        #[cfg(target_endian = "little")]
-        return self.to_le_bytes();
-        #[cfg(target_endian = "big")]
-        return self.to_be_bytes();
+        if cfg!(target_endian = "little") {
+            self.to_le_bytes()
+        } else {
+            self.to_be_bytes()
+        }
     }
 
     fn write_base<W: fmt::Write>(&self, base: usize, w: &mut W, chars: &[char]) -> fmt::Result {
@@ -236,24 +239,24 @@ impl<const N: usize> fmt::Display for U<N> {
 impl<const N: usize> Add for U<N> {
     type Output = Self;
 
-    fn add(mut self, rhs: Self) -> Self::Output {
-        #[cfg(debug_assertions)]
-        ElementAdd::add_checked(&mut self.0, &rhs.0).unwrap();
-        #[cfg(not(debug_assertions))]
-        ElementAdd::add_wrapping(&mut self.0, &rhs.0);
-        self
+    fn add(self, rhs: Self) -> Self::Output {
+        if cfg!(debug_assertions) {
+            self.checked_add(rhs).unwrap()
+        } else {
+            self.wrapping_add(rhs)
+        }
     }
 }
 
 impl<const N: usize> Sub for U<N> {
     type Output = Self;
 
-    fn sub(mut self, rhs: Self) -> Self::Output {
-        #[cfg(debug_assertions)]
-        ElementSub::sub_checked(&mut self.0, &rhs.0).unwrap();
-        #[cfg(not(debug_assertions))]
-        ElementSub::sub_wrapping(&mut self.0, &rhs.0);
-        self
+    fn sub(self, rhs: Self) -> Self::Output {
+        if cfg!(debug_assertions) {
+            self.checked_sub(rhs).unwrap()
+        } else {
+            self.wrapping_sub(rhs)
+        }
     }
 }
 
@@ -481,6 +484,24 @@ impl<const N: usize> CheckedDiv for U<N> {
     }
 }
 
+impl<const N: usize> WrappingAdd for U<N> {
+    type Output = Self;
+
+    fn wrapping_add(mut self, rhs: Self) -> Self::Output {
+        ElementAdd::add_wrapping(&mut self.0, &rhs.0);
+        self
+    }
+}
+
+impl<const N: usize> WrappingSub for U<N> {
+    type Output = Self;
+
+    fn wrapping_sub(mut self, rhs: Self) -> Self::Output {
+        ElementSub::sub_wrapping(&mut self.0, &rhs.0);
+        self
+    }
+}
+
 impl<const N: usize> SaturatingAdd for U<N> {
     type Output = Self;
 
@@ -625,7 +646,7 @@ mod tests {
     fn test_one() {
         let one: U<1> = U::one();
         assert_eq!(one, U([1]));
-        let one = U::one();
+        let one: U<2> = U::one();
         assert_eq!(one, U([1, 0]));
         let one: U<4> = U::one();
         assert_eq!(one, U([1, 0, 0, 0]));

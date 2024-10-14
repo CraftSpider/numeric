@@ -4,10 +4,11 @@
 pub trait ConvertBytes<const N: usize>: Sized {
     /// Create a value from native-endian bytes
     fn from_ne_bytes(bytes: [u8; N]) -> Self {
-        #[cfg(target_endian = "big")]
-        return Self::from_be_bytes(bytes);
-        #[cfg(target_endian = "little")]
-        return Self::from_le_bytes(bytes);
+        if cfg!(target_endian = "little") {
+            Self::from_le_bytes(bytes)
+        } else {
+            Self::from_be_bytes(bytes)
+        }
     }
 
     /// Create a value from little-endian bytes
@@ -18,10 +19,11 @@ pub trait ConvertBytes<const N: usize>: Sized {
 
     /// Convert this value into native-endian bytes
     fn to_ne_bytes(self) -> [u8; N] {
-        #[cfg(target_endian = "big")]
-        return Self::to_be_bytes(self);
-        #[cfg(target_endian = "little")]
-        return Self::to_le_bytes(self);
+        if cfg!(target_endian = "little") {
+            Self::to_le_bytes(self)
+        } else {
+            Self::to_be_bytes(self)
+        }
     }
 
     /// Convert this value into little-endian bytes

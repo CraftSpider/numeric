@@ -3,6 +3,7 @@
 #![allow(unused_variables)]
 
 use core::cmp::Ordering;
+use core::fmt;
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Real, Signed};
 use numeric_traits::identity::{One, Zero};
@@ -75,6 +76,13 @@ impl<T: Integral> Rat<T> {
     /// Convert this value into a numerator/denominator pair
     pub fn into_pair(self) -> (T, T) {
         (self.num, self.denom)
+    }
+}
+
+impl<T: Integral + fmt::Debug> fmt::Debug for Rat<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: Print as decimal
+        write!(f, "{:?} / {:?}", self.num, self.denom)
     }
 }
 
@@ -207,7 +215,7 @@ impl<T: Integral + BoundedSigned> BoundedSigned for Rat<T> {
     }
 
     fn max_negative() -> Self {
-        unsafe { Rat::new_unchecked(-T::min_positive(), T::max_value()) }
+        unsafe { Rat::new_unchecked(T::max_negative(), T::max_value()) }
     }
 }
 
@@ -233,10 +241,23 @@ impl<T: Integral + Gcd<Output = T>> Real for Rat<T> {
     }
 
     fn round(self) -> Self {
-        todo!()
+        let two = T::one() + T::one();
+        let diff = self.num.clone() % self.denom.clone();
+        // Check if remainder is more or less than half denom
+        let add = if diff > (self.denom.clone() / two) {
+            T::one()
+        } else {
+            T::zero()
+        };
+        // Integer division should be round-to-zero division
+        // TODO: This may be wrong for negatives? We probably want floor-division
+        let div = self.num / self.denom;
+        // Floor div, add one if we should round up
+        Rat::new(div + add, T::one()).unwrap()
     }
 
     fn trunc(self) -> Self {
+        // Rounds towards -inf, so we can't just  div - that will round towards zero
         todo!()
     }
 
@@ -250,5 +271,29 @@ impl<T: Integral + Gcd<Output = T>> Real for Rat<T> {
 
     fn sqrt(self) -> Self {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        let a = Rat::new(1, 2).unwrap();
+        let b = Rat::new(3, 4).unwrap();
+        assert_eq!(a + b, Rat::new(5, 4).unwrap());
+    }
+
+    #[test]
+    fn test_round() {
+        let a = Rat::new(3, 7).unwrap();
+        let b = Rat::new(4, 7).unwrap();
+        let c = Rat::new(10, 7).unwrap();
+        let d = Rat::new(11, 7).unwrap();
+        assert_eq!(a.round(), Rat::zero());
+        assert_eq!(b.round(), Rat::one());
+        assert_eq!(c.round(), Rat::one());
+        assert_eq!(d.round(), Rat::one() + Rat::one());
     }
 }

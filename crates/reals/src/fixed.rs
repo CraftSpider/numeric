@@ -43,13 +43,14 @@ impl<T: Integral, const N: usize> Default for Fixed<T, N> {
     }
 }
 
-// TODO: Make this no_std
-#[cfg(feature = "std")]
 impl<T, const N: usize> fmt::Debug for Fixed<T, N>
 where
     T: Integral + fmt::Debug + FromTruncating<usize>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        extern crate alloc;
+        use alloc::string::String;
+
         let two = T::truncate_from(2);
         let ten = T::truncate_from(10);
         // TODO: This can overflow. Find a non-overflowing method
@@ -270,7 +271,9 @@ impl<T: Integral, const N: usize> Real for Fixed<T, N> {
 
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
     use super::*;
+    use alloc::format;
 
     #[test]
     fn test_debug() {

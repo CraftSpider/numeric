@@ -53,6 +53,7 @@ pub trait Real: Numeric {
 
     /// Truncate this number, rounding towards negative infinity
     fn trunc(self) -> Self;
+
     /// Get just the fractional part of this number, this is effectively similar to doing
     /// `x - x.trunc()`
     fn fract(self) -> Self;
