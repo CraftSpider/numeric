@@ -11,7 +11,7 @@ pub type Vec2<T> = Vector<T, 2>;
 pub type Vec3<T> = Vector<T, 3>;
 pub type Vec4<T> = Vector<T, 4>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Vector<T, const N: usize>([T; N]);
 
 impl<T, const N: usize> Vector<T, N> {
@@ -92,6 +92,11 @@ impl<T> Vector<T, 2> {
     }
 
     #[inline(always)]
+    pub const fn x_mut(&mut self) -> &mut T {
+        &mut self.0[0]
+    }
+
+    #[inline(always)]
     pub fn set_x(&mut self, val: T) {
         self.0[0] = val;
     }
@@ -99,6 +104,11 @@ impl<T> Vector<T, 2> {
     #[inline(always)]
     pub const fn y(&self) -> &T {
         &self.0[1]
+    }
+
+    #[inline(always)]
+    pub const fn y_mut(&mut self) -> &mut T {
+        &mut self.0[1]
     }
 
     #[inline(always)]
@@ -114,6 +124,11 @@ impl<T> Vector<T, 3> {
     }
 
     #[inline(always)]
+    pub const fn x_mut(&mut self) -> &mut T {
+        &mut self.0[0]
+    }
+
+    #[inline(always)]
     pub fn set_x(&mut self, val: T) {
         self.0[0] = val;
     }
@@ -124,6 +139,11 @@ impl<T> Vector<T, 3> {
     }
 
     #[inline(always)]
+    pub const fn y_mut(&mut self) -> &mut T {
+        &mut self.0[1]
+    }
+
+    #[inline(always)]
     pub fn set_y(&mut self, val: T) {
         self.0[1] = val;
     }
@@ -131,6 +151,11 @@ impl<T> Vector<T, 3> {
     #[inline(always)]
     pub const fn z(&self) -> &T {
         &self.0[2]
+    }
+
+    #[inline(always)]
+    pub const fn z_mut(&mut self) -> &mut T {
+        &mut self.0[2]
     }
 
     #[inline(always)]
@@ -162,6 +187,11 @@ impl<T> Vector<T, 4> {
     }
 
     #[inline(always)]
+    pub const fn x_mut(&mut self) -> &mut T {
+        &mut self.0[0]
+    }
+
+    #[inline(always)]
     pub fn set_x(&mut self, val: T) {
         self.0[0] = val;
     }
@@ -169,6 +199,11 @@ impl<T> Vector<T, 4> {
     #[inline(always)]
     pub const fn y(&self) -> &T {
         &self.0[1]
+    }
+
+    #[inline(always)]
+    pub const fn y_mut(&mut self) -> &mut T {
+        &mut self.0[1]
     }
 
     #[inline(always)]
@@ -182,6 +217,11 @@ impl<T> Vector<T, 4> {
     }
 
     #[inline(always)]
+    pub const fn z_mut(&mut self) -> &mut T {
+        &mut self.0[2]
+    }
+
+    #[inline(always)]
     pub fn set_z(&mut self, val: T) {
         self.0[2] = val;
     }
@@ -189,6 +229,11 @@ impl<T> Vector<T, 4> {
     #[inline(always)]
     pub const fn w(&self) -> &T {
         &self.0[3]
+    }
+
+    #[inline(always)]
+    pub const fn w_mut(&mut self) -> &mut T {
+        &mut self.0[3]
     }
 
     #[inline(always)]
