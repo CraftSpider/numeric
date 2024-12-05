@@ -11,7 +11,7 @@ pub type Vec2<T> = Vector<T, 2>;
 pub type Vec3<T> = Vector<T, 3>;
 pub type Vec4<T> = Vector<T, 4>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Vector<T, const N: usize>([T; N]);
 
 impl<T, const N: usize> Vector<T, N> {
