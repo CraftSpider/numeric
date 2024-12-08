@@ -279,7 +279,7 @@ impl<const N: usize> Div for U<N> {
         #[cfg(debug_assertions)]
         BitwiseDiv::div_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
         #[cfg(not(debug_assertions))]
-        BitwiseDiv::div_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        BitwiseDiv::div_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
         self
     }
 }
@@ -354,7 +354,7 @@ impl<const N: usize> Shl for U<N> {
         #[cfg(debug_assertions)]
         ElementShl::shl_checked(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShl::shl_wrapping(&mut self.0, val).unwrap();
+        ElementShl::shl_wrapping(&mut self.0, val);
         self
     }
 }
@@ -367,7 +367,7 @@ impl<const N: usize> Shr for U<N> {
         #[cfg(debug_assertions)]
         ElementShr::shr_checked(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShr::shr_wrapping(&mut self.0, val).unwrap();
+        ElementShr::shr_wrapping(&mut self.0, val);
         self
     }
 }
@@ -391,7 +391,7 @@ impl<const N: usize> Shr<usize> for U<N> {
         #[cfg(debug_assertions)]
         ElementShr::shr_checked(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShr::shr_wrap_and_mask_wrapping(&mut self.0, rhs);
+        ElementShr::shr_wrapping(&mut self.0, rhs);
         self
     }
 }

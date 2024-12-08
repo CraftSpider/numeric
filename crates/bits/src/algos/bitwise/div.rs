@@ -101,7 +101,6 @@ pub trait BitwiseDiv: BitSliceExt {
             if ElementCmp::cmp(remainder, div).is_ge() {
                 // Subtract will never overflow
                 ElementSub::sub_wrapping(remainder, div);
-            } else {
             }
         }
         num.slice_mut().copy_from_slice(remainder);

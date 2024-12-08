@@ -22,7 +22,7 @@ impl<'a, I> BitIter<'a, I> {
     }
 }
 
-impl<'a, I> Iterator for BitIter<'a, I>
+impl<I> Iterator for BitIter<'_, I>
 where
     I: BitLike,
 {
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<'a, I> ExactSizeIterator for BitIter<'a, I>
+impl<I> ExactSizeIterator for BitIter<'_, I>
 where
     I: BitLike,
 {

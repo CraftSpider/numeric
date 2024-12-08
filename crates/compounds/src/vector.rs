@@ -6,6 +6,7 @@ use core::ops::{Index, IndexMut};
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::class::{Numeric, Real, RealSigned};
 use numeric_traits::identity::Zero;
+use numeric_traits::ops::checked::{CheckedAdd, CheckedSub};
 
 pub type Vec2<T> = Vector<T, 2>;
 pub type Vec3<T> = Vector<T, 3>;
@@ -400,3 +401,37 @@ assign_ops_impl!(SubAssign, sub_assign, -=);
 assign_ops_impl!(MulAssign, mul_assign, *=);
 assign_ops_impl!(DivAssign, div_assign, /=);
 assign_ops_impl!(RemAssign, rem_assign, %=);
+
+impl<T, const N: usize> CheckedAdd for Vector<T, N>
+where
+    T: CheckedAdd,
+{
+    type Output = Vector<T::Output, N>;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        let new = self
+            .0
+            .into_static_iter()
+            .zip(rhs.0.into_static_iter())
+            .map(|(l, r)| l.checked_add(r))
+            .collect::<Option<_>>()?;
+        Some(Vector(new))
+    }
+}
+
+impl<T, const N: usize> CheckedSub for Vector<T, N>
+where
+    T: CheckedSub,
+{
+    type Output = Vector<T::Output, N>;
+
+    fn checked_sub(self, rhs: Self) -> Option<Self::Output> {
+        let new = self
+            .0
+            .into_static_iter()
+            .zip(rhs.0.into_static_iter())
+            .map(|(l, r)| l.checked_sub(r))
+            .collect::<Option<_>>()?;
+        Some(Vector(new))
+    }
+}

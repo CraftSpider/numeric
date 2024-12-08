@@ -47,7 +47,7 @@ macro_rules! impl_for_int {
                 let neg = val.is_negative();
                 BigInt::new_slice::<&[usize]>(
                     &int_to_arr::<$unsigned, usize, { arr_size::<$unsigned>() }>(
-                        val.abs() as $unsigned
+                        val.unsigned_abs(),
                     ),
                     neg,
                 )

@@ -20,6 +20,7 @@ use core::ops::{Add, Neg, Sub};
 pub struct P<const N: usize>([u8; N]);
 
 impl<const N: usize> P<N> {
+    #[allow(unused)] // TODO: Use this
     const FRAC_LEN: usize = N * 8 - 5;
 
     pub const fn new() -> P<N> {

@@ -1,55 +1,118 @@
 #![no_std]
 
 use adapter::{Enumerate, Map, Zip};
+use core::convert::Infallible;
+use core::mem;
 use core::mem::MaybeUninit;
-use core::ops::{Add, Mul};
-use core::ptr;
+use core::ops::{Add, ControlFlow, Mul};
 use numeric_traits::identity::{One, Zero};
 
-pub trait StaticCollect<T, const N: usize> {
+pub trait FromStaticIter<T, const N: usize>: Sized {
     type Uninit;
-
+    type Break;
     fn uninit() -> Self::Uninit;
-    fn write(uninit: &mut Self::Uninit, idx: usize, val: T);
+    fn write(this: Self::Uninit, idx: usize, val: T) -> ControlFlow<Self::Break, Self::Uninit>;
 
     /// # Safety
     ///
-    /// `write` mut have been called for all values from `0` to `init` at least once
-    unsafe fn drop(uninit: Self::Uninit, init: usize);
+    /// This will be called with uninit data in two cases:
+    /// 1) The underlying iterator has been polled to completion, and `write` called once for each
+    ///    index
+    /// 2) Write returned ControlFlow::Break at any point
+    unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self;
 
-    /// # Safety
-    ///
-    /// `write` must have been called for all values from `0` to `N` at least once
-    unsafe fn assume_init(uninit: Self::Uninit) -> Self;
+    fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
+        let uninit = (0..N).try_fold(Self::uninit(), |acc, idx| {
+            let val = unsafe { iter.idx(idx) };
+            Self::write(acc, idx, val)
+        });
+        unsafe { Self::finish(uninit) }
+    }
 }
 
-impl<T, const N: usize> StaticCollect<T, N> for [T; N] {
+impl<T, const N: usize> FromStaticIter<T, N> for [T; N] {
     type Uninit = [MaybeUninit<T>; N];
+    type Break = Infallible;
 
-    #[inline]
     fn uninit() -> Self::Uninit {
-        // SAFETY: `[MaybeUninit<T>; N]` is uninhabited
-        unsafe { MaybeUninit::uninit().assume_init() }
+        [const { MaybeUninit::uninit() }; N]
     }
 
-    #[inline]
-    fn write(uninit: &mut Self::Uninit, idx: usize, val: T) {
-        uninit[idx].write(val);
+    fn write(mut this: Self::Uninit, idx: usize, val: T) -> ControlFlow<Self::Break, Self::Uninit> {
+        this[idx].write(val);
+        ControlFlow::Continue(this)
     }
 
-    #[inline]
-    unsafe fn drop(mut uninit: Self::Uninit, init: usize) {
-        for val in uninit.iter_mut().take(init) {
-            // SAFETY: All values `0..init` are guaranteed initialized
-            unsafe { val.assume_init_drop() };
+    unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self {
+        let ControlFlow::Continue(c) = this;
+        unsafe { mem::transmute_copy(&c) }
+    }
+
+    fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
+        core::array::from_fn(|idx| unsafe { iter.idx(idx) })
+    }
+}
+
+// TODO: Figure out how to make this generic over the inner collection
+impl<T, C, const N: usize> FromStaticIter<Option<T>, N> for Option<C>
+where
+    C: FromStaticIter<T, N>,
+{
+    type Uninit = C::Uninit;
+    type Break = Option<C::Break>;
+
+    fn uninit() -> Self::Uninit {
+        C::uninit()
+    }
+
+    fn write(
+        this: Self::Uninit,
+        idx: usize,
+        val: Option<T>,
+    ) -> ControlFlow<Self::Break, Self::Uninit> {
+        match val {
+            Some(val) => C::write(this, idx, val).map_break(Some),
+            None => ControlFlow::Break(None),
         }
     }
 
-    #[inline]
-    unsafe fn assume_init(uninit: Self::Uninit) -> Self {
-        let ptr = ptr::from_ref(&uninit).cast::<[T; N]>();
-        // SAFETY: Per contract of this function, `write_next` has been called to initialize all values
-        unsafe { ptr.read() }
+    unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self {
+        match this {
+            ControlFlow::Continue(inner) => Some(C::finish(ControlFlow::Continue(inner))),
+            ControlFlow::Break(Some(inner)) => Some(C::finish(ControlFlow::Break(inner))),
+            ControlFlow::Break(None) => None,
+        }
+    }
+}
+
+impl<T, E, C, const N: usize> FromStaticIter<Result<T, E>, N> for Result<C, E>
+where
+    C: FromStaticIter<T, N>,
+{
+    type Uninit = C::Uninit;
+    type Break = Result<C::Break, E>;
+
+    fn uninit() -> Self::Uninit {
+        C::uninit()
+    }
+
+    fn write(
+        this: Self::Uninit,
+        idx: usize,
+        val: Result<T, E>,
+    ) -> ControlFlow<Self::Break, Self::Uninit> {
+        match val {
+            Ok(val) => C::write(this, idx, val).map_break(Ok),
+            Err(e) => ControlFlow::Break(Err(e)),
+        }
+    }
+
+    unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self {
+        match this {
+            ControlFlow::Continue(inner) => Ok(C::finish(ControlFlow::Continue(inner))),
+            ControlFlow::Break(Ok(e)) => Ok(C::finish(ControlFlow::Break(e))),
+            ControlFlow::Break(Err(e)) => Err(e),
+        }
     }
 }
 
@@ -84,37 +147,30 @@ pub trait StaticIter<const N: usize>: Sized {
     }
 
     #[inline]
-    fn fold<T, F: FnMut(T, Self::Item) -> T>(mut self, mut start: T, mut func: F) -> T {
-        for idx in 0..N {
+    fn fold<T, F: FnMut(T, Self::Item) -> T>(mut self, start: T, mut func: F) -> T {
+        (0..N).fold(start, |acc, idx| {
             // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
             let item = unsafe { self.idx(idx) };
-            start = func(start, item);
-        }
-        start
+            func(acc, item)
+        })
     }
 
     // TODO: This really wants to use `Try`
     #[inline]
     fn try_fold<T, E, F: FnMut(T, Self::Item) -> Result<T, E>>(
         mut self,
-        mut start: T,
+        start: T,
         mut func: F,
     ) -> Result<T, E> {
-        for idx in 0..N {
+        (0..N).try_fold(start, |acc, idx| {
             // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
             let item = unsafe { self.idx(idx) };
-            start = func(start, item)?;
-        }
-        Ok(start)
+            func(acc, item)
+        })
     }
 
-    fn collect<C: StaticCollect<Self::Item, N>>(self) -> C {
-        let out = self.enumerate().fold(C::uninit(), |mut out, (idx, val)| {
-            C::write(&mut out, idx, val);
-            out
-        });
-        // SAFETY: After the fold call, all values from 0..N will have been written
-        unsafe { C::assume_init(out) }
+    fn collect<C: FromStaticIter<Self::Item, N>>(self) -> C {
+        C::from_static_iter(self)
     }
 
     fn any<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
@@ -157,46 +213,6 @@ impl<I: StaticIter<N>, const N: usize> IntoStaticIter<N> for I {
     }
 }
 
-pub trait ZipAll<const N: usize> {
-    type Item;
-    type Iter: StaticIter<N, Item = Self::Item>;
-
-    fn into_zip_iter(self) -> Self::Iter;
-}
-
-impl<T, const N: usize, const M: usize> ZipAll<M> for [T; N]
-where
-    T: IntoStaticIter<M>,
-{
-    type Item = [T::Item; N];
-    type Iter = ArrayZipIter<T::Iter, N, M>;
-
-    fn into_zip_iter(self) -> Self::Iter {
-        ArrayZipIter {
-            arrs: self.map(T::into_static_iter),
-        }
-    }
-}
-
-pub struct ArrayZipIter<T, const N: usize, const M: usize> {
-    arrs: [T; N],
-}
-
-impl<T, const N: usize, const M: usize> StaticIter<M> for ArrayZipIter<T, N, M>
-where
-    T: StaticIter<M>,
-{
-    type Item = [T::Item; N];
-
-    unsafe fn idx(&mut self, idx: usize) -> Self::Item {
-        self.arrs.each_mut().map(|val| val.idx(idx))
-    }
-}
-
-pub fn zip_all<T: ZipAll<N>, const N: usize>(val: T) -> T::Iter {
-    val.into_zip_iter()
-}
-
 pub struct StaticRangeTo<const N: usize>;
 
 impl<const N: usize> IntoStaticIter<N> for StaticRangeTo<N> {
@@ -221,6 +237,9 @@ impl<const N: usize> StaticIter<N> for StaticRangeToIter<N> {
 pub mod adapter;
 pub mod array;
 pub mod codegen;
+pub mod zip_all;
+
+pub use zip_all::zip_all;
 
 #[cfg(test)]
 mod tests {
@@ -235,5 +254,45 @@ mod tests {
             .collect();
 
         assert_eq!(res, [6, 8, 10, 12]);
+    }
+
+    #[test]
+    fn test_option_collect() {
+        let res: [u32; 4] = [1u32, 2, 3, 4]
+            .into_static_iter()
+            .map(|l| l.checked_add(1))
+            .collect::<Option<_>>()
+            .unwrap();
+        assert_eq!(res, [2, 3, 4, 5]);
+
+        let res: Option<[u32; 4]> = [u32::MAX - 1, u32::MAX, 0, 1]
+            .into_static_iter()
+            .map(|l| l.checked_add(1))
+            .collect::<Option<_>>();
+        assert!(res.is_none());
+    }
+
+    #[test]
+    fn test_option_option_collect() {
+        let res: [u32; 4] = [1u32, 2, 3, 4]
+            .into_static_iter()
+            .map(|l| Some(l.checked_add(1)))
+            .collect::<Option<Option<_>>>()
+            .unwrap()
+            .unwrap();
+        assert_eq!(res, [2, 3, 4, 5]);
+
+        let res: Option<[u32; 4]> = [u32::MAX - 1, u32::MAX, 0, 1]
+            .into_static_iter()
+            .map(|l| Some(l.checked_add(1)))
+            .collect::<Option<_>>()
+            .unwrap();
+        assert!(res.is_none());
+
+        let res: Option<[u32; 4]> = [u32::MAX - 1, u32::MAX, 0, 1]
+            .into_static_iter()
+            .map(|_| None)
+            .collect::<Option<_>>();
+        assert!(res.is_none());
     }
 }

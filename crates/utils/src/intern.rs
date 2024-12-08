@@ -99,7 +99,7 @@ where
                 // This intentionally allows reviving dead slots - saves work if you're rapidly
                 // dropping and creating references to a value
                 let count = i.refs.load(Ordering::Acquire);
-                if i.val_opt().map_or(false, |cur_val| val == cur_val.borrow()) {
+                if i.val_opt().is_some_and(|cur_val| val == cur_val.borrow()) {
                     return Find::Exists((idx, idx2));
                 } else if count == 0 {
                     return Find::Dead((idx, idx2));
