@@ -23,19 +23,10 @@ pub trait ElementAdd: BitSliceExt {
             let l = left.get_opt(idx).unwrap_or(zero);
             let r = right.get_opt(idx).unwrap_or(zero);
 
-            let extra = if carry {
-                carry = false;
-                one
-            } else {
-                zero
-            };
+            let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
+            carry = new_carry;
 
-            let (res, new_carry) = l.overflowing_add(r);
-            if new_carry {
-                carry = true;
-            }
-
-            let (res, new_carry) = res.overflowing_add(extra);
+            let (res, new_carry) = res.overflowing_add(r);
             if new_carry {
                 carry = true;
             }
@@ -61,19 +52,11 @@ pub trait ElementAdd: BitSliceExt {
             let l = left.get_opt(idx).unwrap_or(zero);
             let r = right.get_opt(idx).unwrap_or(zero);
 
-            let extra = if carry {
-                carry = false;
-                one
-            } else {
-                zero
-            };
+            let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
+            carry = new_carry;
 
-            let (res, new_carry) = l.overflowing_add(r);
-            if new_carry {
-                carry = true;
-            }
-
-            let (res, new_carry) = res.overflowing_add(extra);
+            let (res, new_carry) = res.overflowing_add(r);
+            // As of Rust 1.86 nightly, this is faster than `carry |= new_carry`
             if new_carry {
                 carry = true;
             }

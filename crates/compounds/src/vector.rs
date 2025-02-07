@@ -87,6 +87,11 @@ impl<T: RealSigned, const N: usize> Vector<T, N> {
 }
 
 impl<T> Vector<T, 2> {
+    #[inline]
+    pub fn from_xy(x: T, y: T) -> Vector<T, 2> {
+        Vector::new([x, y])
+    }
+
     #[inline(always)]
     pub const fn x(&self) -> &T {
         &self.0[0]
@@ -119,6 +124,11 @@ impl<T> Vector<T, 2> {
 }
 
 impl<T> Vector<T, 3> {
+    #[inline]
+    pub fn from_xyz(x: T, y: T, z: T) -> Vector<T, 3> {
+        Vector::new([x, y, z])
+    }
+
     #[inline(always)]
     pub const fn x(&self) -> &T {
         &self.0[0]
@@ -182,6 +192,10 @@ impl<T> Vector<T, 3> {
 }
 
 impl<T> Vector<T, 4> {
+    pub fn from_xyzw(x: T, y: T, z: T, w: T) -> Vector<T, 4> {
+        Vector::new([x, y, z, w])
+    }
+
     #[inline(always)]
     pub const fn x(&self) -> &T {
         &self.0[0]
