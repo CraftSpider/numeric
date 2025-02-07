@@ -1,16 +1,16 @@
 use super::U;
-use rand::distributions::Standard;
+use rand::distr::StandardUniform;
 use rand::prelude::{Distribution, Rng};
-use rand::{Error, Fill};
+use rand::Fill;
 
 impl<const N: usize> Fill for U<N> {
-    fn try_fill<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), Error> {
-        self.0.try_fill(rng)
+    fn fill<R: Rng + ?Sized>(&mut self, rng: &mut R) {
+        self.0.fill(rng)
     }
 }
 
-impl<const N: usize> Distribution<U<N>> for Standard {
+impl<const N: usize> Distribution<U<N>> for StandardUniform {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> U<N> {
-        U(Standard::sample(self, rng))
+        U(StandardUniform::sample(self, rng))
     }
 }
