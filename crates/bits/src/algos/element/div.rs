@@ -38,6 +38,7 @@ pub trait ElementDiv: BitSliceExt {
 
             // TODO: This is the slow bit. Maybe do some mul/sub stuff instead?
             //       Can this not be a loop, maybe nested division or something?
+            //       Remainder is at most Bit::MAX * right. Can we use that?
             // While remainder is greater than divisor
             while ElementCmp::cmp(&remainder, right).is_ge() {
                 // Subtract remainder by divisor

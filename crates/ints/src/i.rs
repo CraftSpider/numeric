@@ -5,7 +5,7 @@
 use core::array;
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use numeric_bits::algos::{ElementAdd, ElementSub};
+use numeric_bits::algos::{BitwiseDiv, ElementAdd, ElementMul, ElementSub};
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};
@@ -58,32 +58,49 @@ impl<const N: usize> Sub for I<N> {
 impl<const N: usize> Mul for I<N> {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> Self::Output {
-        todo!()
+    fn mul(mut self, rhs: Self) -> Self::Output {
+        ElementMul::mul_wrapping(&mut self.0, &rhs.0);
+        self
     }
 }
 
 impl<const N: usize> Div for I<N> {
     type Output = Self;
 
-    fn div(self, rhs: Self) -> Self::Output {
-        todo!()
+    fn div(mut self, mut rhs: Self) -> Self::Output {
+        let neg = self.is_negative() != rhs.is_negative();
+        self = self.abs();
+        rhs = rhs.abs();
+        BitwiseDiv::div_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        if neg {
+            self = -self;
+        }
+        self
     }
 }
 
 impl<const N: usize> Rem for I<N> {
     type Output = Self;
 
-    fn rem(self, rhs: Self) -> Self::Output {
-        todo!()
+    fn rem(mut self, mut rhs: Self) -> Self::Output {
+        let neg = self.is_negative() != rhs.is_negative();
+        self = self.abs();
+        rhs = rhs.abs();
+        BitwiseDiv::rem_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        if neg {
+            self = -self;
+        }
+        self
     }
 }
 
 impl<const N: usize> Neg for I<N> {
     type Output = Self;
 
-    fn neg(self) -> Self::Output {
-        todo!()
+    fn neg(mut self) -> Self::Output {
+        self.0 = self.0.map(|v| !v);
+        self = self + Self::one();
+        self
     }
 }
 
@@ -206,7 +223,10 @@ impl<const N: usize> PartialOrd for I<N> {
 
 impl<const N: usize> Ord for I<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        todo!()
+        match self.is_negative().cmp(&other.is_negative()) {
+            Ordering::Equal => self.0.cmp(&other.0),
+            ord => ord.reverse(),
+        }
     }
 }
 
@@ -341,10 +361,45 @@ mod tests {
     }
 
     #[test]
+    fn test_ord() {
+        let zero: I<3> = I::zero();
+        let one = I::one();
+        let neg_one = -I::one();
+        let two = one + one;
+        let neg_two = -two;
+
+        assert!(neg_one > neg_two);
+        assert!(neg_one < zero);
+        assert!(neg_one < one);
+        assert!(neg_one < two);
+
+        assert!(zero > neg_two);
+        assert!(zero > neg_one);
+        assert!(zero < one);
+        assert!(zero < two);
+
+        assert!(one > neg_two);
+        assert!(one > neg_one);
+        assert!(one > zero);
+        assert!(one < two);
+    }
+
+    #[test]
+    fn test_neg() {
+        let zero: I<3> = I::zero();
+        let one: I<3> = I::one();
+        let neg_one = I::max_negative();
+
+        assert_eq!(-one, neg_one);
+        assert_eq!(-neg_one, one);
+        assert_eq!(-zero, zero);
+    }
+
+    #[test]
     fn test_add() {
         let one: I<3> = I::one();
         let zero = I::zero();
-        let neg_one = I::max_negative();
+        let neg_one = -I::one();
         assert_eq!(one + one, I([2, 0, 0]));
         assert_eq!(one + zero, one);
         assert_eq!(zero + zero, zero);
@@ -360,5 +415,21 @@ mod tests {
         assert_eq!(one + one, I([2, 0, 0]));
         assert_eq!(one + zero, one);
         assert_eq!(zero + zero, zero);
+    }
+
+    #[test]
+    fn test_mul() {
+        let one: I<3> = I::one();
+        let zero = I::zero();
+        let neg_one = -I::one();
+        let two = one + one;
+
+        assert_eq!(zero * zero, zero);
+        assert_eq!(one * one, one);
+        assert_eq!(one * two, I([2, 0, 0]));
+        assert_eq!(one * zero, zero);
+        assert_eq!(neg_one * one, neg_one);
+        assert_eq!(neg_one * zero, zero);
+        assert_eq!(neg_one * two, I([0xFE, 0xFF, 0xFF]));
     }
 }

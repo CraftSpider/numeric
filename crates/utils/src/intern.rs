@@ -147,7 +147,12 @@ where
             // locations. But maybe... it could race with itself?
             Find::Dead((loc1, loc2)) => {
                 Self::incr_inner(&self.inner[loc1][loc2]);
-                // SAFETY: Slot is dead, we're making it live, we are the only ones with access.
+                // TODO: This isn't actually sound - in multi-threaded environments this can
+                //       race with `find`.
+                //       We want to implement a scheme where `set` only occurs when inner is set
+                //       to 1, not before or after, and find doesn't get a ref till after set is
+                //       done.
+                // SAFETY: Slot is dead, we're making it live, we are the only ones with access
                 unsafe { self.inner[loc1][loc2].set_val(val.into()) };
                 loc1 * 32 + loc2
             }

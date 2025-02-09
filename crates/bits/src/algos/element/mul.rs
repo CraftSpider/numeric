@@ -60,31 +60,31 @@ pub trait ElementMul: BitSliceExt {
     {
         let zero = Self::Bit::zero();
 
-        let overflow = right
-            .slice()
-            .iter()
-            .enumerate()
-            .rev()
-            .fold(false, |overflow, (idx, &l)| {
-                // From the top to bottom, add N shifted copies of M. This can be done by taking each
-                // element of the left and doing a widening mul, carrying the upper, and repeating
-                let mut new_overflow = false;
-                let mut carry = zero;
+        let mut overflow = false;
+        for idx in (0..left.len()).rev() {
+            // From the top to bottom, add N shifted copies of M. This can be done by taking each
+            // element of the left and doing a widening mul, carrying the upper, and repeating
+            let mut new_overflow = false;
+            let mut carry = zero;
 
-                for (offset, &r) in right.slice().iter().enumerate() {
-                    let (low, high) = Self::Bit::widening_mul(l, r, carry);
-                    carry = high;
-                    if left.add_item(idx + offset, low) {
-                        new_overflow = true;
-                    }
-                }
+            let l_mut = left.slice_mut();
+            let l = l_mut[idx];
+            l_mut[idx] = zero;
 
-                if carry != zero && left.add_item(idx + right.slice().len(), carry) {
+            for (offset, &r) in right.slice().iter().enumerate() {
+                let (low, high) = Self::Bit::widening_mul(l, r, carry);
+                carry = high;
+                if left.add_item(idx + offset, low) {
                     new_overflow = true;
                 }
+            }
 
-                new_overflow || overflow
-            });
+            if carry != zero && left.add_item(idx + right.slice().len(), carry) {
+                new_overflow = true;
+            }
+
+            overflow |= new_overflow;
+        }
 
         (left, overflow)
     }
@@ -138,5 +138,28 @@ mod tests {
         let slice8 = &[0b00000010];
 
         assert_eq!(ElementMul::mul(slice7, slice8), &[0b100]);
+    }
+
+    #[test]
+    fn test_mul_wrapping() {
+        let slice1: &mut [u8] = &mut [0b00000000];
+        let slice2 = &[0b00000001];
+
+        assert_eq!(ElementMul::mul_wrapping(slice1, slice2), &[0b0]);
+
+        let slice3: &mut [u8] = &mut [0b00000001];
+        let slice4 = &[0b00000001];
+
+        assert_eq!(ElementMul::mul_wrapping(slice3, slice4), &[0b1]);
+
+        let slice5: &mut [u8] = &mut [0b00000001];
+        let slice6 = &[0b00000010];
+
+        assert_eq!(ElementMul::mul_wrapping(slice5, slice6), &[0b10]);
+
+        let slice7: &mut [u8] = &mut [0b00000010];
+        let slice8 = &[0b00000010];
+
+        assert_eq!(ElementMul::mul_wrapping(slice7, slice8), &[0b100]);
     }
 }
