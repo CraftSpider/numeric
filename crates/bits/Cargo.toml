@@ -29,3 +29,7 @@ required-features = ["alloc"]
 name = "utils"
 harness = false
 required-features = ["alloc"]
+
+[[bench]]
+name = "bits"
+harness = false
