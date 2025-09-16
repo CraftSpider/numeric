@@ -24,6 +24,7 @@ use numeric_utils::{static_assert, static_assert_traits};
 mod rand_impl;
 
 /// N-byte bounded, unsigned integer. `U<1> == u8`, `U<16> == u128`, etc.
+#[derive(Copy, Clone)]
 pub struct U<const N: usize>([u8; N]);
 
 static_assert!(size_of::<U<2>>() == 2);
@@ -88,11 +89,11 @@ impl<const N: usize> U<N> {
         // It isn't super fast though, so there are probably optimization improvements
         let base: U<N> = base.into_checked().unwrap();
         let mut digits = Vec::new();
-        let mut scratch = self.clone();
+        let mut scratch = *self;
 
         while scratch > U::zero() {
-            let digit = u8::from_checked(scratch.clone() % base)
-                .expect("Mod base should always be less than 255");
+            let digit =
+                u8::from_checked(scratch % base).expect("Mod base should always be less than 255");
             digits.push(digit);
             scratch = scratch / base;
         }
@@ -205,14 +206,6 @@ impl U<8> {
     #[must_use]
     pub const fn from_usize(val: usize) -> Self {
         Self(val.to_le_bytes())
-    }
-}
-
-impl<const N: usize> Copy for U<N> {}
-
-impl<const N: usize> Clone for U<N> {
-    fn clone(&self) -> Self {
-        *self
     }
 }
 
@@ -547,7 +540,7 @@ impl<const N: usize> Zero for U<N> {
 
 impl<const N: usize> One for U<N> {
     fn one() -> Self {
-        U(array::from_fn(|idx| if idx == 0 { 1 } else { 0 }))
+        U(array::from_fn(|idx| u8::from(idx == 0)))
     }
 
     fn is_one(&self) -> bool {

@@ -1,3 +1,5 @@
+lints.workspace = true
+
 [package]
 name = "numeric-traits"
 version = "0.1.0"
@@ -6,5 +8,3 @@ edition = "2021"
 [features]
 default = ["std"]
 std = []
-
-[dependencies]

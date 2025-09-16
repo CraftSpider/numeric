@@ -104,19 +104,19 @@ impl TaggedOffset {
 
     #[must_use]
     #[inline]
-    pub const fn get(&self) -> (usize, Tag) {
+    pub const fn get(self) -> (usize, Tag) {
         (self.offset(), self.tag())
     }
 
     #[must_use]
     #[inline]
-    pub const fn offset(&self) -> usize {
+    pub const fn offset(self) -> usize {
         self.0 >> 2
     }
 
     #[must_use]
     #[inline]
-    pub const fn tag(&self) -> Tag {
+    pub const fn tag(self) -> Tag {
         Tag::from_usize_truncate(self.0)
     }
 }

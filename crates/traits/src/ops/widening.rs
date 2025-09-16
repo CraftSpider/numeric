@@ -1,3 +1,5 @@
+use crate::cast::{FromTruncating, IntoTruncating};
+
 /// Trait for types that implement 'widening' multiplication
 pub trait WideningMul<Rhs = Self>: Sized {
     /// Extended multiply-addition of `(lhs * rhs) + add`. The result is returned as a tuple of the wrapping part and the
@@ -5,41 +7,30 @@ pub trait WideningMul<Rhs = Self>: Sized {
     fn widening_mul(self, mul: Rhs, add: Rhs) -> (Self, Self);
 }
 
-impl WideningMul for u8 {
-    fn widening_mul(self, rhs: u8, add: u8) -> (u8, u8) {
-        let wide = u16::from(self)
-            .wrapping_mul(u16::from(rhs))
-            .wrapping_add(u16::from(add));
-        (wide as u8, (wide >> 8) as u8)
-    }
+macro_rules! widening_impl {
+    ($ty:ty, $wide:ty) => {
+        impl WideningMul for $ty {
+            fn widening_mul(self, mul: Self, add: Self) -> (Self, Self) {
+                let wide = <$wide>::truncate_from(self)
+                    .wrapping_mul(<$wide>::truncate_from(mul))
+                    .wrapping_add(<$wide>::truncate_from(add));
+                (wide.truncate(), (wide >> <$ty>::BITS).truncate())
+            }
+        }
+    };
 }
 
-impl WideningMul for u16 {
-    fn widening_mul(self, rhs: u16, add: u16) -> (u16, u16) {
-        let wide = u32::from(self)
-            .wrapping_mul(u32::from(rhs))
-            .wrapping_add(u32::from(add));
-        (wide as u16, (wide >> 16) as u16)
-    }
-}
+widening_impl!(u8, u16);
+widening_impl!(u16, u32);
+widening_impl!(u32, u64);
+widening_impl!(u64, u128);
 
-impl WideningMul for u32 {
-    fn widening_mul(self, rhs: u32, add: u32) -> (u32, u32) {
-        let wide = u64::from(self)
-            .wrapping_mul(u64::from(rhs))
-            .wrapping_add(u64::from(add));
-        (wide as u32, (wide >> 32) as u32)
-    }
-}
-
-impl WideningMul for u64 {
-    fn widening_mul(self, rhs: u64, add: u64) -> (u64, u64) {
-        let wide = u128::from(self)
-            .wrapping_mul(u128::from(rhs))
-            .wrapping_add(u128::from(add));
-        (wide as u64, (wide >> 64) as u64)
-    }
-}
+#[cfg(target_pointer_width = "16")]
+widening_impl!(usize, u32);
+#[cfg(target_pointer_width = "32")]
+widening_impl!(usize, u64);
+#[cfg(target_pointer_width = "64")]
+widening_impl!(usize, u128);
 
 impl WideningMul for u128 {
     fn widening_mul(self, rhs: Self, add: Self) -> (Self, Self) {
@@ -56,8 +47,7 @@ impl WideningMul for u128 {
             //                       [------sum0------]
             //     [------sum1------]
             // Used as the form of T with all bits set
-            let max_val = Self::MAX;
-            let lo_mask = max_val.wrapping_shr(64);
+            let lo_mask = Self::MAX.wrapping_shr(64);
 
             let lhs_lo = self & lo_mask;
             let rhs_lo = rhs & lo_mask;
@@ -79,15 +69,5 @@ impl WideningMul for u128 {
                 .wrapping_add(u128::from(carry2));
             (sum0, sum1)
         }
-    }
-}
-
-#[cfg(target_pointer_width = "64")]
-impl WideningMul for usize {
-    fn widening_mul(self, rhs: usize, add: usize) -> (usize, usize) {
-        let wide = (self as u128)
-            .wrapping_mul(rhs as u128)
-            .wrapping_add(add as u128);
-        (wide as usize, (wide >> 32) as usize)
     }
 }

@@ -105,7 +105,7 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// If `idx` is outside the range of this slice
     fn set(&mut self, idx: usize, val: Self::Bit) {
         self.set_opt(idx, val)
-            .unwrap_or_else(|| panic!("Attempt to write value at index {} out of bounds", idx))
+            .unwrap_or_else(|| panic!("Attempt to write value at index {} out of bounds", idx));
     }
 
     /// Set a single value by index on this slice, returning `None` if the index is out of range
@@ -224,7 +224,7 @@ pub trait BitVecExt: BitSliceExt {
 impl<I: BitLike> BitVecExt for alloc::vec::Vec<I> {
     fn extend(&mut self, len: usize, val: Self::Bit) {
         if len > self.len() {
-            self.resize(len, val)
+            self.resize(len, val);
         }
     }
 }

@@ -1,3 +1,5 @@
+lints.workspace = true
+
 [package]
 name = "numeric-utils"
 version = "0.1.0"

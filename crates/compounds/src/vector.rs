@@ -263,7 +263,7 @@ impl<T: Zero, const N: usize> Zero for Vector<T, N> {
     }
 
     fn is_zero(&self) -> bool {
-        (&self.0).into_static_iter().all(|v| v.is_zero())
+        (&self.0).into_static_iter().all(T::is_zero)
     }
 }
 

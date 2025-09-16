@@ -29,7 +29,7 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
     }
 
     pub fn from_rows(vecs: [Vector<T, COL>; ROW]) -> Matrix<T, ROW, COL> {
-        Matrix(vecs.into_static_iter().map(|v| v.into()).collect())
+        Matrix(vecs.into_static_iter().map(Vector::into).collect())
     }
 
     /// Transpose the matrix. This can be interpreted as the following equivalent operations:
@@ -41,7 +41,7 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
     }
 
     pub fn swap_rows(&mut self, a: usize, b: usize) {
-        self.0.swap(a, b)
+        self.0.swap(a, b);
     }
 }
 
@@ -154,7 +154,7 @@ impl<T: Zero, const ROW: usize, const COL: usize> Zero for Matrix<T, ROW, COL> {
     fn is_zero(&self) -> bool {
         (&self.0)
             .into_static_iter()
-            .all(|r| r.into_static_iter().all(|v| v.is_zero()))
+            .all(|r| r.into_static_iter().all(T::is_zero))
     }
 }
 

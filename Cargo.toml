@@ -14,3 +14,10 @@ members = [
 
 [profile.bench]
 debug = true
+
+[workspace.lints.rust]
+#missing_docs = "warn"
+
+[workspace.lints.clippy]
+ptr_as_ptr = "warn"
+#undocumented_unsafe_blocks = "warn"

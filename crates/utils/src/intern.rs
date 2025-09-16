@@ -184,12 +184,12 @@ where
 
     pub fn incr(&self, offset: InternId) {
         let (idx1, idx2) = Self::offset_to_idx(offset);
-        Self::incr_inner(&self.inner[idx1][idx2])
+        Self::incr_inner(&self.inner[idx1][idx2]);
     }
 
     pub fn decr(&self, offset: InternId) {
         let (idx1, idx2) = Self::offset_to_idx(offset);
-        Self::decr_inner(&self.inner[idx1][idx2])
+        Self::decr_inner(&self.inner[idx1][idx2]);
     }
 
     #[allow(dead_code)]

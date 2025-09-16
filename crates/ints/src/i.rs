@@ -21,21 +21,13 @@ mod rand_impl;
 /// N-byte bounded, signed integer. `I<1> == i8`, `I<16> == i128`, etc.
 ///
 /// Represented in two's complement, with the highest bit forming the sign bit
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct I<const N: usize>([u8; N]);
 
 static_assert!(size_of::<I<2>>() == 2);
 static_assert!(size_of::<I<4>>() == 4);
 static_assert!(size_of::<I<8>>() == 8);
 static_assert_traits!(I<4>: Send + Sync);
-
-impl<const N: usize> Copy for I<N> {}
-
-impl<const N: usize> Clone for I<N> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 
 impl<const N: usize> Add for I<N> {
     type Output = Self;
@@ -298,7 +290,7 @@ impl<const N: usize> Zero for I<N> {
 
 impl<const N: usize> One for I<N> {
     fn one() -> Self {
-        I(array::from_fn(|idx| if idx == 0 { 1 } else { 0 }))
+        I(array::from_fn(|idx| u8::from(idx == 0)))
     }
 
     fn is_one(&self) -> bool {

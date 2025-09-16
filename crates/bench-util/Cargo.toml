@@ -1,3 +1,5 @@
+lints.workspace = true
+
 [package]
 name = "numeric-bench-util"
 version = "0.1.0"
@@ -7,4 +9,4 @@ edition = "2021"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [target.'cfg(unix)'.dependencies]
-pprof = { version = "0.13", features = ["flamegraph", "criterion"] }
+pprof = { version = "0.15", features = ["flamegraph", "criterion"] }

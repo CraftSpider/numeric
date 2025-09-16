@@ -65,7 +65,7 @@ where
             if idx == N {
                 write!(buf, ".")?;
             }
-            write!(buf, "{:?}", digit)?;
+            write!(buf, "{digit:?}")?;
             whole = whole / ten.clone();
             idx += 1;
         }

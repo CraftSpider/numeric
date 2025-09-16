@@ -36,6 +36,12 @@ impl<const N: usize> P<N> {
     }
 }
 
+impl<const N: usize> Default for P<N> {
+    fn default() -> Self {
+        P::new()
+    }
+}
+
 impl<const N: usize> PartialOrd for P<N> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(Self::cmp(self, other))

@@ -86,13 +86,14 @@ ref_common!(MatrixMut<'a, T>);
 
 impl<T> IndexMut<(usize, usize)> for MatrixMut<'_, T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        if index.0 > self.rows || index.1 > self.cols {
-            panic!(
-                "Index out of range for matrix of size {}x{}: ({},{})",
-                self.rows, self.cols, index.0, index.1
-            );
-        }
-
+        assert!(
+            index.0 < self.rows && index.1 < self.cols,
+            "Index out of range for matrix of size {}x{}: ({},{})",
+            self.rows,
+            self.cols,
+            index.0,
+            index.1
+        );
         unsafe { &mut *self.data.as_ptr().add(index.0 * self.cols + index.1) }
     }
 }

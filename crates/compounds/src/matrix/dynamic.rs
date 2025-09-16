@@ -12,15 +12,15 @@ pub struct DynMatrix<T> {
 
 impl<T> DynMatrix<T> {
     pub fn new(data: Vec<T>, rows: usize, cols: usize) -> DynMatrix<T> {
-        if data.len() != rows * cols {
-            panic!(
-                "Invalid data length for DynMatrix. Expected length {} ({} by {}), got {}",
-                rows * cols,
-                rows,
-                cols,
-                data.len(),
-            );
-        }
+        assert_eq!(
+            data.len(),
+            rows * cols,
+            "Invalid data length for DynMatrix. Expected length {} ({} by {}), got {}",
+            rows * cols,
+            rows,
+            cols,
+            data.len(),
+        );
 
         DynMatrix { data, rows, cols }
     }
