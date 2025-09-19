@@ -359,6 +359,7 @@ ops_impl!(Add, add, +);
 ops_impl!(Sub, sub, -);
 ops_impl!(Mul, mul, *);
 ops_impl!(Div, div, /);
+ops_impl!(Rem, rem, %);
 
 macro_rules! assign_ops_impl {
     ($trait:ident, $meth:ident, $op:tt) => {
