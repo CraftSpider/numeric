@@ -1,3 +1,5 @@
+use crate::matrix::Matrix;
+use crate::vector::Vec2;
 use alloc::vec::Vec;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
@@ -65,6 +67,35 @@ impl<T, const ROW: usize, const COL: usize> From<[[T; COL]; ROW]> for DynMatrix<
     }
 }
 
+impl<T, const ROW: usize, const COL: usize> From<Matrix<T, ROW, COL>> for DynMatrix<T> {
+    fn from(value: Matrix<T, ROW, COL>) -> Self {
+        DynMatrix::from(value.into_arrays())
+    }
+}
+
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub struct MatrixVecMismatch;
+
+impl<T> TryFrom<Vec<Vec<T>>> for DynMatrix<T> {
+    type Error = MatrixVecMismatch;
+
+    fn try_from(values: Vec<Vec<T>>) -> Result<Self, Self::Error> {
+        let rows = values.len();
+        let cols = values.first().map(Vec::len).unwrap_or(0);
+        for row in &values {
+            if row.len() != cols {
+                return Err(MatrixVecMismatch);
+            }
+        }
+        Ok(DynMatrix::new(
+            values.into_iter().flatten().collect(),
+            rows,
+            cols,
+        ))
+    }
+}
+
 impl<T> Index<(usize, usize)> for DynMatrix<T> {
     type Output = T;
 
@@ -76,6 +107,20 @@ impl<T> Index<(usize, usize)> for DynMatrix<T> {
 impl<T> IndexMut<(usize, usize)> for DynMatrix<T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         &mut self.data[index.0 * self.cols + index.1]
+    }
+}
+
+impl<T> Index<Vec2<usize>> for DynMatrix<T> {
+    type Output = T;
+
+    fn index(&self, index: Vec2<usize>) -> &Self::Output {
+        &self.data[index.y() * self.cols + index.x()]
+    }
+}
+
+impl<T> IndexMut<Vec2<usize>> for DynMatrix<T> {
+    fn index_mut(&mut self, index: Vec2<usize>) -> &mut Self::Output {
+        &mut self.data[index.y() * self.cols + index.x()]
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::vector::Vector;
+use crate::vector::{Vec2, Vector};
 use core::array;
 use core::ops::{Add, Index, IndexMut, Mul, Sub};
 use core::ptr::NonNull;
@@ -30,6 +30,10 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
 
     pub fn from_rows(vecs: [Vector<T, COL>; ROW]) -> Matrix<T, ROW, COL> {
         Matrix(vecs.into_static_iter().map(Vector::into).collect())
+    }
+
+    pub fn into_arrays(self) -> [[T; COL]; ROW] {
+        self.0
     }
 
     /// Transpose the matrix. This can be interpreted as the following equivalent operations:
@@ -191,6 +195,20 @@ impl<T, const ROW: usize, const COL: usize> Index<(usize, usize)> for Matrix<T, 
 impl<T, const ROW: usize, const COL: usize> IndexMut<(usize, usize)> for Matrix<T, ROW, COL> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         &mut self.0[index.0][index.1]
+    }
+}
+
+impl<T, const ROW: usize, const COL: usize> Index<Vec2<usize>> for Matrix<T, ROW, COL> {
+    type Output = T;
+
+    fn index(&self, index: Vec2<usize>) -> &Self::Output {
+        &self.0[*index.y()][*index.x()]
+    }
+}
+
+impl<T, const ROW: usize, const COL: usize> IndexMut<Vec2<usize>> for Matrix<T, ROW, COL> {
+    fn index_mut(&mut self, index: Vec2<usize>) -> &mut Self::Output {
+        &mut self.0[*index.y()][*index.x()]
     }
 }
 
