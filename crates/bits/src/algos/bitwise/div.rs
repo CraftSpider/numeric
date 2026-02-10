@@ -1,4 +1,4 @@
-use crate::algos::{ElementCmp, ElementShl, ElementSub};
+use crate::algos::{AssignBinAlg, Element, ElementCmp, ElementShl, Sub};
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
@@ -22,7 +22,7 @@ pub trait BitwiseDiv: BitSliceExt {
             remainder.set_bit(0, num.get_bit(idx));
             if ElementCmp::cmp(&remainder, div).is_ge() {
                 // Subtract will never overflow
-                ElementSub::sub_wrapping(&mut remainder, div);
+                <Element as AssignBinAlg<Sub>>::wrapping(&mut remainder, div, ());
                 quotient.set_bit(idx, true);
             }
         }
@@ -45,7 +45,7 @@ pub trait BitwiseDiv: BitSliceExt {
             remainder.set_bit(0, num.get_bit(idx));
             if ElementCmp::cmp(remainder, div).is_ge() {
                 // Subtract will never overflow
-                ElementSub::sub_wrapping(remainder, div);
+                <Element as AssignBinAlg<Sub>>::wrapping(remainder, div, ());
                 num.set_bit(idx, true);
             } else {
                 num.set_bit(idx, false);
@@ -100,7 +100,7 @@ pub trait BitwiseDiv: BitSliceExt {
             remainder.set_bit(0, num.get_bit(idx));
             if ElementCmp::cmp(remainder, div).is_ge() {
                 // Subtract will never overflow
-                ElementSub::sub_wrapping(remainder, div);
+                <Element as AssignBinAlg<Sub>>::wrapping(remainder, div, ());
             }
         }
         num.slice_mut().copy_from_slice(remainder);

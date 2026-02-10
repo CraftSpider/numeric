@@ -9,30 +9,35 @@ pub use element::*;
 
 pub trait Operation {
     type Out<L>;
+    type Extra<L>;
 }
 
 pub struct Add;
 
 impl Operation for Add {
     type Out<L> = L;
+    type Extra<L> = ();
 }
 
 pub struct Sub;
 
 impl Operation for Sub {
     type Out<L> = L;
+    type Extra<L> = ();
 }
 
 pub struct Mul;
 
 impl Operation for Mul {
     type Out<L> = L;
+    type Extra<L> = ();
 }
 
 pub struct DivRem;
 
 impl Operation for DivRem {
     type Out<L> = (L, L);
+    type Extra<L> = L;
 }
 
 pub trait BinAlg<OP: Operation> {
@@ -85,6 +90,26 @@ pub trait BinAlg<OP: Operation> {
         right: &R,
         out: OP::Out<&'a mut [L::Bit]>,
     ) -> OP::Out<&'a [L::Bit]>
+    where
+        L: BitSliceExt,
+        R: BitSliceExt<Bit = L::Bit>;
+}
+
+pub trait AssignBinAlg<OP: Operation> {
+    fn overflowing<L, R>(left: &mut L, right: &R, extra: OP::Extra<&mut [L::Bit]>) -> bool
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>;
+
+    fn wrapping<L, R>(left: &mut L, right: &R, extra: OP::Extra<&mut [L::Bit]>)
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        Self::overflowing(left, right, extra);
+    }
+
+    fn saturating<L, R>(left: &L, right: &R, out: OP::Extra<&mut [L::Bit]>)
     where
         L: BitSliceExt,
         R: BitSliceExt<Bit = L::Bit>;

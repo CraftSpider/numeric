@@ -1,3 +1,5 @@
+pub struct Bitwise;
+
 mod add;
 mod div;
 mod mul;
@@ -5,7 +7,6 @@ mod shl;
 mod shr;
 mod sub;
 
-pub use add::BitwiseAdd;
 pub use div::BitwiseDiv;
 pub use mul::BitwiseMul;
 pub use shl::BitwiseShl;

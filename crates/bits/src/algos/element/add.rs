@@ -85,6 +85,46 @@ impl BinAlg<Add> for Element {
     }
 }
 
+impl AssignBinAlg<Add> for Element {
+    fn overflowing<L, R>(left: &mut L, right: &R, _: ()) -> bool
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let len = usize::max(left.len(), right.len());
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
+
+        let mut carry = false;
+
+        for idx in 0..len {
+            let l = left.get_opt(idx).unwrap_or(zero);
+            let r = right.get_opt(idx).unwrap_or(zero);
+
+            let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
+            carry = new_carry;
+
+            let (res, new_carry) = res.overflowing_add(r);
+            // As of Rust 1.86 nightly, this is faster than `carry |= new_carry`
+            if new_carry {
+                carry = true;
+            }
+
+            left.set_ignore(idx, res);
+        }
+
+        carry
+    }
+
+    fn saturating<L, R>(left: &L, right: &R, _: ())
+    where
+        L: BitSliceExt,
+        R: BitSliceExt<Bit = L::Bit>,
+    {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

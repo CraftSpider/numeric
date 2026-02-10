@@ -24,4 +24,3 @@ pub use mul::ElementMul;
 pub use neg::ElementNot;
 pub use shl::ElementShl;
 pub use shr::ElementShr;
-pub use sub::ElementSub;
