@@ -52,9 +52,10 @@ impl AddAlgo for Element {
         let zero = L::Bit::zero();
         let one = L::Bit::one();
 
+        let mut overflow = false;
         let mut carry = false;
 
-        for idx in 0..len {
+        for idx in 0..=len {
             let l = left.get_opt(idx).unwrap_or(zero);
             let r = right.get_opt(idx).unwrap_or(zero);
 
@@ -67,10 +68,13 @@ impl AddAlgo for Element {
                 carry = true;
             }
 
-            out.set_ignore(idx, res);
+            match out.set_opt(idx, res) {
+                None if !res.is_zero() => overflow = true,
+                _ => (),
+            }
         }
 
-        (out, carry)
+        (out, overflow)
     }
 }
 
@@ -84,9 +88,10 @@ impl AssignAddAlgo for Element {
         let zero = L::Bit::zero();
         let one = L::Bit::one();
 
+        let mut overflow = false;
         let mut carry = false;
 
-        for idx in 0..len {
+        for idx in 0..=len {
             let l = left.get_opt(idx).unwrap_or(zero);
             let r = right.get_opt(idx).unwrap_or(zero);
 
@@ -99,10 +104,13 @@ impl AssignAddAlgo for Element {
                 carry = true;
             }
 
-            left.set_ignore(idx, res);
+            match left.set_opt(idx, res) {
+                None if !res.is_zero() => overflow = true,
+                _ => (),
+            }
         }
 
-        carry
+        overflow
     }
 }
 
@@ -157,12 +165,14 @@ impl AddAlgo for Bitwise {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
+        extern crate std;
         let bit_len = usize::max(left.bit_len(), right.bit_len());
 
+        let mut overflow = false;
         let mut carry = false;
         for idx in 0..=bit_len {
-            let l = u8::from(left.get_bit(idx));
-            let r = u8::from(right.get_bit(idx));
+            let l = u8::from(left.get_bit_opt(idx).unwrap_or(false));
+            let r = u8::from(right.get_bit_opt(idx).unwrap_or(false));
 
             let c = if carry {
                 carry = false;
@@ -186,10 +196,13 @@ impl AddAlgo for Bitwise {
                 _ => unsafe { unreachable_unchecked() },
             };
 
-            out.set_bit(idx, new);
+            match out.set_bit_opt(idx, new) {
+                None if new => overflow = true,
+                _ => (),
+            }
         }
 
-        (out, carry)
+        (out, overflow)
     }
 }
 
@@ -201,10 +214,11 @@ impl AssignAddAlgo for Bitwise {
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
 
+        let mut overflow = false;
         let mut carry = false;
         for idx in 0..=bit_len {
-            let l = u8::from(left.get_bit(idx));
-            let r = u8::from(right.get_bit(idx));
+            let l = u8::from(left.get_bit_opt(idx).unwrap_or(false));
+            let r = u8::from(right.get_bit_opt(idx).unwrap_or(false));
 
             let c = if carry {
                 carry = false;
@@ -228,9 +242,12 @@ impl AssignAddAlgo for Bitwise {
                 _ => unsafe { unreachable_unchecked() },
             };
 
-            left.set_bit(idx, new);
+            match left.set_bit_opt(idx, new) {
+                None if new => overflow = true,
+                _ => (),
+            }
         }
 
-        carry
+        overflow
     }
 }

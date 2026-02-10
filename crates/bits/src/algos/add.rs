@@ -113,15 +113,55 @@ mod tests {
         assert_eq!(B::long(&[u32::MAX], &[1]), &[0, 1]);
     }
 
+    fn test_wrapping<B: AddAlgo>() {
+        // Simple addition
+        let mut out = [0u32];
+        assert_eq!(B::wrapping(&[0], &[0], &mut out), &[0]);
+        let mut out = [0u32];
+        assert_eq!(B::wrapping(&[0], &[1], &mut out), &[1]);
+        let mut out = [0u32];
+        assert_eq!(B::wrapping(&[1], &[0], &mut out), &[1]);
+        let mut out = [0u32];
+        assert_eq!(B::wrapping(&[1], &[1], &mut out), &[2]);
+
+        // Long addition handled correctly
+        let mut out = [0; 2];
+        assert_eq!(B::wrapping(&[0u32], &[0, 1], &mut out), &[0, 1]);
+        let mut out = [0; 2];
+        assert_eq!(B::wrapping(&[1u32], &[0, 1], &mut out), &[1, 1]);
+        let mut out = [0; 2];
+        assert_eq!(B::wrapping(&[u32::MAX], &[1], &mut out), &[0, 1]);
+    }
+
+    fn test_saturating<B: AddAlgo>() {
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[0], &[0], &mut out), &[0]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[1], &[1], &mut out), &[2]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[1], &[u32::MAX], &mut out), &[u32::MAX]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[u32::MAX], &[1], &mut out), &[u32::MAX]);
+        let mut out = [0u32];
+        assert_eq!(
+            B::saturating(&[u32::MAX], &[u32::MAX], &mut out),
+            &[u32::MAX]
+        );
+    }
+
     #[test]
     fn test_element() {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
+        test_wrapping::<Element>();
+        test_saturating::<Element>();
     }
 
     #[test]
     fn test_bitwise() {
         #[cfg(feature = "alloc")]
         test_long::<Bitwise>();
+        test_wrapping::<Bitwise>();
+        test_saturating::<Bitwise>();
     }
 }
