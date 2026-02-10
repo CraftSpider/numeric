@@ -94,9 +94,7 @@ pub trait AssignAddAlgo {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "alloc")]
     use super::*;
-    #[cfg(feature = "alloc")]
     use crate::algos::{Bitwise, Element};
 
     #[cfg(feature = "alloc")]

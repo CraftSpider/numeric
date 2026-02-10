@@ -185,6 +185,36 @@ impl SubAlgo for Bitwise {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
-        todo!("{left:?} - {right:?} -> {out:?}")
+        let bit_len = usize::max(left.bit_len(), right.bit_len());
+
+        let mut carry = false;
+        for idx in 0..bit_len {
+            let l = left.get_bit_opt(idx).unwrap_or(false);
+            let r = right.get_bit_opt(idx).unwrap_or(false);
+
+            let c = if carry {
+                carry = false;
+                true
+            } else {
+                false
+            };
+
+            let new = match (l, r, c) {
+                (true, false, false) => true,
+                (true, true, false) | (true, false, true) | (false, false, false) => false,
+                (false, true, false) | (false, false, true) | (true, true, true) => {
+                    carry = true;
+                    true
+                }
+                (false, true, true) => {
+                    carry = true;
+                    false
+                }
+            };
+
+            out.set_bit_ignore(idx, new);
+        }
+
+        (out, carry)
     }
 }

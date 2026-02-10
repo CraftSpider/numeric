@@ -96,9 +96,7 @@ pub trait AssignSubAlgo {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "alloc")]
     use super::*;
-    #[cfg(feature = "alloc")]
     use crate::algos::{Bitwise, Element};
     #[cfg(feature = "alloc")]
     use alloc::vec;
@@ -118,15 +116,54 @@ mod tests {
         assert_eq!(B::long(&[0u32, 1], &[1]), (vec![u32::MAX], false));
     }
 
+    fn test_wrapping<B: SubAlgo>() {
+        // Simple subtraction
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[0u32], &[0], &mut out), &[0]);
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[1u32], &[0], &mut out), &[1]);
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[0u32], &[1], &mut out), &[u32::MAX]);
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[1u32], &[1], &mut out), &[0]);
+
+        // Long subtraction handled correctly
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[0u32, 1], &[0, 1], &mut out), &[0]);
+        let mut out = [0; 2];
+        assert_eq!(B::wrapping(&[1u32, 1], &[1], &mut out), &[0, 1]);
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[1u32, 1], &[0, 1], &mut out), &[1]);
+        let mut out = [0];
+        assert_eq!(B::wrapping(&[0u32, 1], &[1], &mut out), &[u32::MAX]);
+    }
+
+    fn test_saturating<B: SubAlgo>() {
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[0], &[0], &mut out), &[0]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[1], &[1], &mut out), &[0]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[1], &[u32::MAX], &mut out), &[0]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[0], &[1], &mut out), &[0]);
+        let mut out = [0u32];
+        assert_eq!(B::saturating(&[u32::MAX], &[1], &mut out), &[u32::MAX - 1]);
+    }
+
     #[test]
     fn test_element() {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
+        test_wrapping::<Element>();
+        test_saturating::<Element>();
     }
 
     #[test]
     fn test_bitwise() {
         #[cfg(feature = "alloc")]
         test_long::<Bitwise>();
+        test_wrapping::<Bitwise>();
+        test_saturating::<Bitwise>();
     }
 }

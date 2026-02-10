@@ -1,6 +1,6 @@
 #[cfg(feature = "alloc")]
 use crate::algos::{AddAlgo, ShlAlgo};
-use crate::algos::{AssignAddAlgo, AssignMulAlgo, AssignShlAlgo, Bitwise, Element, MulAlgo};
+use crate::algos::{AssignMulAlgo, Bitwise, Element, MulAlgo};
 use crate::bit_slice::{BitLike, BitSliceExt};
 #[cfg(feature = "alloc")]
 use crate::utils::IntSlice;
@@ -138,7 +138,7 @@ impl MulAlgo for Bitwise {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
-        todo!()
+        todo!("{left:?} * {right:?} -> {out:?}")
     }
 }
 
