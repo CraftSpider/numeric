@@ -1,4 +1,4 @@
-use crate::algos::{ElementAdd, ElementCmp, ElementShl, ElementShr, ElementSub};
+use crate::algos::{Add, BinAlg, Element, ElementCmp, ElementShl, ElementShr, ElementSub};
 use crate::bit_slice::{BitLike, BitSliceExt};
 use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
@@ -44,7 +44,9 @@ pub trait ElementDiv: BitSliceExt {
                 // Subtract remainder by divisor
                 ElementSub::sub_wrapping(&mut remainder, right);
                 // Add 1 to quotient at idx
-                ElementAdd::add_wrapping(&mut quotient, &one);
+                // TODO: In-place operation
+                // <Element as BinAlg<Add>>::wrapping(&quotient, &one, &mut quotient);
+                todo!()
             }
 
             ElementShr::shr_wrapping(&mut one, Self::Bit::BIT_LEN);

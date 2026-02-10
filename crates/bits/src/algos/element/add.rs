@@ -1,3 +1,4 @@
+use super::super::*;
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
@@ -5,16 +6,16 @@ use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingAdd;
 
-pub trait ElementAdd: BitSliceExt {
+impl BinAlg<Add> for Element {
     #[cfg(feature = "alloc")]
-    /// Add two slices, implemented as element-wise add and carry
-    fn add<T>(left: &Self, right: &T) -> Vec<Self::Bit>
+    fn growing<L, R>(left: &L, right: &R) -> Vec<L::Bit>
     where
-        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
-        let zero = Self::Bit::zero();
-        let one = Self::Bit::one();
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
         let mut out = vec![zero; len + 1];
 
         let mut carry = false;
@@ -37,14 +38,18 @@ pub trait ElementAdd: BitSliceExt {
         IntSlice::shrink(out)
     }
 
-    /// Add two slices, implemented as wrapping element-wise add and carry with overflow check
-    fn add_overflowing<'a, T>(left: &'a mut Self, right: &T) -> (&'a mut Self, bool)
+    fn overflowing<'a, L, R>(
+        left: &L,
+        right: &R,
+        out: <Add as Operation>::Out<&'a mut [L::Bit]>,
+    ) -> (&'a [L::Bit], bool)
     where
-        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
-        let zero = Self::Bit::zero();
-        let one = Self::Bit::one();
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
 
         let mut carry = false;
 
@@ -61,35 +66,24 @@ pub trait ElementAdd: BitSliceExt {
                 carry = true;
             }
 
-            left.set_ignore(idx, res);
+            out.set_ignore(idx, res);
         }
 
-        (left, carry)
+        (out, carry)
     }
 
-    /// Add two slices, implemented as checked element-wise add and carry
-    fn add_checked<'a, T>(left: &'a mut Self, right: &T) -> Option<&'a mut Self>
+    fn saturating<'a, L, R>(
+        left: &L,
+        right: &R,
+        out: <Add as Operation>::Out<&'a mut [L::Bit]>,
+    ) -> &'a [L::Bit]
     where
-        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
+        L: BitSliceExt,
+        R: BitSliceExt<Bit = L::Bit>,
     {
-        let (out, carry) = ElementAdd::add_overflowing(left, right);
-        if carry {
-            None
-        } else {
-            Some(out)
-        }
-    }
-
-    /// Add two slices, implemented as wrapping element-wise add and carry
-    fn add_wrapping<'a, T>(left: &'a mut Self, right: &T) -> &'a mut Self
-    where
-        T: ?Sized + BitSliceExt<Bit = Self::Bit>,
-    {
-        ElementAdd::add_overflowing(left, right).0
+        todo!()
     }
 }
-
-impl<T: ?Sized + BitSliceExt> ElementAdd for T {}
 
 #[cfg(test)]
 mod tests {
@@ -98,26 +92,29 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn test_simple() {
-        assert_eq!(ElementAdd::add(&[0u32], &[0]), &[0],);
+        assert_eq!(<Element as BinAlg<Add>>::growing(&[0u32], &[0]), &[0],);
 
-        assert_eq!(ElementAdd::add(&[0u32], &[1]), &[1],);
+        assert_eq!(<Element as BinAlg<Add>>::growing(&[0u32], &[1]), &[1],);
 
-        assert_eq!(ElementAdd::add(&[1u32], &[0]), &[1],);
+        assert_eq!(<Element as BinAlg<Add>>::growing(&[1u32], &[0]), &[1],);
 
-        assert_eq!(ElementAdd::add(&[1u32], &[1]), &[2],);
+        assert_eq!(<Element as BinAlg<Add>>::growing(&[1u32], &[1]), &[2],);
     }
 
     #[cfg(feature = "alloc")]
     #[test]
     fn test_long() {
-        assert_eq!(ElementAdd::add(&[0u32], &[0, 1]), &[0, 1],);
+        assert_eq!(<Element as BinAlg<Add>>::growing(&[0u32], &[0, 1]), &[0, 1],);
 
-        assert_eq!(ElementAdd::add(&[1u32], &[0, 1]), &[1, 1],);
+        assert_eq!(<Element as BinAlg<Add>>::growing(&[1u32], &[0, 1]), &[1, 1],);
     }
 
     #[cfg(feature = "alloc")]
     #[test]
     fn test_carry() {
-        assert_eq!(ElementAdd::add(&[u32::MAX], &[1]), &[0, 1],);
+        assert_eq!(
+            <Element as BinAlg<Add>>::growing(&[u32::MAX], &[1]),
+            &[0, 1],
+        );
     }
 }

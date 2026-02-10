@@ -5,7 +5,7 @@
 use core::array;
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use numeric_bits::algos::{BitwiseDiv, ElementAdd, ElementMul, ElementSub};
+use numeric_bits::algos::{self, BinAlg, BitwiseDiv, Element, ElementMul, ElementSub};
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};
@@ -32,9 +32,10 @@ static_assert_traits!(I<4>: Send + Sync);
 impl<const N: usize> Add for I<N> {
     type Output = Self;
 
-    fn add(mut self, rhs: Self) -> Self::Output {
-        ElementAdd::add_wrapping(&mut self.0, &rhs.0);
-        self
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut out = I::zero();
+        <Element as BinAlg<algos::Add>>::wrapping(&self.0, &rhs.0, &mut out.0);
+        out
     }
 }
 

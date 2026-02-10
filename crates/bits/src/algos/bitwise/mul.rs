@@ -1,4 +1,4 @@
-use crate::algos::{ElementAdd, ElementShl};
+use crate::algos::{Add, BinAlg, Element, ElementShl};
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
@@ -18,7 +18,7 @@ pub trait BitwiseMul: BitSliceExt {
         for idx in 0..right.bit_len() {
             let r = right.get_bit(idx);
             if r {
-                out = ElementAdd::add(&out, &new_self);
+                out = <Element as BinAlg<Add>>::growing(&out, &new_self);
             }
             new_self = ElementShl::shl(&new_self, 1);
         }

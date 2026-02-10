@@ -1,6 +1,8 @@
 // Operation Types: carrying, checked, overflowing (wrapping + carrying), saturating, wrapping
 // Shift Types: checked, overflowing (wrapping + checked), wrapping
 
+pub struct Element;
+
 mod add;
 mod bitand;
 mod bitor;
@@ -13,7 +15,6 @@ mod shl;
 mod shr;
 mod sub;
 
-pub use add::ElementAdd;
 pub use bitand::ElementBitand;
 pub use bitor::ElementBitor;
 pub use bitxor::ElementBitxor;

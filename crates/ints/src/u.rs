@@ -7,8 +7,8 @@ use core::cmp::Ordering;
 use core::iter::Product;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
 use core::{array, fmt, iter};
+use numeric_bits::algos::{self, BinAlg, Element, ElementMul, ElementShl, ElementShr, ElementSub};
 use numeric_bits::algos::{BitwiseDiv, ElementCmp};
-use numeric_bits::algos::{ElementAdd, ElementMul, ElementShl, ElementShr, ElementSub};
 use numeric_bits::utils::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
@@ -451,9 +451,10 @@ impl<const N: usize> Product<U<N>> for U<N> {
 impl<const N: usize> CheckedAdd for U<N> {
     type Output = Self;
 
-    fn checked_add(mut self, rhs: Self) -> Option<Self> {
-        ElementAdd::add_checked(&mut self.0, &rhs.0)?;
-        Some(self)
+    fn checked_add(self, rhs: Self) -> Option<Self> {
+        let mut out = U::zero();
+        <Element as BinAlg<algos::Add>>::checked(&self.0, &rhs.0, &mut out.0)?;
+        Some(out)
     }
 }
 
@@ -487,9 +488,10 @@ impl<const N: usize> CheckedDiv for U<N> {
 impl<const N: usize> WrappingAdd for U<N> {
     type Output = Self;
 
-    fn wrapping_add(mut self, rhs: Self) -> Self::Output {
-        ElementAdd::add_wrapping(&mut self.0, &rhs.0);
-        self
+    fn wrapping_add(self, rhs: Self) -> Self::Output {
+        let mut out = U::zero();
+        <Element as BinAlg<algos::Add>>::wrapping(&self.0, &rhs.0, &mut out.0);
+        out
     }
 }
 
@@ -505,9 +507,10 @@ impl<const N: usize> WrappingSub for U<N> {
 impl<const N: usize> SaturatingAdd for U<N> {
     type Output = Self;
 
-    fn saturating_add(mut self, rhs: Self) -> Self {
-        match ElementAdd::add_checked(&mut self.0, &rhs.0) {
-            Some(_) => self,
+    fn saturating_add(self, rhs: Self) -> Self {
+        let mut out = U::zero();
+        match <Element as BinAlg<algos::Add>>::checked(&self.0, &rhs.0, &mut out.0) {
+            Some(_) => out,
             None => Self::max_value(),
         }
     }

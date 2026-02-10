@@ -10,8 +10,8 @@ use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::hint::unreachable_unchecked;
 use core::{fmt, mem, num, ops};
 use numeric_bits::algos::{
-    BitwiseDiv, ElementAdd, ElementBitand, ElementBitor, ElementBitxor, ElementMul, ElementNot,
-    ElementShl, ElementShr, ElementSub,
+    Add, BinAlg, BitwiseDiv, Element, ElementBitand, ElementBitor, ElementBitxor, ElementMul,
+    ElementNot, ElementShl, ElementShr, ElementSub,
 };
 use numeric_bits::bit_slice::BitSliceExt;
 use numeric_bits::utils::*;
@@ -434,7 +434,7 @@ impl_op!(add(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, true) | (false, false) => {
-                (ElementAdd::add(this, other), self.is_negative())
+                (<Element as BinAlg<Add>>::growing(this, other), self.is_negative())
             }
             (true, _) => {
                 let (out, neg) = ElementSub::sub(this, other);
@@ -462,7 +462,7 @@ impl_op!(sub(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, false) | (false, true) => {
-                let out = ElementAdd::add(this, other);
+                let out = <Element as BinAlg<Add>>::growing(this, other);
                 (out, self.is_negative())
             }
             (true, true) => {
