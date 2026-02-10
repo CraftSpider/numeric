@@ -24,6 +24,13 @@ use numeric_utils::{static_assert, static_assert_traits};
 mod rand_impl;
 
 /// N-byte bounded, unsigned integer. `U<1> == u8`, `U<16> == u128`, etc.
+///
+/// # Considerations
+///
+/// This type must have a constant alignment. Currently, that alignment is 1, to prevent wasting
+/// space for small or odd byte values. However, as a trade-off, that means this type cannot
+/// optimize mathematical operations as effectively. A `u32` is likely to have slightly higher
+/// performance than this type, in otherwise identical situations.
 #[derive(Copy, Clone)]
 pub struct U<const N: usize>([u8; N]);
 
