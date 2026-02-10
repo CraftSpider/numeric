@@ -1,6 +1,8 @@
-use crate::algos::sub::{AssignSubAlgo, SubAlgo};
-use crate::algos::{AssignBitAlgo, Bitwise, Element};
+#[cfg(feature = "alloc")]
+use crate::algos::AssignBitAlgo;
+use crate::algos::{AssignSubAlgo, Bitwise, Element, SubAlgo};
 use crate::bit_slice::BitSliceExt;
+#[cfg(feature = "alloc")]
 use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
@@ -132,7 +134,7 @@ impl AssignSubAlgo for Element {
 }
 
 impl SubAlgo for Bitwise {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
     where
         L: ?Sized + BitSliceExt,
@@ -183,6 +185,6 @@ impl SubAlgo for Bitwise {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
-        todo!()
+        todo!("{left:?} - {right:?} -> {out:?}")
     }
 }

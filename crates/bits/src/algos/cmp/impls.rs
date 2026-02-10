@@ -1,5 +1,4 @@
-use crate::algos::cmp::CmpAlgo;
-use crate::algos::Element;
+use crate::algos::{CmpAlgo, Element};
 use crate::bit_slice::BitSliceExt;
 use core::cmp::Ordering;
 use numeric_traits::identity::Zero;

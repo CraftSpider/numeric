@@ -1,7 +1,9 @@
 use super::{AddAlgo, AssignAddAlgo};
 use crate::algos::{Bitwise, Element};
-use crate::bit_slice::{BitSliceExt, BitVecExt};
-#[cfg(feature = "std")]
+use crate::bit_slice::BitSliceExt;
+#[cfg(feature = "alloc")]
+use crate::bit_slice::BitVecExt;
+#[cfg(feature = "alloc")]
 use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};

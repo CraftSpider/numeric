@@ -1,16 +1,12 @@
-use crate::algos::{AddAlgo, Bitwise, Element, ShlAlgo};
 use crate::bit_slice::BitSliceExt;
-#[cfg(feature = "std")]
-use alloc::vec;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use numeric_traits::class::Bounded;
-use numeric_traits::identity::Zero;
 
 mod impls;
 
 pub trait MulAlgo {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,
@@ -96,43 +92,12 @@ pub trait AssignMulAlgo {
     }
 }
 
-impl MulAlgo for Bitwise {
-    #[cfg(feature = "std")]
-    fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
-    where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
-    {
-        let len = usize::max(left.len(), right.len());
-        let mut new_self = <Element as ShlAlgo>::long(left, 0);
-        let mut out = vec![L::Bit::zero(); len * 2];
-
-        for idx in 0..right.bit_len() {
-            let r = right.get_bit(idx);
-            if r {
-                out = <Element as AddAlgo>::long(&out, &new_self);
-            }
-            new_self = <Element as ShlAlgo>::long(&new_self, 1);
-        }
-
-        out
-    }
-
-    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
-    where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn test_long<B: MulAlgo>() {
         let slice1: &[u8] = &[0b00000000];
         let slice2 = &[0b00000001];
@@ -183,14 +148,14 @@ mod tests {
 
     #[test]
     fn test_element() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_long::<Element>();
         test_wrapping_assign::<Element>();
     }
 
     #[test]
     fn test_bitwise() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_long::<Bitwise>();
         // test_wrapping_assign::<Bitwise>();
     }

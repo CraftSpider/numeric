@@ -1,11 +1,13 @@
 use crate::bit_slice::BitSliceExt;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use numeric_traits::class::Bounded;
 
 mod impls;
 
 pub trait SubAlgo {
-    #[cfg(feature = "std")]
-    fn long<L, R>(left: &L, right: &R) -> (alloc::vec::Vec<L::Bit>, bool)
+    #[cfg(feature = "alloc")]
+    fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>;
@@ -94,12 +96,14 @@ pub trait AssignSubAlgo {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "alloc")]
     use super::*;
+    #[cfg(feature = "alloc")]
     use crate::algos::{Bitwise, Element};
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     use alloc::vec;
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn test_long<B: SubAlgo>() {
         // Simple subtraction
         assert_eq!(B::long(&[0u32], &[0]), (vec![0], false));
@@ -116,13 +120,13 @@ mod tests {
 
     #[test]
     fn test_element() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_long::<Element>();
     }
 
     #[test]
     fn test_bitwise() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_long::<Bitwise>();
     }
 }

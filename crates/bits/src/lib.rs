@@ -1,6 +1,6 @@
 #![no_std]
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 pub mod algos;

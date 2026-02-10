@@ -1,3 +1,5 @@
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use core::ops::Deref;
 use numeric_traits::cast::{FromAll, FromChecked, IntoTruncating};
 use numeric_traits::class::{Bounded, Integral, Unsigned};
@@ -15,8 +17,8 @@ impl<T: Integral + Copy> IntSlice<T> for &[T] {
     }
 }
 
-#[cfg(feature = "std")]
-impl<T: Integral + Copy> IntSlice<T> for alloc::vec::Vec<T> {
+#[cfg(feature = "alloc")]
+impl<T: Integral + Copy> IntSlice<T> for Vec<T> {
     fn shrink(mut self) -> Self {
         let idx = self.iter().rposition(|val| *val != T::zero()).unwrap_or(0);
         self.drain(idx + 1..);
@@ -90,7 +92,7 @@ pub const fn const_reverse<const N: usize>(mut bytes: [u8; N]) -> [u8; N] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     use alloc::vec;
 
     #[test]
@@ -110,7 +112,7 @@ mod tests {
         assert_eq!(IntSlice::shrink(&[1, 0, 1] as &[_]), &[1, 0, 1]);
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_shrink_vec() {
         assert_eq!(IntSlice::shrink(vec![0]), &[0]);

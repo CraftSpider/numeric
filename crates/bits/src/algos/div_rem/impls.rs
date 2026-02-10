@@ -1,18 +1,15 @@
-use crate::algos::cmp::CmpAlgo;
-use crate::algos::div_rem::DivRemAlgo;
 use crate::algos::{
-    AssignAddAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, Element,
+    AssignDivRemAlgo, AssignShlAlgo, AssignSubAlgo, Bitwise, CmpAlgo, DivRemAlgo, Element,
 };
-use crate::bit_slice::{BitLike, BitSliceExt};
-use crate::utils::IntSlice;
-#[cfg(feature = "std")]
-use alloc::vec;
-#[cfg(feature = "std")]
-use alloc::vec::Vec;
-use numeric_traits::identity::{One, Zero};
+use crate::bit_slice::BitSliceExt;
+#[cfg(feature = "alloc")]
+use alloc::{vec, vec::Vec};
+#[cfg(feature = "alloc")]
+use numeric_traits::identity::Zero;
 
+/*
 impl DivRemAlgo for Element {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
         L: ?Sized + BitSliceExt,
@@ -67,9 +64,10 @@ impl DivRemAlgo for Element {
         todo!()
     }
 }
+ */
 
 impl DivRemAlgo for Bitwise {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
         L: ?Sized + BitSliceExt,

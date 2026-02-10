@@ -1,10 +1,12 @@
 use crate::bit_slice::BitSliceExt;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 mod impls;
 
 pub trait DivRemAlgo {
-    #[cfg(feature = "std")]
-    fn long<L, R>(left: &L, right: &R) -> (alloc::vec::Vec<L::Bit>, alloc::vec::Vec<L::Bit>)
+    #[cfg(feature = "alloc")]
+    fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>;
@@ -150,7 +152,7 @@ mod tests {
     use super::*;
     use crate::algos::Bitwise;
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn test_div_long<B: DivRemAlgo>() {
         let slice1: &[u8] = &[0b10];
         let slice2: &[u8] = &[0b01];
@@ -173,7 +175,7 @@ mod tests {
         assert_eq!(B::long(slice7, slice8).0, &[0b0, 0b0, 0b10000000, 0b0]);
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn test_rem_long<B: DivRemAlgo>() {
         for i in 0..4 {
             let slice1: &[u8] = &[i];
@@ -225,9 +227,9 @@ mod tests {
 
     #[test]
     fn test_bitwise() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_div_long::<Bitwise>();
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_rem_long::<Bitwise>();
 
         test_div_wrapping::<Bitwise>();

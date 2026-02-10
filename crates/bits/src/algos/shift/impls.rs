@@ -1,16 +1,16 @@
-use crate::algos::shift::{AssignShlAlgo, AssignShrAlgo, ShlAlgo, ShrAlgo};
-use crate::algos::{Bitwise, Element};
-use crate::bit_slice::{BitLike, BitSliceExt, BitVecExt};
+use crate::algos::{AssignShlAlgo, AssignShrAlgo, Bitwise, Element, ShlAlgo, ShrAlgo};
+#[cfg(feature = "alloc")]
+use crate::bit_slice::BitVecExt;
+use crate::bit_slice::{BitLike, BitSliceExt};
+#[cfg(feature = "alloc")]
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
-use alloc::vec;
-#[cfg(feature = "std")]
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use alloc::{vec, vec::Vec};
 use numeric_traits::class::Bounded;
 use numeric_traits::identity::Zero;
 
 impl ShlAlgo for Bitwise {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,
@@ -40,7 +40,7 @@ impl ShlAlgo for Bitwise {
 }
 
 impl ShrAlgo for Bitwise {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,
@@ -71,7 +71,7 @@ impl ShrAlgo for Bitwise {
 }
 
 impl ShlAlgo for Element {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,
@@ -170,7 +170,7 @@ impl AssignShlAlgo for Element {
 }
 
 impl ShrAlgo for Element {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,

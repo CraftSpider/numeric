@@ -12,8 +12,10 @@ mod macros;
 #[cfg(feature = "alloc")]
 pub use intern::Interner;
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub(crate) mod tests {
+    extern crate std;
     use std::thread;
 
     pub const THREAD_COUNT: usize = {

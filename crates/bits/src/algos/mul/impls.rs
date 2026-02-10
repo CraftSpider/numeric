@@ -1,16 +1,16 @@
-use crate::algos::mul::{AssignMulAlgo, MulAlgo};
-use crate::algos::Element;
+#[cfg(feature = "alloc")]
+use crate::algos::{AddAlgo, ShlAlgo};
+use crate::algos::{AssignAddAlgo, AssignMulAlgo, AssignShlAlgo, Bitwise, Element, MulAlgo};
 use crate::bit_slice::{BitLike, BitSliceExt};
+#[cfg(feature = "alloc")]
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
-use alloc::vec;
-#[cfg(feature = "std")]
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use alloc::{vec, vec::Vec};
 use numeric_traits::identity::Zero;
 use numeric_traits::ops::widening::WideningMul;
 
 impl MulAlgo for Element {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,
@@ -108,6 +108,37 @@ impl AssignMulAlgo for Element {
         }
 
         overflow
+    }
+}
+
+impl MulAlgo for Bitwise {
+    #[cfg(feature = "alloc")]
+    fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let len = usize::max(left.len(), right.len());
+        let mut new_self = <Element as ShlAlgo>::long(left, 0);
+        let mut out = vec![L::Bit::zero(); len * 2];
+
+        for idx in 0..right.bit_len() {
+            let r = right.get_bit(idx);
+            if r {
+                out = <Element as AddAlgo>::long(&out, &new_self);
+            }
+            new_self = <Element as ShlAlgo>::long(&new_self, 1);
+        }
+
+        out
+    }
+
+    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        todo!()
     }
 }
 

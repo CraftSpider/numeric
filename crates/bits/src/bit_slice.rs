@@ -1,15 +1,17 @@
 //! A type for bitwise operations on slices of integers
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use core::mem;
 use numeric_traits::class::{BoundedBit, Integral};
 use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::core::{BitAssignOps, NumAssignOps};
 use numeric_traits::ops::overflowing::OverflowingOps;
+use numeric_traits::ops::widening::WideningMul;
 
 mod iter;
 
 pub use iter::*;
-use numeric_traits::ops::core::{BitAssignOps, NumAssignOps};
-use numeric_traits::ops::widening::WideningMul;
 
 #[inline]
 fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
@@ -185,8 +187,8 @@ impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
     }
 }
 
-#[cfg(feature = "std")]
-impl<I: BitLike> BitSliceExt for alloc::vec::Vec<I> {
+#[cfg(feature = "alloc")]
+impl<I: BitLike> BitSliceExt for Vec<I> {
     type Bit = I;
 
     #[inline]
@@ -220,8 +222,8 @@ pub trait BitVecExt: BitSliceExt {
     }
 }
 
-#[cfg(feature = "std")]
-impl<I: BitLike> BitVecExt for alloc::vec::Vec<I> {
+#[cfg(feature = "alloc")]
+impl<I: BitLike> BitVecExt for Vec<I> {
     fn extend(&mut self, len: usize, val: Self::Bit) {
         if len > self.len() {
             self.resize(len, val);
@@ -232,7 +234,7 @@ impl<I: BitLike> BitVecExt for alloc::vec::Vec<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     use alloc::vec;
 
     #[test]
@@ -262,7 +264,7 @@ mod tests {
         assert_eq!(slice, &[0b1010101010101011, 0b0010101010101010])
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_extend() {
         let mut data = vec![0u8; 1];

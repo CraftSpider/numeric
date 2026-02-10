@@ -1,11 +1,13 @@
 use crate::bit_slice::BitSliceExt;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use numeric_traits::identity::Zero;
 
 mod impls;
 
 pub trait ShlAlgo {
-    #[cfg(feature = "std")]
-    fn long<L>(left: &L, right: usize) -> alloc::vec::Vec<L::Bit>
+    #[cfg(feature = "alloc")]
+    fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt;
 
@@ -48,8 +50,8 @@ pub trait ShlAlgo {
 }
 
 pub trait ShrAlgo {
-    #[cfg(feature = "std")]
-    fn long<L>(left: &L, right: usize) -> alloc::vec::Vec<L::Bit>
+    #[cfg(feature = "alloc")]
+    fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt;
 
@@ -156,7 +158,7 @@ mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn test_shl<B: ShlAlgo>() {
         let slice: &[u16] = &[0b1010101010101010, 0b1010101010101010];
         assert_eq!(
@@ -196,7 +198,7 @@ mod tests {
         assert_eq!(B::wrapping(&data, 8, &mut [0; 2]), &[0b0, 0b1])
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn test_shr<B: ShrAlgo>() {
         let slice: &[u16] = &[0b1010101010101010, 0b1010101010101010];
         assert_eq!(B::long(slice, 1), &[0b0101010101010101, 0b0101010101010101]);
@@ -226,9 +228,9 @@ mod tests {
 
     #[test]
     fn test_bitwise() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_shl::<Bitwise>();
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_shr::<Bitwise>();
 
         test_shl_wrapping::<Bitwise>();
@@ -237,9 +239,9 @@ mod tests {
 
     #[test]
     fn test_element() {
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_shl::<Element>();
-        #[cfg(feature = "std")]
+        #[cfg(feature = "alloc")]
         test_shr::<Element>();
 
         test_shl_wrapping::<Element>();
