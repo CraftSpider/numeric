@@ -1,5 +1,5 @@
-use crate::algos::element::ElementNot;
-use crate::algos::{AssignBinAlg, BinAlg, Element, Operation, Sub};
+use crate::algos::sub::{AssignSubAlgo, SubAlgo};
+use crate::algos::{AssignBitAlgo, Bitwise, Element};
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
@@ -7,9 +7,9 @@ use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingSub;
 
-impl BinAlg<Sub> for Element {
+impl SubAlgo for Element {
     #[cfg(feature = "alloc")]
-    fn growing<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
+    fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
@@ -46,17 +46,13 @@ impl BinAlg<Sub> for Element {
 
         if carry {
             out.set_bit(0, !out.get_bit(0));
-            ElementNot::not(&mut out);
+            <Element as AssignBitAlgo>::not(&mut out);
         }
 
         (IntSlice::shrink(out), carry)
     }
 
-    fn overflowing<'a, L, R>(
-        left: &L,
-        right: &R,
-        out: <Sub as Operation>::Out<&'a mut [L::Bit]>,
-    ) -> (&'a [L::Bit], bool)
+    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
@@ -93,22 +89,10 @@ impl BinAlg<Sub> for Element {
 
         (out, carry)
     }
-
-    fn saturating<'a, L, R>(
-        left: &L,
-        right: &R,
-        out: <Sub as Operation>::Out<&'a mut [L::Bit]>,
-    ) -> &'a [L::Bit]
-    where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
-    }
 }
 
-impl AssignBinAlg<Sub> for Element {
-    fn overflowing<L, R>(left: &mut L, right: &R, extra: ()) -> bool
+impl AssignSubAlgo for Element {
+    fn overflowing<L, R>(left: &mut L, right: &R) -> bool
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
@@ -145,67 +129,60 @@ impl AssignBinAlg<Sub> for Element {
 
         carry
     }
-
-    fn saturating<L, R>(left: &L, right: &R, out: ())
-    where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
-    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl SubAlgo for Bitwise {
+    #[cfg(feature = "std")]
+    fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let len = usize::max(left.len(), right.len());
+        let bit_len = usize::max(left.bit_len(), right.bit_len());
+        let mut out = vec![L::Bit::zero(); len];
 
-    #[cfg(feature = "alloc")]
-    #[test]
-    fn test_simple() {
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[0u32], &[0]),
-            (vec![0], false),
-        );
+        let mut carry = false;
+        for idx in 0..bit_len {
+            let l = left.get_bit_opt(idx).unwrap_or(false);
+            let r = right.get_bit_opt(idx).unwrap_or(false);
 
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[1u32], &[0]),
-            (vec![1], false),
-        );
+            let c = if carry {
+                carry = false;
+                true
+            } else {
+                false
+            };
 
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[0u32], &[1]),
-            (vec![1], true),
-        );
+            let new = match (l, r, c) {
+                (true, false, false) => true,
+                (true, true, false) | (true, false, true) | (false, false, false) => false,
+                (false, true, false) | (false, false, true) | (true, true, true) => {
+                    carry = true;
+                    true
+                }
+                (false, true, true) => {
+                    carry = true;
+                    false
+                }
+            };
 
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[1u32], &[1]),
-            (vec![0], false),
-        );
+            out.set_bit(idx, new);
+        }
+
+        if carry {
+            out.set_bit(0, !out.get_bit(0));
+            <Element as AssignBitAlgo>::not(&mut out);
+        }
+
+        (IntSlice::shrink(out), carry)
     }
 
-    #[cfg(feature = "alloc")]
-    #[test]
-    fn test_carry() {
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[0u32, 1], &[1]),
-            (vec![u32::MAX], false),
-        )
-    }
-
-    #[cfg(feature = "alloc")]
-    #[test]
-    fn test_long() {
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[0u32, 1], &[0, 1]),
-            (vec![0], false),
-        );
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[1u32, 1], &[1]),
-            (vec![0, 1], false),
-        );
-        assert_eq!(
-            <Element as BinAlg<Sub>>::growing(&[1u32, 1], &[0, 1]),
-            (vec![1], false),
-        );
+    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        todo!()
     }
 }

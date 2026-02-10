@@ -5,7 +5,9 @@
 use core::array;
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use numeric_bits::algos::{self, BinAlg, BitwiseDiv, Element, ElementMul, ElementSub};
+use numeric_bits::algos::{
+    AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignSubAlgo, Bitwise, DivRemAlgo, Element,
+};
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};
@@ -32,10 +34,9 @@ static_assert_traits!(I<4>: Send + Sync);
 impl<const N: usize> Add for I<N> {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut out = I::zero();
-        <Element as BinAlg<algos::Add>>::wrapping(&self.0, &rhs.0, &mut out.0);
-        out
+    fn add(mut self, rhs: Self) -> Self::Output {
+        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+        self
     }
 }
 
@@ -43,7 +44,7 @@ impl<const N: usize> Sub for I<N> {
     type Output = Self;
 
     fn sub(mut self, rhs: Self) -> Self::Output {
-        ElementSub::sub_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -52,7 +53,7 @@ impl<const N: usize> Mul for I<N> {
     type Output = Self;
 
     fn mul(mut self, rhs: Self) -> Self::Output {
-        ElementMul::mul_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -64,7 +65,7 @@ impl<const N: usize> Div for I<N> {
         let neg = self.is_negative() != rhs.is_negative();
         self = self.abs();
         rhs = rhs.abs();
-        BitwiseDiv::div_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <Bitwise as DivRemAlgo>::wrapping(&self.0, &rhs.0, &mut [0; N], &mut [0; N]);
         if neg {
             self = -self;
         }
@@ -79,7 +80,7 @@ impl<const N: usize> Rem for I<N> {
         let neg = self.is_negative() != rhs.is_negative();
         self = self.abs();
         rhs = rhs.abs();
-        BitwiseDiv::rem_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
         if neg {
             self = -self;
         }

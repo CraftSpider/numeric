@@ -1,13 +1,111 @@
-use crate::algos::{Add, AssignBinAlg, BinAlg, Bitwise, Operation};
+use super::{AddAlgo, AssignAddAlgo};
+use crate::algos::{Bitwise, Element};
 use crate::bit_slice::{BitSliceExt, BitVecExt};
+use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use core::hint::unreachable_unchecked;
-use numeric_traits::identity::Zero;
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::overflowing::OverflowingAdd;
 
-impl BinAlg<Add> for Bitwise {
+impl AddAlgo for Element {
     #[cfg(feature = "alloc")]
-    fn growing<L, R>(left: &L, right: &R) -> Vec<L::Bit>
+    fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let len = usize::max(left.len(), right.len());
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
+        let mut out = vec![zero; len + 1];
+
+        let mut carry = false;
+
+        for idx in 0..=len {
+            let l = left.get_opt(idx).unwrap_or(zero);
+            let r = right.get_opt(idx).unwrap_or(zero);
+
+            let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
+            carry = new_carry;
+
+            let (res, new_carry) = res.overflowing_add(r);
+            if new_carry {
+                carry = true;
+            }
+
+            out.set_ignore(idx, res);
+        }
+
+        IntSlice::shrink(out)
+    }
+
+    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let len = usize::max(left.len(), right.len());
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
+
+        let mut carry = false;
+
+        for idx in 0..len {
+            let l = left.get_opt(idx).unwrap_or(zero);
+            let r = right.get_opt(idx).unwrap_or(zero);
+
+            let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
+            carry = new_carry;
+
+            let (res, new_carry) = res.overflowing_add(r);
+            // As of Rust 1.86 nightly, this is faster than `carry |= new_carry`
+            if new_carry {
+                carry = true;
+            }
+
+            out.set_ignore(idx, res);
+        }
+
+        (out, carry)
+    }
+}
+
+impl AssignAddAlgo for Element {
+    fn overflowing<L, R>(left: &mut L, right: &R) -> bool
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let len = usize::max(left.len(), right.len());
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
+
+        let mut carry = false;
+
+        for idx in 0..len {
+            let l = left.get_opt(idx).unwrap_or(zero);
+            let r = right.get_opt(idx).unwrap_or(zero);
+
+            let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
+            carry = new_carry;
+
+            let (res, new_carry) = res.overflowing_add(r);
+            // As of Rust 1.86 nightly, this is faster than `carry |= new_carry`
+            if new_carry {
+                carry = true;
+            }
+
+            left.set_ignore(idx, res);
+        }
+
+        carry
+    }
+}
+
+impl AddAlgo for Bitwise {
+    #[cfg(feature = "alloc")]
+    fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
@@ -51,11 +149,7 @@ impl BinAlg<Add> for Bitwise {
         out
     }
 
-    fn overflowing<'a, L, R>(
-        left: &L,
-        right: &R,
-        out: <Add as Operation>::Out<&'a mut [L::Bit]>,
-    ) -> (&'a [L::Bit], bool)
+    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
@@ -94,22 +188,10 @@ impl BinAlg<Add> for Bitwise {
 
         (out, carry)
     }
-
-    fn saturating<'a, L, R>(
-        left: &L,
-        right: &R,
-        out: <Add as Operation>::Out<&'a mut [L::Bit]>,
-    ) -> &'a [L::Bit]
-    where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
-    }
 }
 
-impl AssignBinAlg<Add> for Bitwise {
-    fn overflowing<L, R>(left: &mut L, right: &R, extra: ()) -> bool
+impl AssignAddAlgo for Bitwise {
+    fn overflowing<L, R>(left: &mut L, right: &R) -> bool
     where
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
@@ -147,13 +229,5 @@ impl AssignBinAlg<Add> for Bitwise {
         }
 
         carry
-    }
-
-    fn saturating<L, R>(left: &L, right: &R, out: ())
-    where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
     }
 }

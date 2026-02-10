@@ -19,7 +19,15 @@ fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
 /// Trait for types that can be used as 'bit containers'. This means integers that support the
 /// common bit ops, in addition to being copyable and bounded.
 pub trait BitLike:
-    Integral + NumAssignOps + BitAssignOps + BoundedBit + OverflowingOps + WideningMul + Ord + Copy
+    Integral
+    + NumAssignOps
+    + BitAssignOps
+    + BoundedBit
+    + OverflowingOps
+    + WideningMul
+    + Ord
+    + Copy
+    + core::fmt::Binary
 {
     /// The length of this type in bits.
     const BIT_LEN: usize;
@@ -33,7 +41,8 @@ impl<
             + OverflowingOps
             + WideningMul
             + Ord
-            + Copy,
+            + Copy
+            + core::fmt::Binary,
     > BitLike for T
 {
     const BIT_LEN: usize = mem::size_of::<T>() * 8;

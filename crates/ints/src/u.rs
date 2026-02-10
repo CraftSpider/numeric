@@ -7,8 +7,10 @@ use core::cmp::Ordering;
 use core::iter::Product;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
 use core::{array, fmt, iter};
-use numeric_bits::algos::{self, BinAlg, Element, ElementMul, ElementShl, ElementShr, ElementSub};
-use numeric_bits::algos::{BitwiseDiv, ElementCmp};
+use numeric_bits::algos::{
+    AssignAddAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
+};
+use numeric_bits::algos::{AssignMulAlgo, Element};
 use numeric_bits::utils::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
@@ -265,9 +267,9 @@ impl<const N: usize> Mul for U<N> {
 
     fn mul(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementMul::mul_checked(&mut self.0, &rhs.0).unwrap();
+        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementMul::mul_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -277,9 +279,9 @@ impl<const N: usize> Div for U<N> {
 
     fn div(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        BitwiseDiv::div_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
         #[cfg(not(debug_assertions))]
-        BitwiseDiv::div_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
         self
     }
 }
@@ -289,9 +291,9 @@ impl<const N: usize> Rem for U<N> {
 
     fn rem(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        BitwiseDiv::rem_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <Bitwise as AssignDivRemAlgo>::rem_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
         #[cfg(not(debug_assertions))]
-        BitwiseDiv::rem_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
         self
     }
 }
@@ -352,9 +354,9 @@ impl<const N: usize> Shl for U<N> {
     fn shl(mut self, rhs: Self) -> Self::Output {
         let val: usize = usize::from_checked(rhs).unwrap();
         #[cfg(debug_assertions)]
-        ElementShl::shl_checked(&mut self.0, val).unwrap();
+        <Element as AssignShlAlgo>::checked(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShl::shl_wrapping(&mut self.0, val);
+        <Element as AssignShlAlgo>::wrapping(&mut self.0, val);
         self
     }
 }
@@ -365,9 +367,9 @@ impl<const N: usize> Shr for U<N> {
     fn shr(mut self, rhs: Self) -> Self::Output {
         let val: usize = usize::from_checked(rhs).unwrap();
         #[cfg(debug_assertions)]
-        ElementShr::shr_checked(&mut self.0, val).unwrap();
+        <Element as AssignShrAlgo>::checked(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShr::shr_wrapping(&mut self.0, val);
+        <Element as AssignShrAlgo>::wrapping(&mut self.0, val);
         self
     }
 }
@@ -377,9 +379,9 @@ impl<const N: usize> Shl<usize> for U<N> {
 
     fn shl(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementShl::shl_checked(&mut self.0, rhs).unwrap();
+        <Element as AssignShlAlgo>::checked(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShl::shl_wrapping(&mut self.0, rhs);
+        <Element as AssignShlAlgo>::wrapping(&mut self.0, rhs);
         self
     }
 }
@@ -389,9 +391,9 @@ impl<const N: usize> Shr<usize> for U<N> {
 
     fn shr(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementShr::shr_checked(&mut self.0, rhs).unwrap();
+        <Element as AssignShrAlgo>::checked(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShr::shr_wrapping(&mut self.0, rhs);
+        <Element as AssignShrAlgo>::wrapping(&mut self.0, rhs);
         self
     }
 }
@@ -422,7 +424,7 @@ impl<const N: usize> PartialOrd for U<N> {
 
 impl<const N: usize> Ord for U<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        ElementCmp::cmp(&self.0, &other.0)
+        <Element as CmpAlgo>::cmp(&self.0, &other.0)
     }
 }
 
@@ -451,10 +453,9 @@ impl<const N: usize> Product<U<N>> for U<N> {
 impl<const N: usize> CheckedAdd for U<N> {
     type Output = Self;
 
-    fn checked_add(self, rhs: Self) -> Option<Self> {
-        let mut out = U::zero();
-        <Element as BinAlg<algos::Add>>::checked(&self.0, &rhs.0, &mut out.0)?;
-        Some(out)
+    fn checked_add(mut self, rhs: Self) -> Option<Self> {
+        <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0)?;
+        Some(self)
     }
 }
 
@@ -462,7 +463,7 @@ impl<const N: usize> CheckedSub for U<N> {
     type Output = Self;
 
     fn checked_sub(mut self, rhs: Self) -> Option<Self> {
-        ElementSub::sub_checked(&mut self.0, &rhs.0)?;
+        <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -471,7 +472,7 @@ impl<const N: usize> CheckedMul for U<N> {
     type Output = Self;
 
     fn checked_mul(mut self, rhs: Self) -> Option<Self> {
-        ElementMul::mul_checked(&mut self.0, &rhs.0)?;
+        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -480,7 +481,7 @@ impl<const N: usize> CheckedDiv for U<N> {
     type Output = Self;
 
     fn checked_div(mut self, rhs: Self) -> Option<Self> {
-        BitwiseDiv::div_long_checked(&mut self.0, &rhs.0, &mut [0; N])?;
+        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N])?;
         Some(self)
     }
 }
@@ -488,10 +489,9 @@ impl<const N: usize> CheckedDiv for U<N> {
 impl<const N: usize> WrappingAdd for U<N> {
     type Output = Self;
 
-    fn wrapping_add(self, rhs: Self) -> Self::Output {
-        let mut out = U::zero();
-        <Element as BinAlg<algos::Add>>::wrapping(&self.0, &rhs.0, &mut out.0);
-        out
+    fn wrapping_add(mut self, rhs: Self) -> Self::Output {
+        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+        self
     }
 }
 
@@ -499,7 +499,7 @@ impl<const N: usize> WrappingSub for U<N> {
     type Output = Self;
 
     fn wrapping_sub(mut self, rhs: Self) -> Self::Output {
-        ElementSub::sub_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -507,10 +507,9 @@ impl<const N: usize> WrappingSub for U<N> {
 impl<const N: usize> SaturatingAdd for U<N> {
     type Output = Self;
 
-    fn saturating_add(self, rhs: Self) -> Self {
-        let mut out = U::zero();
-        match <Element as BinAlg<algos::Add>>::checked(&self.0, &rhs.0, &mut out.0) {
-            Some(_) => out,
+    fn saturating_add(mut self, rhs: Self) -> Self {
+        match <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0) {
+            Some(_) => self,
             None => Self::max_value(),
         }
     }
@@ -520,7 +519,7 @@ impl<const N: usize> SaturatingSub for U<N> {
     type Output = Self;
 
     fn saturating_sub(mut self, rhs: Self) -> Self {
-        match ElementSub::sub_checked(&mut self.0, &rhs.0) {
+        match <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::min_value(),
         }
@@ -531,7 +530,7 @@ impl<const N: usize> SaturatingMul for U<N> {
     type Output = Self;
 
     fn saturating_mul(mut self, rhs: Self) -> Self {
-        match ElementMul::mul_checked(&mut self.0, &rhs.0) {
+        match <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::max_value(),
         }
