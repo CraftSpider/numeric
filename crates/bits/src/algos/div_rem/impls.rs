@@ -5,7 +5,9 @@ use crate::algos::{
 };
 use crate::bit_slice::{BitLike, BitSliceExt};
 use crate::utils::IntSlice;
+#[cfg(feature = "std")]
 use alloc::vec;
+#[cfg(feature = "std")]
 use alloc::vec::Vec;
 use numeric_traits::identity::{One, Zero};
 
@@ -67,6 +69,7 @@ impl DivRemAlgo for Element {
 }
 
 impl DivRemAlgo for Bitwise {
+    #[cfg(feature = "std")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
         L: ?Sized + BitSliceExt,

@@ -95,6 +95,7 @@ mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
 
+    #[cfg(feature = "std")]
     fn test_long<B: AddAlgo>() {
         // Simple addition
         assert_eq!(B::long(&[0u32], &[0]), &[0]);
@@ -110,11 +111,13 @@ mod tests {
 
     #[test]
     fn test_element() {
+        #[cfg(feature = "std")]
         test_long::<Element>();
     }
 
     #[test]
     fn test_bitwise() {
+        #[cfg(feature = "std")]
         test_long::<Bitwise>();
     }
 }

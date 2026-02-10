@@ -132,6 +132,7 @@ mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
 
+    #[cfg(feature = "std")]
     fn test_long<B: MulAlgo>() {
         let slice1: &[u8] = &[0b00000000];
         let slice2 = &[0b00000001];
@@ -182,12 +183,14 @@ mod tests {
 
     #[test]
     fn test_element() {
+        #[cfg(feature = "std")]
         test_long::<Element>();
         test_wrapping_assign::<Element>();
     }
 
     #[test]
     fn test_bitwise() {
+        #[cfg(feature = "std")]
         test_long::<Bitwise>();
         // test_wrapping_assign::<Bitwise>();
     }

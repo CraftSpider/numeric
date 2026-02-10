@@ -93,6 +93,7 @@ impl<const N: usize> U<N> {
         }
     }
 
+    #[cfg(feature = "std")]
     fn write_base<W: fmt::Write>(&self, base: usize, w: &mut W, chars: &[char]) -> fmt::Result {
         // This is the simplest way - mod base for digit, div base for next digit
         // It isn't super fast though, so there are probably optimization improvements

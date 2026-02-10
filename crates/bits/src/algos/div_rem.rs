@@ -150,6 +150,7 @@ mod tests {
     use super::*;
     use crate::algos::Bitwise;
 
+    #[cfg(feature = "std")]
     fn test_div_long<B: DivRemAlgo>() {
         let slice1: &[u8] = &[0b10];
         let slice2: &[u8] = &[0b01];
@@ -172,6 +173,7 @@ mod tests {
         assert_eq!(B::long(slice7, slice8).0, &[0b0, 0b0, 0b10000000, 0b0]);
     }
 
+    #[cfg(feature = "std")]
     fn test_rem_long<B: DivRemAlgo>() {
         for i in 0..4 {
             let slice1: &[u8] = &[i];
@@ -223,7 +225,9 @@ mod tests {
 
     #[test]
     fn test_bitwise() {
+        #[cfg(feature = "std")]
         test_div_long::<Bitwise>();
+        #[cfg(feature = "std")]
         test_rem_long::<Bitwise>();
 
         test_div_wrapping::<Bitwise>();
