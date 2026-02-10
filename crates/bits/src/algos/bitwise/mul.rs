@@ -1,11 +1,11 @@
 use crate::algos::{ElementAdd, ElementShl};
 use crate::bit_slice::BitSliceExt;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::Zero;
 
 pub trait BitwiseMul: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Multiply two slices, implemented as a bitwise shift-and-add
     fn mul<T>(left: &Self, right: &T) -> Vec<Self::Bit>
     where
@@ -33,6 +33,7 @@ impl<T> BitwiseMul for T where T: ?Sized + BitSliceExt {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_mul() {
         let slice1: &[u8] = &[0b00000000];

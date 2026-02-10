@@ -1,15 +1,15 @@
 #![cfg_attr(not(test), no_std)]
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub mod intern;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod linked;
 mod macros;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use intern::Interner;
 
 #[cfg(test)]

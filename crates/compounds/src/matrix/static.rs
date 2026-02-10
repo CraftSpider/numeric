@@ -207,6 +207,7 @@ mod tests {
         assert_eq!(a * b, expected);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_row_reduce() {
         let a = Matrix::new([
@@ -231,6 +232,7 @@ mod tests {
         assert_eq!(b.row_reduce(), expected);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_determinant() {
         let a = Matrix::new([[1., 2.], [3., 4.]]);

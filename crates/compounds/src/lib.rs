@@ -2,12 +2,13 @@
 
 #![no_std]
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub mod bivec;
 pub mod complex;
 pub mod matrix;
+#[cfg(feature = "alloc")]
 pub mod rotor;
 pub mod vector;

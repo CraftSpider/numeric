@@ -7,10 +7,11 @@ edition = "2021"
 
 [features]
 default = ["std"]
+alloc = ["numeric-traits/alloc"]
 std = ["numeric-traits/std"]
 
 [dependencies]
-numeric-traits = { path = "../traits" }
+numeric-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
 numeric-bench-util = { path = "../bench-util" }

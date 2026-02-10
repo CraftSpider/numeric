@@ -1,4 +1,6 @@
-use crate::matrix::{DynMatrix, Matrix};
+#[cfg(feature = "std")]
+use crate::matrix::DynMatrix;
+use crate::matrix::Matrix;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;

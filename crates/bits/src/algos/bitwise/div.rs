@@ -1,11 +1,11 @@
 use crate::algos::{ElementCmp, ElementShl, ElementSub};
 use crate::bit_slice::BitSliceExt;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::Zero;
 
 pub trait BitwiseDiv: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Divide two slices, implemented as bitwise long division
     fn div_long<T>(num: &Self, div: &T) -> (Vec<Self::Bit>, Vec<Self::Bit>)
     where
@@ -144,6 +144,7 @@ impl<T> BitwiseDiv for T where T: ?Sized + BitSliceExt {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_div() {
         let slice1: &[u8] = &[0b10];
@@ -170,6 +171,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_rem() {
         for i in 0..4 {

@@ -1,13 +1,13 @@
 use crate::algos::element::ElementNot;
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingSub;
 
 pub trait ElementSub: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Subtract two slices, implemented as element-wise subtract and borrow
     fn sub<T>(left: &Self, right: &T) -> (Vec<Self::Bit>, bool)
     where
@@ -118,6 +118,7 @@ impl<T> ElementSub for T where T: ?Sized + BitSliceExt {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_simple() {
         assert_eq!(ElementSub::sub(&[0u32], &[0]), (vec![0], false),);
@@ -129,11 +130,13 @@ mod tests {
         assert_eq!(ElementSub::sub(&[1u32], &[1]), (vec![0], false),);
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_carry() {
         assert_eq!(ElementSub::sub(&[0u32, 1], &[1]), (vec![u32::MAX], false),)
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_long() {
         assert_eq!(ElementSub::sub(&[0u32, 1], &[0, 1]), (vec![0], false),);

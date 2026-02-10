@@ -7,13 +7,14 @@ edition = "2021"
 
 [features]
 default = ["std"]
-std = ["numeric-utils/std", "numeric-ints/std", "numeric-traits/std"]
+alloc = ["numeric-utils/alloc", "numeric-ints/alloc", "numeric-traits/alloc"]
+std = ["numeric-utils/std", "numeric-ints/std", "numeric-traits/std", "alloc"]
 
 [dependencies]
-numeric-static-iter = { path = "../static-iter" }
-numeric-utils = { path = "../utils" }
-numeric-traits = { path = "../traits" }
-numeric-ints = { path = "../ints" }
+numeric-static-iter = { path = "../static-iter", default-features = false }
+numeric-utils = { path = "../utils", default-features = false }
+numeric-traits = { path = "../traits", default-features = false }
+numeric-ints = { path = "../ints", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

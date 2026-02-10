@@ -232,6 +232,7 @@ impl<I: BitLike> BitVecExt for alloc::vec::Vec<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "std")]
     use alloc::vec;
 
     #[test]
@@ -261,6 +262,7 @@ mod tests {
         assert_eq!(slice, &[0b1010101010101011, 0b0010101010101010])
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_extend() {
         let mut data = vec![0u8; 1];

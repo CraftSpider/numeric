@@ -1,12 +1,12 @@
 use crate::bit_slice::{BitLike, BitSliceExt};
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::class::Bounded;
 use numeric_traits::identity::Zero;
 
 pub trait ElementShr: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Shift a slice left by `usize` items, implemented as a series of shifts and masks
     fn shr(left: &Self, right: usize) -> Vec<Self::Bit> {
         let arr_shift = (right / Self::Bit::BIT_LEN) + 1;

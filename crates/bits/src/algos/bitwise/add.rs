@@ -1,11 +1,11 @@
 use crate::bit_slice::{BitSliceExt, BitVecExt};
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use core::hint::unreachable_unchecked;
 use numeric_traits::identity::Zero;
 
 pub trait BitwiseAdd: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Add two slices, implemented as a bitwise add-and-carry
     fn add<T>(left: &Self, right: &T) -> Vec<Self::Bit>
     where

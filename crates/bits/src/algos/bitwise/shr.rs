@@ -1,11 +1,13 @@
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
+#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use numeric_traits::identity::Zero;
 
 pub trait BitwiseShr: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Shift a slice right by `usize` items, implemented as a series of bitwise swaps
     fn shr(left: &Self, right: usize) -> Vec<Self::Bit> {
         let mut out = vec![Self::Bit::zero(); left.len()];
@@ -25,6 +27,7 @@ impl<T> BitwiseShr for T where T: ?Sized + BitSliceExt {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_shr() {
         let slice: &[u16] = &[0b1010101010101010, 0b1010101010101010];

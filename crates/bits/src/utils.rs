@@ -90,6 +90,7 @@ pub const fn const_reverse<const N: usize>(mut bytes: [u8; N]) -> [u8; N] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "std")]
     use alloc::vec;
 
     #[test]
@@ -109,6 +110,7 @@ mod tests {
         assert_eq!(IntSlice::shrink(&[1, 0, 1] as &[_]), &[1, 0, 1]);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_shrink_vec() {
         assert_eq!(IntSlice::shrink(vec![0]), &[0]);

@@ -1,11 +1,11 @@
 use crate::algos::ElementNot;
 use crate::bit_slice::BitSliceExt;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::Zero;
 
 pub trait BitwiseSub: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Subtract two slices, implemented as a bitwise sub-and-borrow
     fn sub<T>(left: &Self, right: &T) -> (Vec<Self::Bit>, bool)
     where

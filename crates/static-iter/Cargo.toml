@@ -6,7 +6,8 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-std = []
+alloc = ["numeric-traits/alloc"]
+std = ["numeric-traits/std", "alloc"]
 
 [dependencies]
-numeric-traits = { path = "../traits" }
+numeric-traits = { path = "../traits", default-features = false }

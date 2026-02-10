@@ -1,12 +1,12 @@
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingAdd;
 
 pub trait ElementAdd: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Add two slices, implemented as element-wise add and carry
     fn add<T>(left: &Self, right: &T) -> Vec<Self::Bit>
     where
@@ -95,6 +95,7 @@ impl<T: ?Sized + BitSliceExt> ElementAdd for T {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_simple() {
         assert_eq!(ElementAdd::add(&[0u32], &[0]), &[0],);
@@ -106,6 +107,7 @@ mod tests {
         assert_eq!(ElementAdd::add(&[1u32], &[1]), &[2],);
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_long() {
         assert_eq!(ElementAdd::add(&[0u32], &[0, 1]), &[0, 1],);
@@ -113,6 +115,7 @@ mod tests {
         assert_eq!(ElementAdd::add(&[1u32], &[0, 1]), &[1, 1],);
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_carry() {
         assert_eq!(ElementAdd::add(&[u32::MAX], &[1]), &[0, 1],);

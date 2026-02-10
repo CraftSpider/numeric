@@ -1,12 +1,12 @@
 use crate::algos::{ElementAdd, ElementCmp, ElementShl, ElementShr, ElementSub};
 use crate::bit_slice::{BitLike, BitSliceExt};
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
 
 pub trait ElementDiv: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Divide two slices, implemented as long division.
     ///
     /// <div class="warning">
@@ -117,6 +117,7 @@ impl<T> ElementDiv for T where T: ?Sized + BitSliceExt {}
 mod test {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_rem() {
         assert_eq!(ElementDiv::div_long(&[10u32], &[2]).1, &[0],);

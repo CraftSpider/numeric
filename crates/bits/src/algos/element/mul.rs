@@ -1,13 +1,13 @@
 use crate::bit_slice::BitSliceExt;
 use crate::utils::IntSlice;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingAdd;
 use numeric_traits::ops::widening::WideningMul;
 
 pub trait ElementMul: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Multiply two slices, implemented as shift-and-add
     fn mul<T>(left: &Self, right: &T) -> Vec<Self::Bit>
     where
@@ -117,6 +117,7 @@ impl<T> ElementMul for T where T: ?Sized + BitSliceExt {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_mul() {
         let slice1: &[u8] = &[0b00000000];

@@ -8,14 +8,16 @@ edition = "2021"
 [features]
 default = ["std"]
 rand = ["dep:rand"]
-std = ["numeric-utils/std", "numeric-bits/std", "numeric-traits/std"]
+alloc = ["numeric-utils/alloc", "numeric-bits/alloc", "numeric-traits/alloc"]
+std = ["numeric-utils/std", "numeric-bits/std", "numeric-traits/std", "alloc"]
 
 [dependencies]
+arrayvec = "0.7"
 rand = { version = "0.9", optional = true }
-numeric-traits = { path = "../traits" }
-numeric-bits = { path = "../bits" }
-numeric-utils = { path = "../utils" }
-numeric-static-iter = { path = "../static-iter" }
+numeric-traits = { path = "../traits", default-features = false }
+numeric-bits = { path = "../bits", default-features = false }
+numeric-utils = { path = "../utils", default-features = false }
+numeric-static-iter = { path = "../static-iter", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

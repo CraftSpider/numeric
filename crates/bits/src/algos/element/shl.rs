@@ -1,4 +1,4 @@
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::cast::FromTruncating;
 use numeric_traits::class::Bounded;
@@ -8,7 +8,7 @@ use crate::bit_slice::{BitLike, BitSliceExt};
 use crate::utils::IntSlice;
 
 pub trait ElementShl: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     /// Shift a slice left by `usize` items, implemented as a series of shifts and masks
     fn shl(left: &Self, right: usize) -> Vec<Self::Bit> {
         let arr_shift = (right / Self::Bit::BIT_LEN) + 1;
@@ -93,6 +93,7 @@ impl<T> ElementShl for T where T: ?Sized + BitSliceExt {}
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_simple() {
         assert_eq!(ElementShl::shl(&[0b00000000u8], 1), &[0]);
@@ -100,6 +101,7 @@ mod tests {
         assert_eq!(ElementShl::shl(&[0b0101u8], 1), &[0b1010]);
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_overflow() {
         let slice = &[0b1010101010101010u16, 0b1010101010101010];

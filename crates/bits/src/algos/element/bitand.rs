@@ -1,10 +1,10 @@
 use crate::bit_slice::BitSliceExt;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::Zero;
 
 pub trait ElementBitand: BitSliceExt {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     fn bitand<T>(left: &Self, right: &T) -> Vec<Self::Bit>
     where
         T: ?Sized + BitSliceExt<Bit = Self::Bit>,

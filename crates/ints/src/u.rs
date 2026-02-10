@@ -2,7 +2,7 @@
 
 #![allow(unused_variables)]
 
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use core::cmp::Ordering;
 use core::iter::Product;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
@@ -95,7 +95,7 @@ impl<const N: usize> U<N> {
         // This is the simplest way - mod base for digit, div base for next digit
         // It isn't super fast though, so there are probably optimization improvements
         let base: U<N> = base.into_checked().unwrap();
-        let mut digits = Vec::new();
+        let mut digits = ArrayVec::<u8, N>::new();
         let mut scratch = *self;
 
         while scratch > U::zero() {
