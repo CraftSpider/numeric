@@ -4,6 +4,7 @@ use crate::algos::{
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
+use core::mem;
 #[cfg(feature = "alloc")]
 use numeric_traits::identity::Zero;
 
@@ -147,7 +148,9 @@ impl AssignDivRemAlgo for Bitwise {
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
         Self::div_overflowing(left, right, quotient);
-        left.slice_mut().swap_with_slice(quotient);
+        left.iter_mut()
+            .zip(quotient.iter_mut())
+            .for_each(|(l, r)| mem::swap(l, r));
         false
     }
 }

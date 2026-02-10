@@ -12,8 +12,8 @@ impl BitAlgo for Element {
         let zero = L::Bit::zero();
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             out.set(idx, l & r);
         }
@@ -30,8 +30,8 @@ impl BitAlgo for Element {
         let zero = L::Bit::zero();
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             out.set(idx, l | r);
         }
@@ -48,8 +48,8 @@ impl BitAlgo for Element {
         let zero = L::Bit::zero();
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             out.set(idx, l ^ r);
         }
@@ -61,8 +61,9 @@ impl BitAlgo for Element {
     where
         L: ?Sized + BitSliceExt,
     {
+        let zero = L::Bit::zero();
         for idx in 0..left.len() {
-            let l = left.get(idx);
+            let l = left.get(idx).unwrap_or(zero);
             out.set(idx, !l);
         }
 
@@ -80,8 +81,8 @@ impl AssignBitAlgo for Element {
         let zero = L::Bit::zero();
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             left.set(idx, l & r);
         }
@@ -96,8 +97,8 @@ impl AssignBitAlgo for Element {
         let zero = L::Bit::zero();
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             left.set(idx, l | r);
         }
@@ -112,8 +113,8 @@ impl AssignBitAlgo for Element {
         let zero = L::Bit::zero();
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             left.set(idx, l ^ r);
         }
@@ -123,8 +124,9 @@ impl AssignBitAlgo for Element {
     where
         L: ?Sized + BitSliceExt,
     {
+        let zero = L::Bit::zero();
         for idx in 0..left.len() {
-            let l = left.get(idx);
+            let l = left.get(idx).unwrap_or(zero);
             left.set(idx, !l);
         }
     }

@@ -13,8 +13,8 @@ impl CmpAlgo for Element {
         let len = usize::max(left.len(), right.len());
         for idx in 0..len {
             match Ord::cmp(
-                &left.get_opt(idx).unwrap_or(zero),
-                &right.get_opt(idx).unwrap_or(zero),
+                &left.get(idx).unwrap_or(zero),
+                &right.get(idx).unwrap_or(zero),
             ) {
                 Ordering::Equal => (),
                 ord => return ord,

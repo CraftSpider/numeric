@@ -1,12 +1,13 @@
 #[cfg(feature = "alloc")]
 use crate::algos::{AddAlgo, ShlAlgo};
 use crate::algos::{AssignMulAlgo, Bitwise, Element, MulAlgo};
-use crate::bit_slice::{BitLike, BitSliceExt};
+use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
-use numeric_traits::identity::Zero;
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::overflowing::OverflowingAdd;
 use numeric_traits::ops::widening::WideningMul;
 
 impl MulAlgo for Element {
@@ -19,17 +20,17 @@ impl MulAlgo for Element {
         let zero = L::Bit::zero();
         let mut out = vec![zero; left.len() + right.len()];
 
-        left.slice().iter().enumerate().for_each(|(idx, &l)| {
+        left.iter().enumerate().for_each(|(idx, l)| {
             let mut carry = zero;
 
-            for (offset, &r) in right.slice().iter().enumerate() {
+            for (offset, r) in right.iter().enumerate() {
                 let (low, high) = L::Bit::widening_mul(l, r, carry);
                 carry = high;
                 add_item(&mut out, idx + offset, low);
             }
 
             if carry != zero {
-                add_item(&mut out, idx + right.slice().len(), carry);
+                add_item(&mut out, idx + right.len(), carry);
             }
         });
 
@@ -50,11 +51,10 @@ impl MulAlgo for Element {
             let mut new_overflow = false;
             let mut carry = zero;
 
-            let l_mut = out.slice_mut();
-            let l = l_mut[idx];
-            l_mut[idx] = zero;
+            let l = *out.get(idx).unwrap();
+            out.set(idx, zero);
 
-            for (offset, &r) in right.slice().iter().enumerate() {
+            for (offset, r) in right.iter().enumerate() {
                 let (low, high) = L::Bit::widening_mul(l, r, carry);
                 carry = high;
                 if add_item(out, idx + offset, low) {
@@ -62,7 +62,7 @@ impl MulAlgo for Element {
                 }
             }
 
-            if carry != zero && add_item(out, idx + right.slice().len(), carry) {
+            if carry != zero && add_item(out, idx + right.len(), carry) {
                 new_overflow = true;
             }
 
@@ -88,19 +88,18 @@ impl AssignMulAlgo for Element {
             let mut new_overflow = false;
             let mut carry = zero;
 
-            let l_mut = left.slice_mut();
-            let l = l_mut[idx];
-            l_mut[idx] = zero;
+            let l = left.get(idx).unwrap();
+            left.set(idx, zero);
 
-            for (offset, &r) in right.slice().iter().enumerate() {
+            for (offset, r) in right.iter().enumerate() {
                 let (low, high) = L::Bit::widening_mul(l, r, carry);
                 carry = high;
-                if add_item(l_mut, idx + offset, low) {
+                if add_item(left, idx + offset, low) {
                     new_overflow = true;
                 }
             }
 
-            if carry != zero && add_item(l_mut, idx + right.slice().len(), carry) {
+            if carry != zero && add_item(left, idx + right.len(), carry) {
                 new_overflow = true;
             }
 
@@ -142,7 +141,7 @@ impl MulAlgo for Bitwise {
     }
 }
 
-fn add_item<B: BitLike>(slice: &mut [B], mut idx: usize, mut val: B) -> bool {
+fn add_item<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize, mut val: B::Bit) -> bool {
     let mut carry = false;
 
     while let Some(loc) = slice.get_mut(idx) {
@@ -154,7 +153,7 @@ fn add_item<B: BitLike>(slice: &mut [B], mut idx: usize, mut val: B) -> bool {
         if !carry {
             break;
         } else {
-            val = B::one();
+            val = B::Bit::one();
         }
     }
 

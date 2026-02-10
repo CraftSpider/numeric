@@ -87,7 +87,7 @@ pub trait AssignMulAlgo {
     {
         let overflow = Self::overflowing(left, right);
         if overflow {
-            left.slice_mut().fill(L::Bit::max_value());
+            left.iter_mut().for_each(|l| *l = L::Bit::max_value());
         }
     }
 }

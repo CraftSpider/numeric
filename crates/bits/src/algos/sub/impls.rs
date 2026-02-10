@@ -23,8 +23,8 @@ impl SubAlgo for Element {
 
         let mut carry = false;
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             let extra = if carry {
                 carry = false;
@@ -66,8 +66,8 @@ impl SubAlgo for Element {
         let mut carry = false;
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             let extra = if carry {
                 carry = false;
@@ -106,8 +106,8 @@ impl AssignSubAlgo for Element {
         let mut carry = false;
 
         for idx in 0..len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             let extra = if carry {
                 carry = false;

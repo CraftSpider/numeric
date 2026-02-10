@@ -118,7 +118,7 @@ pub trait AssignShlAlgo {
     {
         let overflow = Self::overflowing(left, right);
         if overflow {
-            left.slice_mut().fill(L::Bit::zero());
+            left.iter_mut().for_each(|l| *l = L::Bit::zero());
         }
     }
 }
@@ -148,7 +148,7 @@ pub trait AssignShrAlgo {
     {
         let overflow = Self::overflowing(left, right);
         if overflow {
-            left.slice_mut().fill(L::Bit::zero());
+            left.iter_mut().for_each(|l| *l = L::Bit::zero());
         }
     }
 }

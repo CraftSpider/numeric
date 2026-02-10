@@ -83,25 +83,20 @@ impl ShlAlgo for Element {
         let zero = L::Bit::zero();
         let mut out = vec![L::Bit::zero(); left.len() + arr_shift];
 
-        left.slice()
-            .iter()
-            .enumerate()
-            .rev()
-            .for_each(|(idx, &val)| {
-                let high = val >> inverse_elem_shift;
-                let low = val << elem_shift;
+        left.iter().enumerate().rev().for_each(|(idx, val)| {
+            let high = val >> inverse_elem_shift;
+            let low = val << elem_shift;
 
-                let high = (out.get_opt(idx + arr_shift).unwrap_or(zero) & !elem_mask)
-                    | (high & elem_mask);
+            let high = (out.get(idx + arr_shift).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
 
-                out.set_ignore(idx + arr_shift, high);
+            out.set_ignore(idx + arr_shift, high);
 
-                // We don't need to consider the existing value of the output. `low` always goes
-                // into it before `high` since we're iterating backwards.
-                let low = low & !elem_mask;
+            // We don't need to consider the existing value of the output. `low` always goes
+            // into it before `high` since we're iterating backwards.
+            let low = low & !elem_mask;
 
-                out.set_ignore(idx + arr_shift - 1, low);
-            });
+            out.set_ignore(idx + arr_shift - 1, low);
+        });
 
         IntSlice::shrink(out)
     }
@@ -116,14 +111,14 @@ impl ShlAlgo for Element {
         let elem_mask: L::Bit = !(L::Bit::max_value() << elem_shift);
         let zero = L::Bit::zero();
 
-        (0..left.slice().len()).rev().for_each(|idx| {
+        (0..left.len()).rev().for_each(|idx| {
             // SAFETY: Iterating up to len - will never overrun
-            let val = unsafe { left.get_opt(idx).unwrap_unchecked() };
+            let val = unsafe { left.get(idx).unwrap_unchecked() };
             let high = val >> inverse_elem_shift;
             let low = val << elem_shift;
 
-            let high =
-                (out.get_opt(idx + arr_shift).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
+            let high = (out.get(idx + arr_shift).copied().unwrap_or(zero) & !elem_mask)
+                | (high & elem_mask);
 
             out.set_ignore(idx + arr_shift, high);
 
@@ -131,7 +126,7 @@ impl ShlAlgo for Element {
 
             out.set_ignore(idx + arr_shift - 1, low);
         });
-        out.slice_mut()[..arr_shift - 1].fill(zero);
+        out.iter_mut().take(arr_shift - 1).for_each(|o| *o = zero);
 
         (out, right > left.bit_len())
     }
@@ -148,14 +143,14 @@ impl AssignShlAlgo for Element {
         let elem_mask: L::Bit = !(L::Bit::max_value() << elem_shift);
         let zero = L::Bit::zero();
 
-        (0..left.slice().len()).rev().for_each(|idx| {
+        (0..left.len()).rev().for_each(|idx| {
             // SAFETY: Iterating up to len - will never overrun
-            let val = unsafe { left.get_opt(idx).unwrap_unchecked() };
+            let val = unsafe { left.get(idx).unwrap_unchecked() };
             let high = val >> inverse_elem_shift;
             let low = val << elem_shift;
 
             let high =
-                (left.get_opt(idx + arr_shift).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
+                (left.get(idx + arr_shift).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
 
             left.set_ignore(idx + arr_shift, high);
 
@@ -163,7 +158,7 @@ impl AssignShlAlgo for Element {
 
             left.set_ignore(idx + arr_shift - 1, low);
         });
-        left.slice_mut()[..arr_shift - 1].fill(zero);
+        left.iter_mut().take(arr_shift - 1).for_each(|l| *l = zero);
 
         right > left.bit_len()
     }
@@ -182,12 +177,12 @@ impl ShrAlgo for Element {
         let zero = L::Bit::zero();
         let mut out = vec![L::Bit::zero(); left.len()];
 
-        left.slice().iter().enumerate().for_each(|(idx, &val)| {
+        left.iter().enumerate().for_each(|(idx, val)| {
             let high = val >> elem_shift;
             let low = val << inverse_elem_shift;
 
             if let Some(idx) = usize::checked_sub(idx, arr_shift) {
-                let low = (out.get_opt(idx).unwrap_or(zero) & !elem_mask) | (low & elem_mask);
+                let low = (out.get(idx).unwrap_or(zero) & !elem_mask) | (low & elem_mask);
 
                 out.set_ignore(idx, low);
             }
@@ -215,14 +210,14 @@ impl ShrAlgo for Element {
 
         // dbg!(arr_shift, elem_shift);
 
-        (0..left.slice().len()).for_each(|idx| {
+        (0..left.len()).for_each(|idx| {
             // SAFETY: Iterating up to len - will never overrun
-            let val = unsafe { left.get_opt(idx).unwrap_unchecked() };
+            let val = unsafe { left.get(idx).unwrap_unchecked() };
             let high = val >> elem_shift;
             let low = val << inverse_elem_shift;
 
             if let Some(idx) = usize::checked_sub(idx, arr_shift) {
-                let low = (out.get_opt(idx).unwrap_or(zero) & !elem_mask) | (low & elem_mask);
+                let low = (out.get(idx).copied().unwrap_or(zero) & !elem_mask) | (low & elem_mask);
 
                 out.set_ignore(idx, low);
             }
@@ -234,7 +229,7 @@ impl ShrAlgo for Element {
             }
         });
         let empty = left.len() - arr_shift + 1;
-        out.slice_mut()[empty..].fill(zero);
+        out.iter_mut().skip(empty).for_each(|o| *o = zero);
 
         (out, right > left.bit_len())
     }
@@ -253,14 +248,14 @@ impl AssignShrAlgo for Element {
 
         // dbg!(arr_shift, elem_shift);
 
-        (0..left.slice().len()).for_each(|idx| {
+        (0..left.len()).for_each(|idx| {
             // SAFETY: Iterating up to len - will never overrun
-            let val = unsafe { left.get_opt(idx).unwrap_unchecked() };
+            let val = unsafe { left.get(idx).unwrap_unchecked() };
             let high = val >> elem_shift;
             let low = val << inverse_elem_shift;
 
             if let Some(idx) = usize::checked_sub(idx, arr_shift) {
-                let low = (left.get_opt(idx).unwrap_or(zero) & !elem_mask) | (low & elem_mask);
+                let low = (left.get(idx).unwrap_or(zero) & !elem_mask) | (low & elem_mask);
 
                 left.set_ignore(idx, low);
             }
@@ -272,7 +267,7 @@ impl AssignShrAlgo for Element {
             }
         });
         let empty = left.len() - arr_shift + 1;
-        left.slice_mut()[empty..].fill(zero);
+        left.iter_mut().skip(empty).for_each(|l| *l = zero);
 
         right > left.bit_len()
     }

@@ -222,7 +222,7 @@ impl BigInt {
             digits.push(0);
         }
 
-        for &d in digits.iter().rev() {
+        for d in digits.iter().rev() {
             w.write_char(chars[d as usize])?;
         }
         Ok(())

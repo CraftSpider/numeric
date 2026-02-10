@@ -26,8 +26,8 @@ impl AddAlgo for Element {
         let mut carry = false;
 
         for idx in 0..=len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
             carry = new_carry;
@@ -56,8 +56,8 @@ impl AddAlgo for Element {
         let mut carry = false;
 
         for idx in 0..=len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
             carry = new_carry;
@@ -92,8 +92,8 @@ impl AssignAddAlgo for Element {
         let mut carry = false;
 
         for idx in 0..=len {
-            let l = left.get_opt(idx).unwrap_or(zero);
-            let r = right.get_opt(idx).unwrap_or(zero);
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
 
             let (res, new_carry) = l.overflowing_add(if carry { one } else { zero });
             carry = new_carry;
