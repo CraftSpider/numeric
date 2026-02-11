@@ -262,6 +262,6 @@ mod tests {
 
         let pos1 = interner.add(-1);
         interner.decr(pos1.clone());
-        assert!(matches!(interner.try_get(pos1), None));
+        assert!(interner.try_get(pos1).is_none());
     }
 }

@@ -190,7 +190,7 @@ mod tests {
             } else {
                 let mut tries = 0;
                 loop {
-                    if list.get((i / 2) as usize).is_some() {
+                    if list.get(i / 2).is_some() {
                         break;
                     } else if tries > 100 {
                         panic!("{}", list.len())

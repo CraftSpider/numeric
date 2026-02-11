@@ -82,17 +82,8 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// of range.
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit>;
 
-    /// Get the value of a bit at a given position, panicking if the index is out of range
-    ///
-    /// # Panics
-    ///
-    /// If `idx` is outside the range of this slice
-    fn get_bit(&self, idx: usize) -> bool {
-        self.get_bit_opt(idx).expect("get_bit index in-bounds")
-    }
-
     /// Get the value of a bit at a given index, returning `None` if the index is out of range
-    fn get_bit_opt(&self, idx: usize) -> Option<bool> {
+    fn get_bit(&self, idx: usize) -> Option<bool> {
         let (idx, bit) = idx_bit::<Self>(idx);
         self.get(idx)
             .map(|val| val & (<Self::Bit as One>::one() << bit) != <Self::Bit as Zero>::zero())
@@ -229,6 +220,7 @@ impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
     }
 
     fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        #[allow(clippy::into_iter_on_ref)]
         self.into_iter()
     }
 
@@ -328,20 +320,20 @@ mod tests {
 
     #[test]
     fn test_get_bit() {
-        let slice = &[0b1010101010101010u16, 0b1010101010101010];
+        let slice = &[0b1010_1010_1010_1010u16, 0b1010_1010_1010_1010];
         for idx in 0..32 {
-            let b = slice.get_bit(idx);
+            let b = slice.get_bit(idx).unwrap();
             assert_eq!(b, (idx % 2) != 0);
         }
     }
 
     #[test]
     fn test_set_bit() {
-        let mut data = [0b1010101010101010u16, 0b1010101010101010];
+        let mut data = [0b1010_1010_1010_1010u16, 0b1010_1010_1010_1010];
         let slice = &mut data;
         slice.set_bit(0, true);
         slice.set_bit(31, false);
-        assert_eq!(slice, &[0b1010101010101011, 0b0010101010101010])
+        assert_eq!(slice, &[0b1010_1010_1010_1011, 0b0010_1010_1010_1010])
     }
 
     #[cfg(feature = "alloc")]

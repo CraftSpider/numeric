@@ -14,7 +14,9 @@ fn bench_int_arr(c: &mut Criterion) {
         .bench_function(
             BenchmarkId::new("<u128, u8>", "0x0102030405060708090A0B0C0D0E0F00"),
             |b| {
-                b.iter(|| int_to_arr::<u128, u8, 16>(black_box(0x0102030405060708090A0B0C0D0E0F00)))
+                b.iter(|| {
+                    int_to_arr::<u128, u8, 16>(black_box(0x0102_0304_0506_0708_090A_0B0C_0D0E_0F00))
+                })
             },
         );
 }

@@ -227,7 +227,11 @@ mod tests {
 
         let b = Matrix::new([[2., -3., 1.], [2., 0., -1.], [1., 4., 5.]]);
 
-        let expected = Matrix::new([[1., 4., 5.], [0., -11., -9.], [0., 0., -4.454545454545454]]);
+        let expected = Matrix::new([
+            [1., 4., 5.],
+            [0., -11., -9.],
+            [0., 0., -4.454_545_454_545_454],
+        ]);
 
         assert_eq!(b.row_reduce(), expected);
     }

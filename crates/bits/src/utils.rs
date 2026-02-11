@@ -148,7 +148,7 @@ mod tests {
         );
 
         assert_eq!(
-            &int_to_arr::<u128, u8, 16>(0x0102030405060708090A0B0C0D0E0F00),
+            &int_to_arr::<u128, u8, 16>(0x0102_0304_0506_0708_090A_0B0C_0D0E_0F00),
             &[0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
         );
     }
@@ -166,7 +166,7 @@ mod tests {
             Some(usize::MAX as u128)
         );
 
-        assert_eq!(arr_to_int::<u8, usize>(&[0, 1, 2, 3]), Some(0x03020100));
+        assert_eq!(arr_to_int::<u8, usize>(&[0, 1, 2, 3]), Some(0x0302_0100));
         assert_eq!(arr_to_int::<u8, usize>(&[u8::MAX]), Some(255));
     }
 }

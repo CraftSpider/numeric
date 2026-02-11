@@ -127,8 +127,8 @@ impl AddAlgo for Bitwise {
 
         let mut carry = false;
         for idx in 0..=bit_len {
-            let l = u8::from(left.get_bit_opt(idx).unwrap_or(false));
-            let r = u8::from(right.get_bit_opt(idx).unwrap_or(false));
+            let l = u8::from(left.get_bit(idx).unwrap_or(false));
+            let r = u8::from(right.get_bit(idx).unwrap_or(false));
 
             let c = if carry {
                 carry = false;
@@ -171,8 +171,8 @@ impl AddAlgo for Bitwise {
         let mut overflow = false;
         let mut carry = false;
         for idx in 0..=bit_len {
-            let l = u8::from(left.get_bit_opt(idx).unwrap_or(false));
-            let r = u8::from(right.get_bit_opt(idx).unwrap_or(false));
+            let l = u8::from(left.get_bit(idx).unwrap_or(false));
+            let r = u8::from(right.get_bit(idx).unwrap_or(false));
 
             let c = if carry {
                 carry = false;
@@ -217,8 +217,8 @@ impl AssignAddAlgo for Bitwise {
         let mut overflow = false;
         let mut carry = false;
         for idx in 0..=bit_len {
-            let l = u8::from(left.get_bit_opt(idx).unwrap_or(false));
-            let r = u8::from(right.get_bit_opt(idx).unwrap_or(false));
+            let l = u8::from(left.get_bit(idx).unwrap_or(false));
+            let r = u8::from(right.get_bit(idx).unwrap_or(false));
 
             let c = if carry {
                 carry = false;

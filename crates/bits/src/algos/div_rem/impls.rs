@@ -82,7 +82,7 @@ impl DivRemAlgo for Bitwise {
 
         for idx in (0..bit_len).rev() {
             <Element as AssignShlAlgo>::wrapping(&mut remainder, 1);
-            remainder.set_bit(0, left.get_bit(idx));
+            remainder.set_bit(0, left.get_bit(idx).unwrap());
             if <Element as CmpAlgo>::ge(&remainder, right) {
                 // Subtract will never overflow
                 <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
@@ -106,7 +106,7 @@ impl DivRemAlgo for Bitwise {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
             <Element as AssignShlAlgo>::wrapping(remainder, 1);
-            remainder.set_bit(0, left.get_bit(idx));
+            remainder.set_bit(0, left.get_bit(idx).unwrap());
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
                 <Element as AssignSubAlgo>::wrapping(remainder, right);
@@ -129,7 +129,7 @@ impl AssignDivRemAlgo for Bitwise {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
             <Element as AssignShlAlgo>::wrapping(remainder, 1);
-            remainder.set_bit(0, left.get_bit(idx));
+            remainder.set_bit(0, left.get_bit(idx).unwrap());
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
                 <Element as AssignSubAlgo>::wrapping(remainder, right);

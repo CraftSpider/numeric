@@ -122,7 +122,7 @@ impl MulAlgo for Bitwise {
         let mut out = vec![L::Bit::zero(); len * 2];
 
         for idx in 0..right.bit_len() {
-            let r = right.get_bit(idx);
+            let r = right.get_bit(idx).unwrap_or(false);
             if r {
                 out = <Element as AddAlgo>::long(&out, &new_self);
             }

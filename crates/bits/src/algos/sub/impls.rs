@@ -47,7 +47,7 @@ impl SubAlgo for Element {
         }
 
         if carry {
-            out.set_bit(0, !out.get_bit(0));
+            out.set_bit(0, !out.get_bit(0).unwrap());
             <Element as AssignBitAlgo>::not(&mut out);
         }
 
@@ -146,8 +146,8 @@ impl SubAlgo for Bitwise {
 
         let mut carry = false;
         for idx in 0..bit_len {
-            let l = left.get_bit_opt(idx).unwrap_or(false);
-            let r = right.get_bit_opt(idx).unwrap_or(false);
+            let l = left.get_bit(idx).unwrap_or(false);
+            let r = right.get_bit(idx).unwrap_or(false);
 
             let c = if carry {
                 carry = false;
@@ -173,7 +173,7 @@ impl SubAlgo for Bitwise {
         }
 
         if carry {
-            out.set_bit(0, !out.get_bit(0));
+            out.set_bit(0, !out.get_bit(0).unwrap());
             <Element as AssignBitAlgo>::not(&mut out);
         }
 
@@ -189,8 +189,8 @@ impl SubAlgo for Bitwise {
 
         let mut carry = false;
         for idx in 0..bit_len {
-            let l = left.get_bit_opt(idx).unwrap_or(false);
-            let r = right.get_bit_opt(idx).unwrap_or(false);
+            let l = left.get_bit(idx).unwrap_or(false);
+            let r = right.get_bit(idx).unwrap_or(false);
 
             let c = if carry {
                 carry = false;

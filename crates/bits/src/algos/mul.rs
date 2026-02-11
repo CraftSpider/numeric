@@ -99,48 +99,48 @@ mod tests {
 
     #[cfg(feature = "alloc")]
     fn test_long<B: MulAlgo>() {
-        let slice1: &[u8] = &[0b00000000];
-        let slice2 = &[0b00000001];
+        let slice1: &[u8] = &[0b0000_0000];
+        let slice2 = &[0b0000_0001];
 
         assert_eq!(B::long(slice1, slice2), &[0b0]);
 
-        let slice3: &[u8] = &[0b00000001];
-        let slice4 = &[0b00000001];
+        let slice3: &[u8] = &[0b0000_0001];
+        let slice4 = &[0b0000_0001];
 
         assert_eq!(B::long(slice3, slice4), &[0b1]);
 
-        let slice5: &[u8] = &[0b00000001];
-        let slice6 = &[0b00000010];
+        let slice5: &[u8] = &[0b0000_0001];
+        let slice6 = &[0b0000_0010];
 
         assert_eq!(B::long(slice5, slice6), &[0b10]);
 
-        let slice7: &[u8] = &[0b00000010];
-        let slice8 = &[0b00000010];
+        let slice7: &[u8] = &[0b0000_0010];
+        let slice8 = &[0b0000_0010];
 
         assert_eq!(B::long(slice7, slice8), &[0b100]);
     }
 
     fn test_wrapping_assign<B: AssignMulAlgo>() {
-        let slice1: &mut [u8] = &mut [0b00000000];
-        let slice2 = &[0b00000001];
+        let slice1: &mut [u8] = &mut [0b0000_0000];
+        let slice2 = &[0b0000_0001];
 
         B::wrapping(slice1, slice2);
         assert_eq!(slice1, &[0b0]);
 
-        let slice3: &mut [u8] = &mut [0b00000001];
-        let slice4 = &[0b00000001];
+        let slice3: &mut [u8] = &mut [0b0000_0001];
+        let slice4 = &[0b0000_0001];
 
         B::wrapping(slice3, slice4);
         assert_eq!(slice3, &[0b1]);
 
-        let slice5: &mut [u8] = &mut [0b00000001];
-        let slice6 = &[0b00000010];
+        let slice5: &mut [u8] = &mut [0b0000_0001];
+        let slice6 = &[0b0000_0010];
 
         B::wrapping(slice5, slice6);
         assert_eq!(slice5, &[0b10]);
 
-        let slice7: &mut [u8] = &mut [0b00000010];
-        let slice8 = &[0b00000010];
+        let slice7: &mut [u8] = &mut [0b0000_0010];
+        let slice8 = &[0b0000_0010];
 
         B::wrapping(slice7, slice8);
         assert_eq!(slice7, &[0b100]);

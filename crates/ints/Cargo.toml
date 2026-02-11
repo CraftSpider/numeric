@@ -13,14 +13,14 @@ std = ["numeric-utils/std", "numeric-bits/std", "numeric-traits/std", "alloc"]
 
 [dependencies]
 arrayvec = "0.7"
-rand = { version = "0.9", optional = true }
+rand = { version = "0.10", optional = true }
 numeric-traits = { path = "../traits", default-features = false }
 numeric-bits = { path = "../bits", default-features = false }
 numeric-utils = { path = "../utils", default-features = false }
 numeric-static-iter = { path = "../static-iter", default-features = false }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 numeric-bench-util = { path = "../bench-util" }
 
 [[bench]]

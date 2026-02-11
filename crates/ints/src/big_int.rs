@@ -286,7 +286,7 @@ impl Binary for BigInt {
         write!(f, "0b")?;
         self.with_slice(|slice| {
             for idx in (0..slice.bit_len()).rev() {
-                write!(f, "{}", u8::from(slice.get_bit(idx)))?;
+                write!(f, "{}", u8::from(slice.get_bit(idx).unwrap_or(false)))?;
             }
             Ok(())
         })
@@ -759,7 +759,7 @@ mod tests {
         assert_eq!(BigInt::from(10).to_string(), "10");
         assert_eq!(BigInt::from(111).to_string(), "111");
         assert_eq!(
-            BigInt::from(18446744073709551616u128).to_string(),
+            BigInt::from(18_446_744_073_709_551_616u128).to_string(),
             "18446744073709551616"
         );
     }

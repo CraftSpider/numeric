@@ -15,10 +15,10 @@ numeric-traits = { path = "../traits", default-features = false }
 
 [dev-dependencies]
 numeric-bench-util = { path = "../bench-util" }
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 
 [target.'cfg(unix)'.dev-dependencies]
-pprof = { version = "0.13", features = ["flamegraph", "criterion"] }
+pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
 
 [[bench]]
 name = "bit_slice"

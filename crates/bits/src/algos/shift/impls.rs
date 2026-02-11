@@ -47,7 +47,7 @@ impl ShrAlgo for Bitwise {
     {
         let mut out = vec![L::Bit::zero(); left.len()];
         for idx in (0..=left.bit_len()).rev() {
-            let new = left.get_bit_opt(idx).unwrap_or(false);
+            let new = left.get_bit(idx).unwrap_or(false);
             if let Some(idx) = idx.checked_sub(right) {
                 out.set_bit_ignore(idx, new);
             }
@@ -61,7 +61,7 @@ impl ShrAlgo for Bitwise {
     {
         let bit_len = left.bit_len();
         for idx in (0..=bit_len).rev() {
-            let new = left.get_bit_opt(idx).unwrap_or(false);
+            let new = left.get_bit(idx).unwrap_or(false);
             if let Some(idx) = idx.checked_sub(right) {
                 out.set_bit_ignore(idx, new);
             }

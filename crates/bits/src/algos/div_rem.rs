@@ -35,6 +35,7 @@ pub trait DivRemAlgo {
         (q, r)
     }
 
+    #[allow(clippy::type_complexity)]
     fn checked<'a, L, R>(
         left: &L,
         right: &R,
@@ -164,15 +165,15 @@ mod tests {
 
         assert_eq!(B::long(slice3, slice4).0, &[0b01]);
 
-        let slice5: &[u8] = &[0b00000000, 0b1];
-        let slice6: &[u8] = &[0b00000010];
+        let slice5: &[u8] = &[0b0000_0000, 0b1];
+        let slice6: &[u8] = &[0b0000_0010];
 
-        assert_eq!(B::long(slice5, slice6).0, &[0b10000000, 0b0]);
+        assert_eq!(B::long(slice5, slice6).0, &[0b1000_0000, 0b0]);
 
         let slice7: &[u8] = &[0b0, 0b0, 0b0, 0b1];
         let slice8: &[u8] = &[0b10];
 
-        assert_eq!(B::long(slice7, slice8).0, &[0b0, 0b0, 0b10000000, 0b0]);
+        assert_eq!(B::long(slice7, slice8).0, &[0b0, 0b0, 0b1000_0000, 0b0]);
     }
 
     #[cfg(feature = "alloc")]
@@ -191,8 +192,8 @@ mod tests {
             assert_eq!(B::long(slice3, slice4).1, &[i % 3]);
         }
 
-        let slice5: &[u8] = &[0b00000001, 0b111];
-        let slice6 = &[0b00000010];
+        let slice5: &[u8] = &[0b0000_0001, 0b111];
+        let slice6 = &[0b0000_0010];
 
         assert_eq!(B::long(slice5, slice6).1, &[0b01, 0b0]);
     }
@@ -208,12 +209,12 @@ mod tests {
 
         assert_eq!(B::wrapping(data, slice4, &mut [0], &mut [0]).0, &[0b01]);
 
-        let data = &[0b00000000u8, 0b1];
-        let slice6: &[u8] = &[0b00000010];
+        let data = &[0b0000_0000u8, 0b1];
+        let slice6: &[u8] = &[0b0000_0010];
 
         assert_eq!(
             B::wrapping(data, slice6, &mut [0; 2], &mut [0; 2]).0,
-            &[0b10000000, 0b0]
+            &[0b1000_0000, 0b0]
         );
 
         let data = &[0b0u8, 0b0, 0b0, 0b1];
@@ -221,7 +222,7 @@ mod tests {
 
         assert_eq!(
             B::wrapping(data, slice8, &mut [0; 4], &mut [0; 4]).0,
-            &[0b0, 0b0, 0b10000000, 0b0]
+            &[0b0, 0b0, 0b1000_0000, 0b0]
         );
     }
 
