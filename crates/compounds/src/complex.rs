@@ -4,7 +4,7 @@ use numeric_traits::class::Real;
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::NumOps;
 
-#[derive(Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Complex<T> {
     real: T,
     imag: T,

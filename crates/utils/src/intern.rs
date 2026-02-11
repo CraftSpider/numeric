@@ -49,7 +49,7 @@ impl<T> Interned<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct InternId(usize);
 

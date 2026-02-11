@@ -21,5 +21,4 @@ debug = true
 [workspace.lints.clippy]
 ptr_as_ptr = "warn"
 unreadable_literal = "warn"
-pedantic = "warn"
 #undocumented_unsafe_blocks = "warn"

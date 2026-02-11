@@ -18,7 +18,7 @@ pub trait FromStaticIter<T, const N: usize>: Sized {
     /// This will be called with uninit data in two cases:
     /// 1) The underlying iterator has been polled to completion, and `write` called once for each
     ///    index
-    /// 2) Write returned ControlFlow::Break at any point
+    /// 2) Write returned `ControlFlow::Break` at any point
     unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self;
 
     fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
