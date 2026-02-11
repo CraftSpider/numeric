@@ -5,6 +5,7 @@ use crate::identity::{One, Zero};
 use crate::ops::core::{BitOps, NumOps, ShiftOps};
 use crate::ops::Pow;
 use core::ops::Neg;
+use std::num::FpCategory;
 
 /// Trait for generic number-like types. These are types that can generally be thought of as
 /// representing values on the number line - they support common numeric operations as well
@@ -95,6 +96,30 @@ pub enum FloatClass {
     Subnormal,
     /// A normal float value. This is most numbers.
     Normal,
+}
+
+impl From<FpCategory> for FloatClass {
+    fn from(value: FpCategory) -> Self {
+        match value {
+            FpCategory::Nan => FloatClass::Nan,
+            FpCategory::Infinite => FloatClass::Infinite,
+            FpCategory::Zero => FloatClass::Zero,
+            FpCategory::Subnormal => FloatClass::Subnormal,
+            FpCategory::Normal => FloatClass::Normal,
+        }
+    }
+}
+
+impl From<FloatClass> for FpCategory {
+    fn from(value: FloatClass) -> Self {
+        match value {
+            FloatClass::Nan => FpCategory::Nan,
+            FloatClass::Infinite => FpCategory::Infinite,
+            FloatClass::Zero => FpCategory::Zero,
+            FloatClass::Subnormal => FpCategory::Subnormal,
+            FloatClass::Normal => FpCategory::Normal,
+        }
+    }
 }
 
 /// Trait for types that are floating point - real numbers that specifically use the float format,
