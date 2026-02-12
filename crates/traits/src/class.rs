@@ -4,8 +4,8 @@
 use crate::identity::{One, Zero};
 use crate::ops::core::{BitOps, NumOps, ShiftOps};
 use crate::ops::Pow;
+use core::num::FpCategory;
 use core::ops::Neg;
-use std::num::FpCategory;
 
 /// Trait for generic number-like types. These are types that can generally be thought of as
 /// representing values on the number line - they support common numeric operations as well

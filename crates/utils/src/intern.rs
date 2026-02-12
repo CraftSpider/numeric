@@ -105,8 +105,8 @@ where
                 // intend to set the value.
 
                 let count = loop {
-                    let count = i.refs.swap(0xFFFFFFFF, Ordering::AcqRel);
-                    if count == 0xFFFFFFFF {
+                    let count = i.refs.swap(0xFFFF_FFFF, Ordering::AcqRel);
+                    if count == 0xFFFF_FFFF {
                         continue;
                     } else {
                         break count;
