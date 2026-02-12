@@ -1,5 +1,6 @@
 //! Various mathematical compound type implementations - complex numbers, matrices, etc
 
+#![feature(min_generic_const_args, opaque_generic_const_args)]
 #![no_std]
 
 #[cfg(feature = "alloc")]
