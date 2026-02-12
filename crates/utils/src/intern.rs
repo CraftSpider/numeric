@@ -98,12 +98,27 @@ where
             for (idx2, i) in i.iter().enumerate() {
                 // This intentionally allows reviving dead slots - saves work if you're rapidly
                 // dropping and creating references to a value
-                let count = i.refs.load(Ordering::Acquire);
+
+                // We use 0xFFFFFFFF to indicate a value currently being watched by another thread
+                // This is effectively locking, but it means we have a very small locking surface
+                // (a single interned item at once). We also only need to hold that lock if we
+                // intend to set the value.
+
+                let count = loop {
+                    let count = i.refs.swap(0xFFFFFFFF, Ordering::AcqRel);
+                    if count == 0xFFFFFFFF {
+                        continue;
+                    } else {
+                        break count;
+                    }
+                };
                 if i.val_opt().is_some_and(|cur_val| val == cur_val.borrow()) {
+                    i.refs.swap(count, Ordering::AcqRel);
                     return Find::Exists((idx, idx2));
                 } else if count == 0 {
                     return Find::Dead((idx, idx2));
                 }
+                i.refs.swap(count, Ordering::AcqRel);
             }
         }
         Find::None
@@ -112,7 +127,7 @@ where
     #[inline]
     fn incr_inner(interned: &Interned<T>) {
         let val = interned.refs.fetch_add(1, Ordering::AcqRel);
-        debug_assert_ne!(val, usize::MAX, "Too many instances of a single value!");
+        debug_assert_ne!(val, usize::MAX - 1, "Too many instances of a single value!");
     }
 
     #[inline]
@@ -141,20 +156,14 @@ where
         InternId::from_usize(match find {
             Find::Exists((loc1, loc2)) => {
                 Self::incr_inner(&self.inner[loc1][loc2]);
-                loc1 * 32 + loc2
+                loc1 * CHUNK_SIZE + loc2
             }
-            // This can't race with below because they're guaranteed to act on different memory
-            // locations. But maybe... it could race with itself?
             Find::Dead((loc1, loc2)) => {
-                Self::incr_inner(&self.inner[loc1][loc2]);
-                // TODO: This isn't actually sound - in multi-threaded environments this can
-                //       race with `find`.
-                //       We want to implement a scheme where `set` only occurs when inner is set
-                //       to 1, not before or after, and find doesn't get a ref till after set is
-                //       done.
+                let interned = &self.inner[loc1][loc2];
                 // SAFETY: Slot is dead, we're making it live, we are the only ones with access
-                unsafe { self.inner[loc1][loc2].set_val(val.into()) };
-                loc1 * 32 + loc2
+                unsafe { interned.set_val(val.into()) };
+                interned.refs.store(1, Ordering::Release);
+                loc1 * CHUNK_SIZE + loc2
             }
             Find::None => {
                 let len = self
@@ -163,7 +172,7 @@ where
                 Self::incr_inner(&self.inner[len - 1][0]);
                 // SAFETY: Slot is empty, we're making it live, we are the only ones with access
                 unsafe { self.inner[len - 1][0].set_val(val.into()) };
-                (len - 1) * 32
+                (len - 1) * CHUNK_SIZE
             }
         })
     }

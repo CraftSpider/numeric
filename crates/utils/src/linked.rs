@@ -50,6 +50,17 @@ impl<T> Node<T> {
     }
 }
 
+/// A linked list which allows for unsynchronized, simultaneous operations. As an example,
+/// it is possible to both append and iterate from different threads simultaneously.
+///
+/// # Caveats
+///
+/// An iterator created while a node is being push may or may not see that node. As such, many
+/// threads searching for an item or appending it in sync may result in that item appearing in
+/// the list multiple times.
+///
+/// Some operations such as popping a value still require unique access, as otherwise a node
+/// could be removed by one thread while a reference was held to it by another thread.
 pub struct UnsyncLinked<T> {
     head: AtomicPtr<Node<T>>,
 }
