@@ -186,8 +186,11 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use super::*;
     use crate::tests::{run_threaded, THREAD_COUNT};
     use std::thread;

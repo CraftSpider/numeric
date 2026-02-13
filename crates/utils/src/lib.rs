@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), no_std)]
+#![no_std]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -16,18 +16,10 @@ pub use intern::Interner;
 #[cfg(test)]
 pub(crate) mod tests {
     extern crate std;
+    use alloc::vec::Vec;
     use std::thread;
 
-    pub const THREAD_COUNT: usize = {
-        #[cfg(miri)]
-        {
-            100
-        }
-        #[cfg(not(miri))]
-        {
-            100
-        }
-    };
+    pub const THREAD_COUNT: usize = if cfg!(miri) { 100 } else { 1000 };
 
     pub fn run_threaded<T, C, F>(ctx: C, f: F) -> T
     where

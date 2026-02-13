@@ -218,3 +218,43 @@ impl SubAlgo for Bitwise {
         (out, carry)
     }
 }
+
+impl AssignSubAlgo for Bitwise {
+    fn overflowing<L, R>(left: &mut L, right: &R) -> bool
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let bit_len = usize::max(left.bit_len(), right.bit_len());
+
+        let mut carry = false;
+        for idx in 0..bit_len {
+            let l = left.get_bit(idx).unwrap_or(false);
+            let r = right.get_bit(idx).unwrap_or(false);
+
+            let c = if carry {
+                carry = false;
+                true
+            } else {
+                false
+            };
+
+            let new = match (l, r, c) {
+                (true, false, false) => true,
+                (true, true, false) | (true, false, true) | (false, false, false) => false,
+                (false, true, false) | (false, false, true) | (true, true, true) => {
+                    carry = true;
+                    true
+                }
+                (false, true, true) => {
+                    carry = true;
+                    false
+                }
+            };
+
+            left.set_bit_ignore(idx, new);
+        }
+
+        carry
+    }
+}

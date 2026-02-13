@@ -1,6 +1,7 @@
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+use numeric_traits::identity::Zero;
 
 mod impls;
 
@@ -66,7 +67,9 @@ pub trait DivRemAlgo {
     {
         let (q, r, overflow) = Self::overflowing(left, right, quotient, remainder);
         if overflow {
-            todo!()
+            quotient.iter_mut().for_each(|l| *l = L::Bit::zero());
+            remainder.iter_mut().for_each(|l| *l = L::Bit::zero());
+            (quotient, remainder)
         } else {
             // SAFETY: Polonius case
             unsafe { core::mem::transmute::<(&[_], &[_]), (&[_], &[_])>((q, r)) }
@@ -107,7 +110,8 @@ pub trait AssignDivRemAlgo {
     {
         let overflow = Self::div_overflowing(left, right, remainder);
         if overflow {
-            todo!()
+            left.iter_mut().for_each(|l| *l = L::Bit::zero());
+            remainder.iter_mut().for_each(|l| *l = L::Bit::zero());
         }
     }
 
@@ -143,7 +147,8 @@ pub trait AssignDivRemAlgo {
     {
         let overflow = Self::rem_overflowing(left, right, quotient);
         if overflow {
-            todo!()
+            left.iter_mut().for_each(|l| *l = L::Bit::zero());
+            quotient.iter_mut().for_each(|l| *l = L::Bit::zero());
         }
     }
 }

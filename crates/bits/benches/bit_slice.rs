@@ -333,9 +333,9 @@ pub fn bench_sub(c: &mut Criterion) {
             long_elem: Some(|l, r| <Element as SubAlgo>::long(l, r).0),
             long_bit: Some(|l, r| <Bitwise as SubAlgo>::long(l, r).0),
             checked_elem: Some(<Element as AssignSubAlgo>::checked),
-            checked_bit: None, // Some(<Bitwise as AssignSubAlgo>::checked),
+            checked_bit: Some(<Bitwise as AssignSubAlgo>::checked),
             wrapping_elem: Some(<Element as AssignSubAlgo>::wrapping),
-            wrapping_bit: None, // Some(<Bitwise as AssignSubAlgo>::wrapping),
+            wrapping_bit: Some(<Bitwise as AssignSubAlgo>::wrapping),
         },
     );
 }
@@ -348,9 +348,9 @@ pub fn bench_mul(c: &mut Criterion) {
             long_elem: Some(<Element as MulAlgo>::long),
             long_bit: Some(<Bitwise as MulAlgo>::long),
             checked_elem: Some(<Element as AssignMulAlgo>::checked),
-            checked_bit: None,
+            checked_bit: Some(<Bitwise as AssignMulAlgo>::checked),
             wrapping_elem: Some(<Element as AssignMulAlgo>::wrapping),
-            wrapping_bit: None,
+            wrapping_bit: Some(<Bitwise as AssignMulAlgo>::wrapping),
         },
     );
 }

@@ -120,6 +120,32 @@ mod tests {
         assert_eq!(B::long(slice7, slice8), &[0b100]);
     }
 
+    fn test_wrapping<B: MulAlgo>() {
+        let slice1: &[u8] = &[0b0000_0000];
+        let slice2 = &[0b0000_0001];
+
+        let mut out = [0];
+        assert_eq!(B::wrapping(slice1, slice2, &mut out), &[0b0]);
+
+        let slice3: &[u8] = &[0b0000_0001];
+        let slice4 = &[0b0000_0001];
+
+        let mut out = [0];
+        assert_eq!(B::wrapping(slice3, slice4, &mut out), &[0b1]);
+
+        let slice5: &[u8] = &[0b0000_0001];
+        let slice6 = &[0b0000_0010];
+
+        let mut out = [0];
+        assert_eq!(B::wrapping(slice5, slice6, &mut out), &[0b10]);
+
+        let slice7: &[u8] = &[0b0000_0010];
+        let slice8 = &[0b0000_0010];
+
+        let mut out = [0];
+        assert_eq!(B::wrapping(slice7, slice8, &mut out), &[0b100]);
+    }
+
     fn test_wrapping_assign<B: AssignMulAlgo>() {
         let slice1: &mut [u8] = &mut [0b0000_0000];
         let slice2 = &[0b0000_0001];
@@ -150,6 +176,7 @@ mod tests {
     fn test_element() {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
+        test_wrapping::<Element>();
         test_wrapping_assign::<Element>();
     }
 
@@ -157,6 +184,7 @@ mod tests {
     fn test_bitwise() {
         #[cfg(feature = "alloc")]
         test_long::<Bitwise>();
-        // test_wrapping_assign::<Bitwise>();
+        test_wrapping::<Bitwise>();
+        test_wrapping_assign::<Bitwise>();
     }
 }

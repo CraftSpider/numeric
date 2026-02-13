@@ -51,8 +51,7 @@ impl MulAlgo for Element {
             let mut new_overflow = false;
             let mut carry = zero;
 
-            let l = *out.get(idx).unwrap();
-            out.set(idx, zero);
+            let l = left.get(idx).unwrap();
 
             for (offset, r) in right.iter().enumerate() {
                 let (low, high) = L::Bit::widening_mul(l, r, carry);
@@ -137,8 +136,63 @@ impl MulAlgo for Bitwise {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
-        todo!("{left:?} * {right:?} -> {out:?}")
+        let mut overflow = false;
+        for idx in 0..right.bit_len() {
+            let r = right.get_bit(idx).unwrap_or(false);
+
+            if r {
+                let mut new_overflow = false;
+                for (offset, l) in left.iter_bits().enumerate() {
+                    if l && add_bit(out, idx + offset) {
+                        new_overflow = true;
+                    }
+                }
+                overflow |= new_overflow;
+            }
+        }
+        (out, overflow)
     }
+}
+
+impl AssignMulAlgo for Bitwise {
+    fn overflowing<L, R>(left: &mut L, right: &R) -> bool
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        let mut overflow = false;
+        for idx in (0..left.bit_len()).rev() {
+            let l = left.get_bit(idx).unwrap_or(false);
+            left.set_bit(idx, false);
+
+            if l {
+                let mut new_overflow = false;
+                for (offset, r) in right.iter_bits().enumerate() {
+                    if r && add_bit(left, idx + offset) {
+                        new_overflow = true;
+                    }
+                }
+                overflow |= new_overflow;
+            }
+        }
+        overflow
+    }
+}
+
+fn add_bit<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize) -> bool {
+    let mut carry = false;
+    while let Some(val) = slice.get_bit(idx) {
+        slice.set_bit(idx, true);
+        if val {
+            carry = true;
+        }
+        idx += 1;
+
+        if !carry {
+            break;
+        }
+    }
+    carry
 }
 
 fn add_item<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize, mut val: B::Bit) -> bool {
