@@ -278,6 +278,8 @@ impl<const N: usize> Div for U<N> {
     type Output = Self;
 
     fn div(mut self, rhs: Self) -> Self::Output {
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
+
         #[cfg(debug_assertions)]
         <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
         #[cfg(not(debug_assertions))]
@@ -612,13 +614,89 @@ macro_rules! impl_unsign_cast {
                 let bytes = val.to_le_bytes();
                 let mut arr = [0; N];
                 if N >= SIZE {
-                    for i in 0..N {
+                    for i in 0..SIZE {
                         arr[i] = bytes[i];
                     }
                     Some(U::from_le_bytes(arr))
                 } else {
+                    for i in 0..SIZE {
+                        if i < N {
+                            arr[i] = bytes[i];
+                        } else {
+                            if bytes[i] != 0 {
+                                return None;
+                            }
+                        }
+                    }
+                    Some(U::from_le_bytes(arr))
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_sign_cast {
+    ($num:ty) => {
+        impl<const N: usize> FromChecked<U<N>> for $num {
+            fn from_checked(val: U<N>) -> Option<Self> {
+                const SIZE: usize = size_of::<$num>();
+                let mut arr = [0; SIZE];
+                if const { N <= SIZE } {
+                    for i in 0..SIZE {
+                        arr[i] = val.0[i];
+                    }
+                    Some(<$num>::from_le_bytes(arr))
+                } else {
                     for i in 0..N {
-                        if i <= N {
+                        if i <= SIZE {
+                            arr[i] = val.0[i];
+                        } else {
+                            if val.0[i] != 0 {
+                                return None;
+                            }
+                        }
+                    }
+                    Some(<$num>::from_le_bytes(arr))
+                }
+            }
+        }
+
+        impl<const N: usize> FromSaturating<U<N>> for $num {
+            fn saturate_from(val: U<N>) -> Self {
+                match <$num>::from_checked(val) {
+                    Some(val) => val,
+                    None => <$num>::MAX,
+                }
+            }
+        }
+
+        impl<const N: usize> FromTruncating<U<N>> for $num {
+            fn truncate_from(val: U<N>) -> Self {
+                const SIZE: usize = size_of::<$num>();
+                let mut arr = [0; SIZE];
+                for i in 0..N {
+                    arr[i] = val.0[i];
+                }
+                <$num>::from_le_bytes(arr)
+            }
+        }
+
+        impl<const N: usize> FromChecked<$num> for U<N> {
+            fn from_checked(val: $num) -> Option<Self> {
+                const SIZE: usize = size_of::<$num>();
+                if val.is_negative() {
+                    return None;
+                }
+                let bytes = val.to_le_bytes();
+                let mut arr = [0; N];
+                if N >= SIZE {
+                    for i in 0..SIZE {
+                        arr[i] = bytes[i];
+                    }
+                    Some(U::from_le_bytes(arr))
+                } else {
+                    for i in 0..SIZE {
+                        if i < N {
                             arr[i] = bytes[i];
                         } else {
                             if bytes[i] != 0 {
@@ -639,6 +717,13 @@ impl_unsign_cast!(u32);
 impl_unsign_cast!(u64);
 impl_unsign_cast!(u128);
 impl_unsign_cast!(usize);
+
+impl_sign_cast!(i8);
+impl_sign_cast!(i16);
+impl_sign_cast!(i32);
+impl_sign_cast!(i64);
+impl_sign_cast!(i128);
+impl_sign_cast!(isize);
 
 #[cfg(test)]
 mod tests {
@@ -677,5 +762,34 @@ mod tests {
         let ten = U([10, 0, 0]);
         assert_eq!(four / two, U([2, 0, 0]));
         assert_eq!(ten / two, U([5, 0, 0]));
+    }
+
+    #[test]
+    fn test_from_checked() {
+        assert_eq!(U::<1>::from_checked(0u8), Some(U::zero()));
+        assert_eq!(U::<1>::from_checked(255u8), Some(U::max_value()));
+        assert_eq!(U::<1>::from_checked(-1i8), None);
+        assert_eq!(U::<1>::from_checked(-128i8), None);
+        assert_eq!(U::<1>::from_checked(1i8), Some(U::one()));
+        assert_eq!(U::<1>::from_checked(127i8), Some(U([0x7F])));
+
+        assert_eq!(U::<1>::from_checked(0u16), Some(U::zero()));
+        assert_eq!(U::<1>::from_checked(255u16), Some(U::max_value()));
+        assert_eq!(U::<1>::from_checked(256u16), None);
+        assert_eq!(U::<1>::from_checked(u16::MAX), None);
+        assert_eq!(U::<1>::from_checked(-1i16), None);
+        assert_eq!(U::<1>::from_checked(-128i16), None);
+        assert_eq!(U::<1>::from_checked(1i16), Some(U::one()));
+        assert_eq!(U::<1>::from_checked(127i16), Some(U([0x7F])));
+        assert_eq!(U::<1>::from_checked(255i16), Some(U::max_value()));
+        assert_eq!(U::<1>::from_checked(256i16), None);
+        assert_eq!(U::<1>::from_checked(i16::MAX), None);
+
+        assert_eq!(U::<2>::from_checked(0u8), Some(U::zero()));
+        assert_eq!(U::<2>::from_checked(255u8), Some(U::max_value()));
+        assert_eq!(U::<2>::from_checked(-1i8), None);
+        assert_eq!(U::<2>::from_checked(-128i8), None);
+        assert_eq!(U::<2>::from_checked(1i8), Some(U::one()));
+        assert_eq!(U::<2>::from_checked(127i8), Some(U([0x7F, 0x0])));
     }
 }
