@@ -10,9 +10,17 @@ macro_rules! static_assert {
 
 #[macro_export]
 macro_rules! static_assert_traits {
-    ($ty:ty: $trait:ident $( + $traits:ident )*) => {
+    ([$($bounds:tt)*] $ty:ty: $( $traits:tt )*) => {
         const _: () = {
-            const fn __check<T: $trait $( + $traits )*>() {}
+            const fn __check<T: $( $traits )*>() {}
+            const fn __check_outer<$($bounds)*>() {
+                __check::<$ty>();
+            }
+        };
+    };
+    ($ty:ty: $( $traits:tt )*) => {
+        const _: () = {
+            const fn __check<T: $( $traits )*>() {}
             __check::<$ty>();
         };
     };

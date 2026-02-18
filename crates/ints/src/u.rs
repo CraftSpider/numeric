@@ -5,7 +5,10 @@
 use arrayvec::ArrayVec;
 use core::cmp::Ordering;
 use core::iter::Product;
-use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
+use core::ops::{
+    Add, AddAssign, BitAnd, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Not, Rem, RemAssign,
+    Shl, Shr, Sub, SubAssign,
+};
 use core::{array, fmt, iter};
 use numeric_bits::algos::{
     AssignAddAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
@@ -39,7 +42,7 @@ pub struct U<const N: usize>([u8; N]);
 static_assert!(size_of::<U<2>>() == 2);
 static_assert!(size_of::<U<4>>() == 4);
 static_assert!(size_of::<U<8>>() == 8);
-static_assert_traits!(U<4>: Send + Sync);
+static_assert_traits!([const N: usize] U<N>: Send + Sync);
 
 impl<const N: usize> U<N> {
     /// Create a new instance containing the default value (0)
@@ -97,7 +100,7 @@ impl<const N: usize> U<N> {
         // This is the simplest way - mod base for digit, div base for next digit
         // It isn't super fast though, so there are probably optimization improvements
         let base: U<N> = base.into_checked().unwrap();
-        let mut digits = ArrayVec::<u8, N>::new();
+        let mut digits = ArrayVec::<u8, 255>::new();
         let mut scratch = *self;
 
         while scratch > U::zero() {
@@ -400,6 +403,36 @@ impl<const N: usize> Shr<usize> for U<N> {
     }
 }
 
+impl<const N: usize> AddAssign for U<N> {
+    fn add_assign(&mut self, rhs: Self) {
+        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> SubAssign for U<N> {
+    fn sub_assign(&mut self, rhs: Self) {
+        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> MulAssign for U<N> {
+    fn mul_assign(&mut self, rhs: Self) {
+        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> DivAssign for U<N> {
+    fn div_assign(&mut self, rhs: Self) {
+        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+    }
+}
+
+impl<const N: usize> RemAssign for U<N> {
+    fn rem_assign(&mut self, rhs: Self) {
+        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+    }
+}
+
 impl<const N: usize> Bounded for U<N> {
     fn min_value() -> Self {
         U([0; N])
@@ -578,7 +611,7 @@ macro_rules! impl_unsign_cast {
                     Some(<$num>::from_le_bytes(arr))
                 } else {
                     for i in 0..N {
-                        if i <= SIZE {
+                        if i < SIZE {
                             arr[i] = val.0[i];
                         } else {
                             if val.0[i] != 0 {
@@ -728,6 +761,22 @@ impl_sign_cast!(isize);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
+
+    #[test]
+    fn test_display() {
+        let one: U<1> = U::one();
+        assert_eq!(one.to_string(), "1");
+        let max: U<1> = U::max_value();
+        assert_eq!(max.to_string(), "255");
+        let min: U<1> = U::min_value();
+        assert_eq!(min.to_string(), "0");
+
+        let big: U<5> = U::from_checked(i32::MAX).unwrap();
+        assert_eq!(big.to_string(), "2147483647");
+        let small: U<5> = U::from_checked(u32::MAX).unwrap();
+        assert_eq!(small.to_string(), "4294967295");
+    }
 
     #[test]
     fn test_one() {
@@ -752,7 +801,32 @@ mod tests {
     #[test]
     fn test_add() {
         let one: U<3> = U::one();
+        let zero = U::zero();
         assert_eq!(one + one, U([2, 0, 0]));
+        assert_eq!(one + zero, one);
+        assert_eq!(zero + one, one);
+        assert_eq!(zero + zero, zero);
+    }
+
+    #[test]
+    fn test_sub() {
+        let one: U<3> = U::one();
+        let zero = U::zero();
+        assert_eq!(one - one, zero);
+        assert_eq!(one - zero, one);
+        assert_eq!(zero - zero, zero);
+    }
+
+    #[test]
+    fn test_mul() {
+        let one: U<3> = U::one();
+        let zero = U::zero();
+        let two = one + one;
+
+        assert_eq!(zero * zero, zero);
+        assert_eq!(one * one, one);
+        assert_eq!(one * two, two);
+        assert_eq!(one * zero, zero);
     }
 
     #[test]
@@ -786,7 +860,7 @@ mod tests {
         assert_eq!(U::<1>::from_checked(i16::MAX), None);
 
         assert_eq!(U::<2>::from_checked(0u8), Some(U::zero()));
-        assert_eq!(U::<2>::from_checked(255u8), Some(U::max_value()));
+        assert_eq!(U::<2>::from_checked(255u8), Some(U([255, 0])));
         assert_eq!(U::<2>::from_checked(-1i8), None);
         assert_eq!(U::<2>::from_checked(-128i8), None);
         assert_eq!(U::<2>::from_checked(1i8), Some(U::one()));

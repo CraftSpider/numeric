@@ -4,7 +4,10 @@
 
 use arrayvec::ArrayVec;
 use core::cmp::Ordering;
-use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use core::ops::{
+    Add, AddAssign, BitAnd, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Neg, Not, Rem,
+    RemAssign, Shl, Shr, Sub, SubAssign,
+};
 use core::{array, fmt};
 use numeric_bits::algos::{
     AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
@@ -32,7 +35,7 @@ pub struct I<const N: usize>([u8; N]);
 static_assert!(size_of::<I<2>>() == 2);
 static_assert!(size_of::<I<4>>() == 4);
 static_assert!(size_of::<I<8>>() == 8);
-static_assert_traits!(I<4>: Send + Sync);
+static_assert_traits!([const N: usize] I<N>: Send + Sync);
 
 impl<const N: usize> I<N> {
     /// Create a new instance containing the default value (0)
@@ -113,6 +116,112 @@ impl<const N: usize> I<N> {
             w.write_char(chars[d as usize])?;
         }
         Ok(())
+    }
+}
+
+impl I<1> {
+    /// Lossless infallible conversion for `I<1> -> i8`
+    #[must_use]
+    pub const fn as_i8(self) -> i8 {
+        i8::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `i8 -> I<1>`
+    #[must_use]
+    pub const fn from_i8(val: i8) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+impl I<2> {
+    /// Lossless infallible conversion for `I<2> -> i16`
+    #[must_use]
+    pub const fn as_i16(self) -> i16 {
+        i16::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `i16 -> I<2>`
+    #[must_use]
+    pub const fn from_i16(val: i16) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+impl I<4> {
+    /// Lossless infallible conversion for `I<4> -> i32`
+    #[must_use]
+    pub const fn as_i32(self) -> i32 {
+        i32::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `i32 -> I<4>`
+    #[must_use]
+    pub const fn from_i32(val: i32) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+impl I<8> {
+    /// Lossless infallible conversion for `I<8> -> i64`
+    #[must_use]
+    pub const fn as_i64(self) -> i64 {
+        i64::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `i64 -> I<8>`
+    #[must_use]
+    pub const fn from_i64(val: i64) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+impl I<16> {
+    /// Lossless infallible conversion for `I<16> -> i128`
+    #[must_use]
+    pub const fn as_i128(self) -> i128 {
+        i128::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `i128 -> I<16>`
+    #[must_use]
+    pub const fn from_i128(val: i128) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+#[cfg(target_pointer_width = "32")]
+impl I<4> {
+    /// Lossless infallible conversion for `U<PtrWidth> -> isize`
+    #[must_use]
+    pub const fn as_isize(self) -> isize {
+        isize::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `isize -> U<PtrWidth>`
+    #[must_use]
+    pub const fn from_isize(val: isize) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl I<8> {
+    /// Lossless infallible conversion for `I<PtrWidth> -> isize`
+    #[must_use]
+    pub const fn as_isize(self) -> isize {
+        isize::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `isize -> I<PtrWidth>`
+    #[must_use]
+    pub const fn from_isize(val: isize) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
+impl<const N: usize> Default for I<N> {
+    fn default() -> Self {
+        I::new()
     }
 }
 
@@ -303,6 +412,55 @@ impl<const N: usize> Shr<usize> for I<N> {
     }
 }
 
+impl<const N: usize> AddAssign for I<N> {
+    fn add_assign(&mut self, rhs: Self) {
+        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> SubAssign for I<N> {
+    fn sub_assign(&mut self, rhs: Self) {
+        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> MulAssign for I<N> {
+    fn mul_assign(&mut self, rhs: Self) {
+        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> DivAssign for I<N> {
+    fn div_assign(&mut self, mut rhs: Self) {
+        // Division of minimum value by negative one is invalid, since it would produce an
+        // out-of-range positive value.
+        assert!(
+            *self != I::min_value() || rhs != -I::one(),
+            "attempt to divide with overflow"
+        );
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
+        let neg = self.is_negative() != rhs.is_negative();
+        *self = self.abs();
+        rhs = rhs.abs();
+        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        if neg {
+            *self = -*self;
+        }
+    }
+}
+
+impl<const N: usize> RemAssign for I<N> {
+    fn rem_assign(&mut self, mut rhs: Self) {
+        let neg = self.is_negative() != rhs.is_negative();
+        *self = self.abs();
+        rhs = rhs.abs();
+        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        if neg {
+            *self = -*self;
+        }
+    }
+}
+
 impl<const N: usize> Bounded for I<N> {
     fn min_value() -> Self {
         I(array::from_fn(|idx| if idx == N - 1 { 0x80 } else { 0 }))
@@ -350,56 +508,63 @@ impl<const N: usize> Ord for I<N> {
 impl<const N: usize> CheckedAdd for I<N> {
     type Output = Self;
 
-    fn checked_add(self, rhs: Self) -> Option<Self> {
-        todo!()
+    fn checked_add(mut self, rhs: Self) -> Option<Self> {
+        <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0)?;
+        Some(self)
     }
 }
 
 impl<const N: usize> CheckedSub for I<N> {
     type Output = Self;
 
-    fn checked_sub(self, rhs: Self) -> Option<Self> {
-        todo!()
+    fn checked_sub(mut self, rhs: Self) -> Option<Self> {
+        <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0)?;
+        Some(self)
     }
 }
 
 impl<const N: usize> CheckedMul for I<N> {
     type Output = Self;
 
-    fn checked_mul(self, rhs: Self) -> Option<Self> {
-        todo!()
+    fn checked_mul(mut self, rhs: Self) -> Option<Self> {
+        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0)?;
+        Some(self)
     }
 }
 
 impl<const N: usize> CheckedDiv for I<N> {
     type Output = Self;
 
-    fn checked_div(self, rhs: Self) -> Option<Self> {
-        todo!()
+    fn checked_div(mut self, rhs: Self) -> Option<Self> {
+        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N])?;
+        Some(self)
     }
 }
 
 impl<const N: usize> SaturatingAdd for I<N> {
     type Output = Self;
 
-    fn saturating_add(self, v: Self) -> Self {
-        todo!()
+    fn saturating_add(mut self, rhs: Self) -> Self {
+        <Element as AssignAddAlgo>::saturating(&mut self.0, &rhs.0);
+        self
     }
 }
 
 impl<const N: usize> SaturatingSub for I<N> {
     type Output = Self;
 
-    fn saturating_sub(self, rhs: Self) -> Self::Output {
-        todo!()
+    fn saturating_sub(mut self, rhs: Self) -> Self::Output {
+        <Element as AssignSubAlgo>::saturating(&mut self.0, &rhs.0);
+        self
     }
 }
 
 impl<const N: usize> SaturatingMul for I<N> {
     type Output = Self;
 
-    fn saturating_mul(self, rhs: Self) -> Self::Output {
-        todo!()
+    fn saturating_mul(mut self, rhs: Self) -> Self::Output {
+        <Element as AssignMulAlgo>::saturating(&mut self.0, &rhs.0);
+        self
     }
 }
 
@@ -426,8 +591,17 @@ impl<const N: usize> One for I<N> {
 impl<const N: usize> Pow for I<N> {
     type Output = I<N>;
 
-    fn pow(self, rhs: Self) -> Self::Output {
-        todo!()
+    fn pow(self, mut rhs: Self) -> Self::Output {
+        if rhs.is_zero() {
+            I::one()
+        } else {
+            let mut out = I::zero();
+            while rhs > I::zero() {
+                out += self;
+                rhs -= I::one();
+            }
+            out
+        }
     }
 }
 
@@ -739,9 +913,11 @@ mod tests {
     fn test_sub() {
         let one: I<3> = I::one();
         let zero = I::zero();
-        assert_eq!(one + one, I([2, 0, 0]));
-        assert_eq!(one + zero, one);
-        assert_eq!(zero + zero, zero);
+        let neg_one = -I::one();
+        assert_eq!(one - one, zero);
+        assert_eq!(one - zero, one);
+        assert_eq!(zero - one, neg_one);
+        assert_eq!(zero - zero, zero);
     }
 
     #[test]
@@ -753,7 +929,7 @@ mod tests {
 
         assert_eq!(zero * zero, zero);
         assert_eq!(one * one, one);
-        assert_eq!(one * two, I([2, 0, 0]));
+        assert_eq!(one * two, two);
         assert_eq!(one * zero, zero);
         assert_eq!(neg_one * one, neg_one);
         assert_eq!(neg_one * zero, zero);
