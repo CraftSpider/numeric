@@ -14,7 +14,7 @@ enum Find<T> {
     None,
 }
 
-struct Interned<T> {
+pub struct Interned<T> {
     refs: AtomicUsize,
     val: UnsafeCell<Option<T>>,
 }
@@ -125,13 +125,13 @@ where
     }
 
     #[inline]
-    fn incr_inner(interned: &Interned<T>) {
+    pub fn incr_val(&self, interned: &Interned<T>) {
         let val = interned.refs.fetch_add(1, Ordering::AcqRel);
         debug_assert_ne!(val, usize::MAX - 1, "Too many instances of a single value!");
     }
 
     #[inline]
-    fn decr_inner(interned: &Interned<T>) {
+    pub fn decr_val(&self, interned: &Interned<T>) {
         let _ = interned
             .refs
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |val| {
@@ -146,35 +146,38 @@ where
 
     /// Get or insert an item into the interner. Note that this takes `O(N)` time with respect
     /// to the number of items in the interner, so avoid calling it in a hot loop if possible.
-    pub fn add<U, V>(&self, val: U) -> InternId
+    pub fn add<U, V>(&self, val: U) -> (InternId, &Interned<T>)
     where
         U: Into<T> + Borrow<V>,
         T: Borrow<V>,
         V: ?Sized + PartialEq,
     {
         let find = Self::find(&self.inner, val.borrow());
-        InternId::from_usize(match find {
+        let (idx, val) = match find {
             Find::Exists((loc1, loc2)) => {
-                Self::incr_inner(&self.inner[loc1][loc2]);
-                loc1 * CHUNK_SIZE + loc2
+                let interned = &self.inner[loc1][loc2];
+                self.incr_val(interned);
+                (loc1 * CHUNK_SIZE + loc2, interned)
             }
             Find::Dead((loc1, loc2)) => {
                 let interned = &self.inner[loc1][loc2];
                 // SAFETY: Slot is dead, we're making it live, we are the only ones with access
                 unsafe { interned.set_val(val.into()) };
                 interned.refs.store(1, Ordering::Release);
-                loc1 * CHUNK_SIZE + loc2
+                (loc1 * CHUNK_SIZE + loc2, interned)
             }
             Find::None => {
                 let len = self
                     .inner
                     .push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
-                Self::incr_inner(&self.inner[len - 1][0]);
+                let interned = &self.inner[len - 1][0];
+                self.incr_val(interned);
                 // SAFETY: Slot is empty, we're making it live, we are the only ones with access
-                unsafe { self.inner[len - 1][0].set_val(val.into()) };
-                (len - 1) * CHUNK_SIZE
+                unsafe { interned.set_val(val.into()) };
+                ((len - 1) * CHUNK_SIZE, interned)
             }
-        })
+        };
+        (InternId(idx), val)
     }
 
     pub fn try_get(&self, offset: InternId) -> Option<&T> {
@@ -187,18 +190,22 @@ where
         }
     }
 
+    pub fn get_val<'a>(&self, val: &'a Interned<T>) -> &'a T {
+        val.val()
+    }
+
     pub fn get(&self, offset: InternId) -> &T {
         self.try_get(offset).expect("Expected valid offset")
     }
 
     pub fn incr(&self, offset: InternId) {
         let (idx1, idx2) = Self::offset_to_idx(offset);
-        Self::incr_inner(&self.inner[idx1][idx2]);
+        self.incr_val(&self.inner[idx1][idx2]);
     }
 
     pub fn decr(&self, offset: InternId) {
         let (idx1, idx2) = Self::offset_to_idx(offset);
-        Self::decr_inner(&self.inner[idx1][idx2]);
+        self.decr_val(&self.inner[idx1][idx2]);
     }
 
     #[allow(dead_code)]
@@ -228,7 +235,7 @@ mod tests {
         run_threaded(
             move || interner,
             |interner, idx| {
-                let pos = interner.add(idx % 10);
+                let (pos, _) = interner.add(idx % 10);
                 assert!(pos.0 < 10, "pos too big: {}", pos.0);
             },
         );
@@ -238,10 +245,10 @@ mod tests {
     fn test_add() {
         let interner = Interner::<i32>::new();
 
-        let pos1 = interner.add(0);
-        let pos2 = interner.add(0);
-        let pos3 = interner.add(1);
-        let pos4 = interner.add(1);
+        let (pos1, _) = interner.add(0);
+        let (pos2, _) = interner.add(0);
+        let (pos3, _) = interner.add(1);
+        let (pos4, _) = interner.add(1);
 
         assert_eq!(pos1, pos2);
         assert_eq!(pos3, pos4);
@@ -253,13 +260,13 @@ mod tests {
         let interner = Interner::<i32>::new();
 
         // Create value
-        let pos1 = interner.add(0);
+        let (pos1, _) = interner.add(0);
         assert_eq!(interner.refcount(pos1.clone()), 1);
         // Kill the location
         interner.decr(pos1.clone());
         assert_eq!(interner.refcount(pos1.clone()), 0);
         // Revive it
-        let pos2 = interner.add(0);
+        let (pos2, _) = interner.add(0);
 
         assert_eq!(pos1, pos2);
         assert_eq!(interner.refcount(pos2), 1);
@@ -269,7 +276,7 @@ mod tests {
     fn test_no_dead() {
         let interner = Interner::<i32>::new();
 
-        let pos1 = interner.add(-1);
+        let (pos1, _) = interner.add(-1);
         interner.decr(pos1.clone());
         assert!(interner.try_get(pos1).is_none());
     }

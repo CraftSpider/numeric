@@ -8,7 +8,7 @@ edition = "2021"
 [features]
 alloc = ["numeric-traits/alloc"]
 std = ["numeric-traits/std", "alloc"]
-ints = ["numeric-ints"]
+ints = ["dep:numeric-ints"]
 
 [dependencies]
 numeric-traits = { path = "../traits", default-features = false }

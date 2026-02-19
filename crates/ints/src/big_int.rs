@@ -8,7 +8,7 @@ use core::borrow::Borrow;
 use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::hint::unreachable_unchecked;
-use core::{fmt, mem, num, ops};
+use core::{fmt, mem, num, ops, ptr};
 use numeric_bits::algos::{
     AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, ShlAlgo, ShrAlgo,
     SubAlgo,
@@ -19,12 +19,13 @@ use numeric_traits::cast::{FromChecked, FromStrRadix};
 use numeric_traits::class::{Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
-use numeric_utils::intern::InternId;
+use numeric_utils::intern::Interned;
 use numeric_utils::{static_assert, static_assert_traits, Interner};
 
 #[macro_use]
 mod macros;
 
+type InternedInt = Interned<Box<[usize]>>;
 static INT_STORE: Interner<Box<[usize]>> = Interner::new();
 
 /// The tag associated with a `TaggedOffset`
@@ -84,42 +85,86 @@ impl TryFrom<usize> for Tag {
     }
 }
 
+enum TaggedVal<'a> {
+    Literal(usize),
+    Big(&'a InternedInt),
+}
+
+impl PartialEq for TaggedVal<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Literal(a), Self::Literal(b)) if a == b => true,
+            (Self::Big(a), Self::Big(b)) if ptr::addr_eq(a, b) => true,
+            _ => false,
+        }
+    }
+}
+
 /// An offset containing a `Tag` in its lower two bits
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct TaggedOffset(usize);
+#[derive(Copy, Clone)]
+union TaggedOffset {
+    val: usize,
+    ptr: *const InternedInt,
+}
 
 impl TaggedOffset {
     #[must_use]
     #[inline]
     pub const fn new(offset: usize, tag: Tag) -> TaggedOffset {
         assert!(offset <= usize::MAX >> 2);
-        TaggedOffset((offset << 2) | (tag as usize))
+        TaggedOffset {
+            val: (offset << 2) | (tag as usize),
+        }
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn new_ptr(r: *const InternedInt, tag: Tag) -> TaggedOffset {
+        assert_eq!(r.addr() % 4, 0, "Pointer has insufficient alignment");
+        TaggedOffset {
+            ptr: r.map_addr(|r| r | (tag as usize)),
+        }
     }
 
     #[must_use]
     #[inline]
     pub const fn invert_neg(self) -> TaggedOffset {
-        TaggedOffset(self.0 ^ 0b1)
+        TaggedOffset {
+            val: unsafe { self.val ^ 0b1 },
+        }
     }
 
     #[must_use]
     #[inline]
-    pub const fn get(self) -> (usize, Tag) {
+    pub fn get(self) -> (TaggedVal<'static>, Tag) {
         (self.offset(), self.tag())
     }
 
     #[must_use]
     #[inline]
-    pub const fn offset(self) -> usize {
-        self.0 >> 2
+    pub fn offset(self) -> TaggedVal<'static> {
+        if self.tag().inline() {
+            TaggedVal::Literal(unsafe { self.val >> 2 })
+        } else {
+            TaggedVal::Big(unsafe { &*self.ptr.map_addr(|a| a & !0b11) })
+        }
     }
 
     #[must_use]
     #[inline]
     pub const fn tag(self) -> Tag {
-        Tag::from_usize_truncate(self.0)
+        Tag::from_usize_truncate(unsafe { self.val })
     }
 }
+
+impl PartialEq for TaggedOffset {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { self.val == other.val }
+    }
+}
+
+unsafe impl Send for TaggedOffset {}
+unsafe impl Sync for TaggedOffset {}
 
 enum MaybeInline<'a> {
     Inline(usize),
@@ -146,10 +191,9 @@ static_assert_traits!(BigInt: Send + Sync);
 impl BigInt {
     #[inline]
     fn val(&self) -> MaybeInline<'_> {
-        if self.is_inline() {
-            MaybeInline::Inline(self.0.offset())
-        } else {
-            MaybeInline::Slice(INT_STORE.get(InternId::from_usize(self.0.offset())))
+        match self.0.offset() {
+            TaggedVal::Literal(val) => MaybeInline::Inline(val),
+            TaggedVal::Big(val) => MaybeInline::Slice(INT_STORE.get_val(val)),
         }
     }
 
@@ -181,9 +225,9 @@ impl BigInt {
     where
         V: Borrow<[usize]> + Into<Box<[usize]>>,
     {
-        let offset = INT_STORE.add::<_, [usize]>(val);
-        BigInt(TaggedOffset::new(
-            offset.into_usize(),
+        let (_, val) = INT_STORE.add::<_, [usize]>(val);
+        BigInt(TaggedOffset::new_ptr(
+            ptr::from_ref(val),
             if neg { Tag::Neg } else { Tag::None },
         ))
     }
@@ -323,9 +367,9 @@ impl LowerHex for BigInt {
 
 impl Clone for BigInt {
     fn clone(&self) -> Self {
-        let (val, tag) = self.0.get();
-        if !tag.inline() {
-            INT_STORE.incr(InternId::from_usize(val));
+        let (val, _) = self.0.get();
+        if let TaggedVal::Big(val) = val {
+            INT_STORE.incr_val(val);
         }
         BigInt(self.0)
     }
@@ -333,9 +377,9 @@ impl Clone for BigInt {
 
 impl Drop for BigInt {
     fn drop(&mut self) {
-        let (val, tag) = self.0.get();
-        if !tag.inline() {
-            INT_STORE.decr(InternId::from_usize(val));
+        let (val, _) = self.0.get();
+        if let TaggedVal::Big(val) = val {
+            INT_STORE.decr_val(val);
         }
     }
 }
@@ -610,7 +654,7 @@ impl Zero for BigInt {
     }
 
     fn is_zero(&self) -> bool {
-        self.0.get() == (0, Tag::Inline)
+        self.0.get() == (TaggedVal::Literal(0), Tag::Inline)
     }
 }
 
@@ -620,7 +664,7 @@ impl One for BigInt {
     }
 
     fn is_one(&self) -> bool {
-        self.0.get() == (1, Tag::Inline)
+        self.0.get() == (TaggedVal::Literal(1), Tag::Inline)
     }
 }
 
