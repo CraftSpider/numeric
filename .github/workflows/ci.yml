@@ -7,7 +7,7 @@ name: Numeric CI
 
 jobs:
   check:
-    name: Numeric Check
+    name: Numeric Check (all features)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,7 +20,7 @@ jobs:
         run: cargo check --workspace --all-targets --all-features
 
   check-none:
-    name: Numeric Check
+    name: Numeric Check (no features)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
