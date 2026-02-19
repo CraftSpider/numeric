@@ -74,15 +74,15 @@ impl TryFrom<usize> for Tag {
 }
 
 enum TaggedVal<'a> {
-    Literal(usize),
-    Big(&'a InternedInt),
+    Inline(usize),
+    Slice(&'a InternedInt),
 }
 
 impl PartialEq for TaggedVal<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Literal(a), Self::Literal(b)) if a == b => true,
-            (Self::Big(a), Self::Big(b)) if ptr::addr_eq(a, b) => true,
+            (Self::Inline(a), Self::Inline(b)) if a == b => true,
+            (Self::Slice(a), Self::Slice(b)) if ptr::addr_eq(a, b) => true,
             _ => false,
         }
     }
@@ -132,9 +132,9 @@ impl TaggedOffset {
     #[inline]
     pub fn offset(self) -> TaggedVal<'static> {
         if self.inline() {
-            TaggedVal::Literal(unsafe { self.val >> 2 })
+            TaggedVal::Inline(unsafe { self.val >> 2 })
         } else {
-            TaggedVal::Big(unsafe { &*self.ptr.map_addr(|a| a & !0b11) })
+            TaggedVal::Slice(unsafe { &*self.ptr.map_addr(|a| a & !0b11) })
         }
     }
 
@@ -192,8 +192,8 @@ impl BigInt {
     #[inline]
     fn val(&self) -> MaybeInline<'_> {
         match self.0.offset() {
-            TaggedVal::Literal(val) => MaybeInline::Inline(val),
-            TaggedVal::Big(val) => MaybeInline::Slice(INT_STORE.get_val(val)),
+            TaggedVal::Inline(val) => MaybeInline::Inline(val),
+            TaggedVal::Slice(val) => MaybeInline::Slice(INT_STORE.get_val(val)),
         }
     }
 
@@ -358,7 +358,7 @@ impl LowerHex for BigInt {
 impl Clone for BigInt {
     fn clone(&self) -> Self {
         let (val, _) = self.0.get();
-        if let TaggedVal::Big(val) = val {
+        if let TaggedVal::Slice(val) = val {
             INT_STORE.incr_val(val);
         }
         BigInt(self.0)
@@ -368,7 +368,7 @@ impl Clone for BigInt {
 impl Drop for BigInt {
     fn drop(&mut self) {
         let (val, _) = self.0.get();
-        if let TaggedVal::Big(val) = val {
+        if let TaggedVal::Slice(val) = val {
             INT_STORE.decr_val(val);
         }
     }
@@ -644,7 +644,7 @@ impl Zero for BigInt {
     }
 
     fn is_zero(&self) -> bool {
-        self.0.get() == (TaggedVal::Literal(0), false)
+        self.0.get() == (TaggedVal::Inline(0), false)
     }
 }
 
@@ -654,7 +654,7 @@ impl One for BigInt {
     }
 
     fn is_one(&self) -> bool {
-        self.0.get() == (TaggedVal::Literal(1), false)
+        self.0.get() == (TaggedVal::Inline(1), false)
     }
 }
 

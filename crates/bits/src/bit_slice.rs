@@ -3,7 +3,7 @@
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use core::iter::Copied;
-use core::{array, mem, slice};
+use core::{array, slice};
 use numeric_traits::class::{BoundedBit, Integral};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::{BitAssignOps, NumAssignOps};

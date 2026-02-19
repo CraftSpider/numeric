@@ -105,7 +105,7 @@ impl<const N: usize> I<N> {
             let digit = u8::from_checked((scratch % base).abs())
                 .expect("Mod base should always be less than 255");
             digits.push(digit);
-            scratch = scratch / base;
+            scratch /= base;
         }
 
         if digits.is_empty() {
@@ -307,7 +307,7 @@ impl<const N: usize> Neg for I<N> {
 
     fn neg(mut self) -> Self::Output {
         self.0 = self.0.map(|v| !v);
-        self = self + Self::one();
+        self += Self::one();
         self
     }
 }
