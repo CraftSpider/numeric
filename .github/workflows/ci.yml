@@ -46,7 +46,7 @@ jobs:
           components: rustfmt
 
       - name: Run rustfmt
-        run: cargo fmt --workspace --all-targets -- --check
+        run: cargo fmt --all -- --check
 
   clippy:
     name: Numeric Clippy
