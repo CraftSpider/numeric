@@ -157,6 +157,42 @@ macro_rules! impl_for_int {
             }
         }
 
+        impl numeric_traits::cast::FromTruncating<$signed> for BigInt {
+            fn truncate_from(val: $signed) -> Self {
+                BigInt::from(val)
+            }
+        }
+
+        impl numeric_traits::cast::FromTruncating<$unsigned> for BigInt {
+            fn truncate_from(val: $unsigned) -> Self {
+                BigInt::from(val)
+            }
+        }
+
+        impl numeric_traits::cast::FromChecked<$signed> for BigInt {
+            fn from_checked(val: $signed) -> Option<Self> {
+                Some(BigInt::from(val))
+            }
+        }
+
+        impl numeric_traits::cast::FromChecked<$unsigned> for BigInt {
+            fn from_checked(val: $unsigned) -> Option<Self> {
+                Some(BigInt::from(val))
+            }
+        }
+
+        impl numeric_traits::cast::FromSaturating<$signed> for BigInt {
+            fn saturate_from(val: $signed) -> Self {
+                BigInt::from(val)
+            }
+        }
+
+        impl numeric_traits::cast::FromSaturating<$unsigned> for BigInt {
+            fn saturate_from(val: $unsigned) -> Self {
+                BigInt::from(val)
+            }
+        }
+
         // Comparison
 
         impl PartialEq<$signed> for BigInt {

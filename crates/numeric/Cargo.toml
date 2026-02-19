@@ -7,11 +7,12 @@ edition = "2021"
 
 [features]
 default = ["std"]
-std = ["numeric-traits/std", "numeric-ints/std", "numeric-reals/std", "numeric-compounds/std"]
+alloc = ["numeric-traits/alloc", "numeric-ints/alloc", "numeric-reals/alloc", "numeric-compounds/alloc"]
+std = ["numeric-traits/std", "numeric-ints/std", "numeric-reals/std", "numeric-compounds/std", "alloc"]
 rand = ["numeric-ints/rand"]
 
 [dependencies]
-numeric-traits = { path = "../traits" }
-numeric-ints = { path = "../ints" }
-numeric-reals = { path = "../reals" }
-numeric-compounds = { path = "../compounds" }
+numeric-traits = { path = "../traits", default-features = false }
+numeric-ints = { path = "../ints", default-features = false }
+numeric-reals = { path = "../reals", default-features = false }
+numeric-compounds = { path = "../compounds", default-features = false }

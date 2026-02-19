@@ -2,13 +2,18 @@
 
 #![allow(unused_variables)]
 
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use core::cmp::Ordering;
 use core::iter::Product;
-use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Rem, Shl, Shr, Sub};
+use core::ops::{
+    Add, AddAssign, BitAnd, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Not, Rem, RemAssign,
+    Shl, Shr, Sub, SubAssign,
+};
 use core::{array, fmt, iter};
-use numeric_bits::algos::{BitwiseDiv, ElementCmp};
-use numeric_bits::algos::{ElementAdd, ElementMul, ElementShl, ElementShr, ElementSub};
+use numeric_bits::algos::{
+    AssignAddAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
+};
+use numeric_bits::algos::{AssignMulAlgo, Element};
 use numeric_bits::utils::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
@@ -37,7 +42,7 @@ pub struct U<const N: usize>([u8; N]);
 static_assert!(size_of::<U<2>>() == 2);
 static_assert!(size_of::<U<4>>() == 4);
 static_assert!(size_of::<U<8>>() == 8);
-static_assert_traits!(U<4>: Send + Sync);
+static_assert_traits!([const N: usize] U<N>: Send + Sync);
 
 impl<const N: usize> U<N> {
     /// Create a new instance containing the default value (0)
@@ -95,7 +100,7 @@ impl<const N: usize> U<N> {
         // This is the simplest way - mod base for digit, div base for next digit
         // It isn't super fast though, so there are probably optimization improvements
         let base: U<N> = base.into_checked().unwrap();
-        let mut digits = Vec::new();
+        let mut digits = ArrayVec::<u8, 255>::new();
         let mut scratch = *self;
 
         while scratch > U::zero() {
@@ -265,9 +270,9 @@ impl<const N: usize> Mul for U<N> {
 
     fn mul(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementMul::mul_checked(&mut self.0, &rhs.0).unwrap();
+        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementMul::mul_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -276,10 +281,12 @@ impl<const N: usize> Div for U<N> {
     type Output = Self;
 
     fn div(mut self, rhs: Self) -> Self::Output {
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
+
         #[cfg(debug_assertions)]
-        BitwiseDiv::div_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
         #[cfg(not(debug_assertions))]
-        BitwiseDiv::div_long_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
         self
     }
 }
@@ -289,9 +296,9 @@ impl<const N: usize> Rem for U<N> {
 
     fn rem(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        BitwiseDiv::rem_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <Bitwise as AssignDivRemAlgo>::rem_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
         #[cfg(not(debug_assertions))]
-        BitwiseDiv::rem_long_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
         self
     }
 }
@@ -352,9 +359,9 @@ impl<const N: usize> Shl for U<N> {
     fn shl(mut self, rhs: Self) -> Self::Output {
         let val: usize = usize::from_checked(rhs).unwrap();
         #[cfg(debug_assertions)]
-        ElementShl::shl_checked(&mut self.0, val).unwrap();
+        <Element as AssignShlAlgo>::checked(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShl::shl_wrapping(&mut self.0, val);
+        <Element as AssignShlAlgo>::wrapping(&mut self.0, val);
         self
     }
 }
@@ -365,9 +372,9 @@ impl<const N: usize> Shr for U<N> {
     fn shr(mut self, rhs: Self) -> Self::Output {
         let val: usize = usize::from_checked(rhs).unwrap();
         #[cfg(debug_assertions)]
-        ElementShr::shr_checked(&mut self.0, val).unwrap();
+        <Element as AssignShrAlgo>::checked(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShr::shr_wrapping(&mut self.0, val);
+        <Element as AssignShrAlgo>::wrapping(&mut self.0, val);
         self
     }
 }
@@ -377,9 +384,9 @@ impl<const N: usize> Shl<usize> for U<N> {
 
     fn shl(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementShl::shl_checked(&mut self.0, rhs).unwrap();
+        <Element as AssignShlAlgo>::checked(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShl::shl_wrapping(&mut self.0, rhs);
+        <Element as AssignShlAlgo>::wrapping(&mut self.0, rhs);
         self
     }
 }
@@ -389,10 +396,40 @@ impl<const N: usize> Shr<usize> for U<N> {
 
     fn shr(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        ElementShr::shr_checked(&mut self.0, rhs).unwrap();
+        <Element as AssignShrAlgo>::checked(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        ElementShr::shr_wrapping(&mut self.0, rhs);
+        <Element as AssignShrAlgo>::wrapping(&mut self.0, rhs);
         self
+    }
+}
+
+impl<const N: usize> AddAssign for U<N> {
+    fn add_assign(&mut self, rhs: Self) {
+        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> SubAssign for U<N> {
+    fn sub_assign(&mut self, rhs: Self) {
+        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> MulAssign for U<N> {
+    fn mul_assign(&mut self, rhs: Self) {
+        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+    }
+}
+
+impl<const N: usize> DivAssign for U<N> {
+    fn div_assign(&mut self, rhs: Self) {
+        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+    }
+}
+
+impl<const N: usize> RemAssign for U<N> {
+    fn rem_assign(&mut self, rhs: Self) {
+        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
     }
 }
 
@@ -422,7 +459,7 @@ impl<const N: usize> PartialOrd for U<N> {
 
 impl<const N: usize> Ord for U<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        ElementCmp::cmp(&self.0, &other.0)
+        <Element as CmpAlgo>::cmp(&self.0, &other.0)
     }
 }
 
@@ -452,7 +489,7 @@ impl<const N: usize> CheckedAdd for U<N> {
     type Output = Self;
 
     fn checked_add(mut self, rhs: Self) -> Option<Self> {
-        ElementAdd::add_checked(&mut self.0, &rhs.0)?;
+        <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -461,7 +498,7 @@ impl<const N: usize> CheckedSub for U<N> {
     type Output = Self;
 
     fn checked_sub(mut self, rhs: Self) -> Option<Self> {
-        ElementSub::sub_checked(&mut self.0, &rhs.0)?;
+        <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -470,7 +507,7 @@ impl<const N: usize> CheckedMul for U<N> {
     type Output = Self;
 
     fn checked_mul(mut self, rhs: Self) -> Option<Self> {
-        ElementMul::mul_checked(&mut self.0, &rhs.0)?;
+        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -479,7 +516,7 @@ impl<const N: usize> CheckedDiv for U<N> {
     type Output = Self;
 
     fn checked_div(mut self, rhs: Self) -> Option<Self> {
-        BitwiseDiv::div_long_checked(&mut self.0, &rhs.0, &mut [0; N])?;
+        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N])?;
         Some(self)
     }
 }
@@ -488,7 +525,7 @@ impl<const N: usize> WrappingAdd for U<N> {
     type Output = Self;
 
     fn wrapping_add(mut self, rhs: Self) -> Self::Output {
-        ElementAdd::add_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -497,7 +534,7 @@ impl<const N: usize> WrappingSub for U<N> {
     type Output = Self;
 
     fn wrapping_sub(mut self, rhs: Self) -> Self::Output {
-        ElementSub::sub_wrapping(&mut self.0, &rhs.0);
+        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
         self
     }
 }
@@ -506,7 +543,7 @@ impl<const N: usize> SaturatingAdd for U<N> {
     type Output = Self;
 
     fn saturating_add(mut self, rhs: Self) -> Self {
-        match ElementAdd::add_checked(&mut self.0, &rhs.0) {
+        match <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::max_value(),
         }
@@ -517,7 +554,7 @@ impl<const N: usize> SaturatingSub for U<N> {
     type Output = Self;
 
     fn saturating_sub(mut self, rhs: Self) -> Self {
-        match ElementSub::sub_checked(&mut self.0, &rhs.0) {
+        match <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::min_value(),
         }
@@ -528,7 +565,7 @@ impl<const N: usize> SaturatingMul for U<N> {
     type Output = Self;
 
     fn saturating_mul(mut self, rhs: Self) -> Self {
-        match ElementMul::mul_checked(&mut self.0, &rhs.0) {
+        match <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::max_value(),
         }
@@ -574,7 +611,7 @@ macro_rules! impl_unsign_cast {
                     Some(<$num>::from_le_bytes(arr))
                 } else {
                     for i in 0..N {
-                        if i <= SIZE {
+                        if i < SIZE {
                             arr[i] = val.0[i];
                         } else {
                             if val.0[i] != 0 {
@@ -610,13 +647,89 @@ macro_rules! impl_unsign_cast {
                 let bytes = val.to_le_bytes();
                 let mut arr = [0; N];
                 if N >= SIZE {
-                    for i in 0..N {
+                    for i in 0..SIZE {
                         arr[i] = bytes[i];
                     }
                     Some(U::from_le_bytes(arr))
                 } else {
+                    for i in 0..SIZE {
+                        if i < N {
+                            arr[i] = bytes[i];
+                        } else {
+                            if bytes[i] != 0 {
+                                return None;
+                            }
+                        }
+                    }
+                    Some(U::from_le_bytes(arr))
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_sign_cast {
+    ($num:ty) => {
+        impl<const N: usize> FromChecked<U<N>> for $num {
+            fn from_checked(val: U<N>) -> Option<Self> {
+                const SIZE: usize = size_of::<$num>();
+                let mut arr = [0; SIZE];
+                if const { N <= SIZE } {
+                    for i in 0..SIZE {
+                        arr[i] = val.0[i];
+                    }
+                    Some(<$num>::from_le_bytes(arr))
+                } else {
                     for i in 0..N {
-                        if i <= N {
+                        if i <= SIZE {
+                            arr[i] = val.0[i];
+                        } else {
+                            if val.0[i] != 0 {
+                                return None;
+                            }
+                        }
+                    }
+                    Some(<$num>::from_le_bytes(arr))
+                }
+            }
+        }
+
+        impl<const N: usize> FromSaturating<U<N>> for $num {
+            fn saturate_from(val: U<N>) -> Self {
+                match <$num>::from_checked(val) {
+                    Some(val) => val,
+                    None => <$num>::MAX,
+                }
+            }
+        }
+
+        impl<const N: usize> FromTruncating<U<N>> for $num {
+            fn truncate_from(val: U<N>) -> Self {
+                const SIZE: usize = size_of::<$num>();
+                let mut arr = [0; SIZE];
+                for i in 0..N {
+                    arr[i] = val.0[i];
+                }
+                <$num>::from_le_bytes(arr)
+            }
+        }
+
+        impl<const N: usize> FromChecked<$num> for U<N> {
+            fn from_checked(val: $num) -> Option<Self> {
+                const SIZE: usize = size_of::<$num>();
+                if val.is_negative() {
+                    return None;
+                }
+                let bytes = val.to_le_bytes();
+                let mut arr = [0; N];
+                if N >= SIZE {
+                    for i in 0..SIZE {
+                        arr[i] = bytes[i];
+                    }
+                    Some(U::from_le_bytes(arr))
+                } else {
+                    for i in 0..SIZE {
+                        if i < N {
                             arr[i] = bytes[i];
                         } else {
                             if bytes[i] != 0 {
@@ -638,9 +751,32 @@ impl_unsign_cast!(u64);
 impl_unsign_cast!(u128);
 impl_unsign_cast!(usize);
 
+impl_sign_cast!(i8);
+impl_sign_cast!(i16);
+impl_sign_cast!(i32);
+impl_sign_cast!(i64);
+impl_sign_cast!(i128);
+impl_sign_cast!(isize);
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
+
+    #[test]
+    fn test_display() {
+        let one: U<1> = U::one();
+        assert_eq!(one.to_string(), "1");
+        let max: U<1> = U::max_value();
+        assert_eq!(max.to_string(), "255");
+        let min: U<1> = U::min_value();
+        assert_eq!(min.to_string(), "0");
+
+        let big: U<5> = U::from_checked(i32::MAX).unwrap();
+        assert_eq!(big.to_string(), "2147483647");
+        let small: U<5> = U::from_checked(u32::MAX).unwrap();
+        assert_eq!(small.to_string(), "4294967295");
+    }
 
     #[test]
     fn test_one() {
@@ -665,7 +801,32 @@ mod tests {
     #[test]
     fn test_add() {
         let one: U<3> = U::one();
+        let zero = U::zero();
         assert_eq!(one + one, U([2, 0, 0]));
+        assert_eq!(one + zero, one);
+        assert_eq!(zero + one, one);
+        assert_eq!(zero + zero, zero);
+    }
+
+    #[test]
+    fn test_sub() {
+        let one: U<3> = U::one();
+        let zero = U::zero();
+        assert_eq!(one - one, zero);
+        assert_eq!(one - zero, one);
+        assert_eq!(zero - zero, zero);
+    }
+
+    #[test]
+    fn test_mul() {
+        let one: U<3> = U::one();
+        let zero = U::zero();
+        let two = one + one;
+
+        assert_eq!(zero * zero, zero);
+        assert_eq!(one * one, one);
+        assert_eq!(one * two, two);
+        assert_eq!(one * zero, zero);
     }
 
     #[test]
@@ -675,5 +836,34 @@ mod tests {
         let ten = U([10, 0, 0]);
         assert_eq!(four / two, U([2, 0, 0]));
         assert_eq!(ten / two, U([5, 0, 0]));
+    }
+
+    #[test]
+    fn test_from_checked() {
+        assert_eq!(U::<1>::from_checked(0u8), Some(U::zero()));
+        assert_eq!(U::<1>::from_checked(255u8), Some(U::max_value()));
+        assert_eq!(U::<1>::from_checked(-1i8), None);
+        assert_eq!(U::<1>::from_checked(-128i8), None);
+        assert_eq!(U::<1>::from_checked(1i8), Some(U::one()));
+        assert_eq!(U::<1>::from_checked(127i8), Some(U([0x7F])));
+
+        assert_eq!(U::<1>::from_checked(0u16), Some(U::zero()));
+        assert_eq!(U::<1>::from_checked(255u16), Some(U::max_value()));
+        assert_eq!(U::<1>::from_checked(256u16), None);
+        assert_eq!(U::<1>::from_checked(u16::MAX), None);
+        assert_eq!(U::<1>::from_checked(-1i16), None);
+        assert_eq!(U::<1>::from_checked(-128i16), None);
+        assert_eq!(U::<1>::from_checked(1i16), Some(U::one()));
+        assert_eq!(U::<1>::from_checked(127i16), Some(U([0x7F])));
+        assert_eq!(U::<1>::from_checked(255i16), Some(U::max_value()));
+        assert_eq!(U::<1>::from_checked(256i16), None);
+        assert_eq!(U::<1>::from_checked(i16::MAX), None);
+
+        assert_eq!(U::<2>::from_checked(0u8), Some(U::zero()));
+        assert_eq!(U::<2>::from_checked(255u8), Some(U([255, 0])));
+        assert_eq!(U::<2>::from_checked(-1i8), None);
+        assert_eq!(U::<2>::from_checked(-128i8), None);
+        assert_eq!(U::<2>::from_checked(1i8), Some(U::one()));
+        assert_eq!(U::<2>::from_checked(127i8), Some(U([0x7F, 0x0])));
     }
 }

@@ -333,6 +333,16 @@ macro_rules! impl_sint {
                 <$ty>::is_negative(*self)
             }
         }
+
+        impl crate::class::BoundedSigned for $ty {
+            fn min_positive() -> Self {
+                1
+            }
+
+            fn max_negative() -> Self {
+                -1
+            }
+        }
     };
 }
 
@@ -366,7 +376,7 @@ impl_sint!(isize);
 
 #[cfg(feature = "std")]
 macro_rules! impl_float {
-    ($ty:ty) => {
+    ($ty:ident) => {
         impl crate::class::Numeric for $ty {}
 
         impl crate::class::Signed for $ty {
@@ -418,6 +428,40 @@ macro_rules! impl_float {
 
         impl crate::class::RealSigned for $ty {}
 
+        impl crate::class::Float for $ty {
+            fn nan() -> Self {
+                <$ty>::NAN
+            }
+
+            fn inf() -> Self {
+                <$ty>::INFINITY
+            }
+
+            fn neg_inf() -> Self {
+                <$ty>::NEG_INFINITY
+            }
+
+            fn epsilon() -> Self {
+                <$ty>::EPSILON
+            }
+
+            fn is_nan(&self) -> bool {
+                <$ty>::is_nan(*self)
+            }
+
+            fn is_inf(&self) -> bool {
+                <$ty>::is_infinite(*self)
+            }
+
+            fn is_normal(&self) -> bool {
+                <$ty>::is_normal(*self)
+            }
+
+            fn classify(&self) -> crate::class::FloatClass {
+                <$ty>::classify(*self).into()
+            }
+        }
+
         impl crate::class::Bounded for $ty {
             #[inline]
             fn max_value() -> Self {
@@ -466,6 +510,16 @@ macro_rules! impl_float {
             }
         }
 
+        impl crate::identity::RealConsts for $ty {
+            fn pi() -> Self {
+                core::$ty::consts::PI
+            }
+
+            fn e() -> Self {
+                core::$ty::consts::E
+            }
+        }
+
         impl crate::ops::Pow for $ty {
             type Output = $ty;
 
@@ -497,6 +551,32 @@ macro_rules! impl_float {
 
             fn cot(self) -> Self {
                 1. / self.tan()
+            }
+        }
+
+        impl crate::ops::HypTrigOps for $ty {
+            fn sinh(self) -> Self {
+                <$ty>::sinh(self)
+            }
+
+            fn cosh(self) -> Self {
+                <$ty>::cosh(self)
+            }
+
+            fn tanh(self) -> Self {
+                <$ty>::tanh(self)
+            }
+
+            fn asinh(self) -> Self {
+                1. / self.sinh()
+            }
+
+            fn acosh(self) -> Self {
+                1. / self.cosh()
+            }
+
+            fn atanh(self) -> Self {
+                1. / self.tanh()
             }
         }
 

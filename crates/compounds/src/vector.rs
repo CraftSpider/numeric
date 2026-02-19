@@ -1,4 +1,4 @@
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::bivec::BiVector;
 use crate::matrix::Matrix;
 use core::array;
@@ -79,7 +79,7 @@ impl<T: Real, const N: usize> Vector<T, N> {
 }
 
 impl<T: RealSigned, const N: usize> Vector<T, N> {
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     #[doc(alias = "exterior")]
     pub fn wedge(lhs: Vector<T, N>, rhs: Vector<T, N>) -> BiVector<T, N> {
         BiVector::new(lhs, rhs)

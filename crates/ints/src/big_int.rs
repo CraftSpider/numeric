@@ -10,8 +10,8 @@ use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::hint::unreachable_unchecked;
 use core::{fmt, mem, num, ops};
 use numeric_bits::algos::{
-    BitwiseDiv, ElementAdd, ElementBitand, ElementBitor, ElementBitxor, ElementMul, ElementNot,
-    ElementShl, ElementShr, ElementSub,
+    AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, ShlAlgo, ShrAlgo,
+    SubAlgo,
 };
 use numeric_bits::bit_slice::BitSliceExt;
 use numeric_bits::utils::*;
@@ -222,7 +222,7 @@ impl BigInt {
             digits.push(0);
         }
 
-        for &d in digits.iter().rev() {
+        for d in digits.iter().rev() {
             w.write_char(chars[d as usize])?;
         }
         Ok(())
@@ -286,7 +286,7 @@ impl Binary for BigInt {
         write!(f, "0b")?;
         self.with_slice(|slice| {
             for idx in (0..slice.bit_len()).rev() {
-                write!(f, "{}", u8::from(slice.get_bit(idx)))?;
+                write!(f, "{}", u8::from(slice.get_bit(idx).unwrap_or(false)))?;
             }
             Ok(())
         })
@@ -434,14 +434,14 @@ impl_op!(add(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, true) | (false, false) => {
-                (ElementAdd::add(this, other), self.is_negative())
+                (<Element as AddAlgo>::long(this, other), self.is_negative())
             }
             (true, _) => {
-                let (out, neg) = ElementSub::sub(this, other);
+                let (out, neg) = <Element as SubAlgo>::long(this, other);
                 (out, neg)
             }
             (_, true) => {
-                let (out, neg) = ElementSub::sub(this, other);
+                let (out, neg) = <Element as SubAlgo>::long(this, other);
                 (out, !neg)
             }
         }
@@ -452,7 +452,7 @@ impl_op!(add(self, rhs) => {
 
 impl_op!(mul(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        ElementMul::mul(this, other)
+        <Element as MulAlgo>::long(this, other)
     });
 
     BigInt::new_slice(out, self.is_negative() != rhs.is_negative())
@@ -462,15 +462,15 @@ impl_op!(sub(self, rhs) => {
     let (out, neg) = BigInt::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, false) | (false, true) => {
-                let out = ElementAdd::add(this, other);
+                let out = <Element as AddAlgo>::long(this, other);
                 (out, self.is_negative())
             }
             (true, true) => {
-                let (out, neg) = ElementSub::sub(this, other);
+                let (out, neg) = <Element as SubAlgo>::long(this, other);
                 (out, neg)
             }
             (false, false) => {
-                let (out, neg) = ElementSub::sub(this, other);
+                let (out, neg) = <Element as SubAlgo>::long(this, other);
                 (out, !neg)
             }
         }
@@ -481,49 +481,58 @@ impl_op!(sub(self, rhs) => {
 
 impl_op!(div(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        BitwiseDiv::div_long(this, other).0
+        <Bitwise as DivRemAlgo>::long(this, other).0
     });
     BigInt::new_slice(out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(rem(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        BitwiseDiv::div_long(this, other).1
+        <Bitwise as DivRemAlgo>::long(this, other).1
     });
     BigInt::new_slice(out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(shl(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, _| {
-        ElementShl::shl(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+        <Element as ShlAlgo>::long(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     BigInt::new_slice(out, self.is_negative())
 });
 
 impl_op!(shr(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, _| {
-        ElementShr::shr(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+        <Element as ShrAlgo>::long(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     BigInt::new_slice(out, self.is_negative())
 });
 
 impl_op!(bitand(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        ElementBitand::bitand(this, other)
+        let len = usize::max(this.len(), other.len());
+        let mut out = alloc::vec![0; len];
+        <Element as BitAlgo>::and(this, other, &mut out);
+        out
     });
     BigInt::new_slice(out, self.is_negative())
 });
 
 impl_op!(bitor(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        ElementBitor::bitor(this, other)
+        let len = usize::max(this.len(), other.len());
+        let mut out = alloc::vec![0; len];
+        <Element as BitAlgo>::or(this, other, &mut out);
+        out
     });
     BigInt::new_slice(out, self.is_negative())
 });
 
 impl_op!(bitxor(self, rhs) => {
     let out = BigInt::with_slices(self, rhs, |this, other| {
-        ElementBitxor::bitxor(this, other)
+        let len = usize::max(this.len(), other.len());
+        let mut out = alloc::vec![0; len];
+        <Element as BitAlgo>::xor(this, other, &mut out);
+        out
     });
     BigInt::new_slice(out, self.is_negative())
 });
@@ -534,7 +543,7 @@ impl ops::Not for BigInt {
     fn not(self) -> Self::Output {
         let out = BigInt::with_slice(&self, |slice| {
             let mut out = slice.to_vec();
-            ElementNot::not(&mut out);
+            <Element as AssignBitAlgo>::not(&mut out);
             out
         });
         BigInt::new_slice(out, self.is_negative())
@@ -750,7 +759,7 @@ mod tests {
         assert_eq!(BigInt::from(10).to_string(), "10");
         assert_eq!(BigInt::from(111).to_string(), "111");
         assert_eq!(
-            BigInt::from(18446744073709551616u128).to_string(),
+            BigInt::from(18_446_744_073_709_551_616u128).to_string(),
             "18446744073709551616"
         );
     }

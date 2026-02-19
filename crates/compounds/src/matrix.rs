@@ -1,11 +1,11 @@
 #[macro_use]
 mod macros;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod dynamic;
 mod refs;
 mod r#static;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use dynamic::DynMatrix;
 pub use r#static::{Matrix, SquareMatrix};
 pub use refs::{MatrixMut, MatrixRef};

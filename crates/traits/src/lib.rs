@@ -2,7 +2,10 @@
 //!
 //! Part of the `numeric` project
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod bytes;
 pub mod cast;

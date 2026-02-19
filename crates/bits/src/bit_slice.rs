@@ -1,15 +1,18 @@
 //! A type for bitwise operations on slices of integers
 
-use core::mem;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+use core::iter::Copied;
+use core::{array, mem, slice};
 use numeric_traits::class::{BoundedBit, Integral};
 use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::core::{BitAssignOps, NumAssignOps};
 use numeric_traits::ops::overflowing::OverflowingOps;
+use numeric_traits::ops::widening::WideningMul;
 
 mod iter;
 
 pub use iter::*;
-use numeric_traits::ops::core::{BitAssignOps, NumAssignOps};
-use numeric_traits::ops::widening::WideningMul;
 
 #[inline]
 fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
@@ -45,23 +48,25 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// The bit container type contained in this slice
     type Bit: BitLike;
 
-    /// Access this item as a slice of its elements
-    fn slice(&self) -> &[Self::Bit];
+    type Iter<'a>: Iterator<Item = Self::Bit> + ExactSizeIterator + DoubleEndedIterator + 'a
+    where
+        Self: 'a;
 
-    /// Access this item as a mutable slice of its elements
-    fn slice_mut(&mut self) -> &mut [Self::Bit];
+    type IterMut<'a>: Iterator<Item = &'a mut Self::Bit>
+        + ExactSizeIterator
+        + DoubleEndedIterator
+        + 'a
+    where
+        Self: 'a;
+
+    // /// Access this item as a mutable slice of its elements
+    // fn slice_mut(&mut self) -> &mut [Self::Bit];
 
     /// Get the length of this slice in terms of [`Self::Bit`]
-    #[inline]
-    fn len(&self) -> usize {
-        self.slice().len()
-    }
+    fn len(&self) -> usize;
 
     /// Whether this slice is empty
-    #[inline]
-    fn is_empty(&self) -> bool {
-        self.slice().is_empty()
-    }
+    fn is_empty(&self) -> bool;
 
     /// Get the length of this slice in bits
     #[inline]
@@ -69,32 +74,18 @@ pub trait BitSliceExt: core::fmt::Debug {
         self.len() * Self::Bit::BIT_LEN
     }
 
-    /// Get the value of an element at a given index, panicking if the index is out of range
-    fn get(&self, idx: usize) -> Self::Bit {
-        self.get_opt(idx).expect("get index in-bounds")
-    }
-
     /// Get the value of an element at a given index, returning `None` if the index is out of
     /// range
-    fn get_opt(&self, idx: usize) -> Option<Self::Bit> {
-        self.slice().get(idx).copied()
-    }
+    fn get(&self, idx: usize) -> Option<Self::Bit>;
 
-    /// Get the value of a bit at a given position, panicking if the index is out of range
-    ///
-    /// # Panics
-    ///
-    /// If `idx` is outside the range of this slice
-    fn get_bit(&self, idx: usize) -> bool {
-        self.get_bit_opt(idx).expect("get_bit index in-bounds")
-    }
+    /// Get a mutable reference to a value at a given index, returning `None` if the index is out
+    /// of range.
+    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit>;
 
     /// Get the value of a bit at a given index, returning `None` if the index is out of range
-    fn get_bit_opt(&self, idx: usize) -> Option<bool> {
+    fn get_bit(&self, idx: usize) -> Option<bool> {
         let (idx, bit) = idx_bit::<Self>(idx);
-        self.slice()
-            .get(idx)
-            .copied()
+        self.get(idx)
             .map(|val| val & (<Self::Bit as One>::one() << bit) != <Self::Bit as Zero>::zero())
     }
 
@@ -111,7 +102,7 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// Set a single value by index on this slice, returning `None` if the index is out of range
     #[must_use]
     fn set_opt(&mut self, idx: usize, val: Self::Bit) -> Option<()> {
-        self.slice_mut().get_mut(idx).map(|cur| {
+        self.get_mut(idx).map(|cur| {
             *cur = val;
         })
     }
@@ -131,7 +122,7 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// Set a single bit by index on this slice, returning `None` if the index is out of range
     fn set_bit_opt(&mut self, idx: usize, val: bool) -> Option<()> {
         let (idx, bit) = idx_bit::<Self>(idx);
-        self.slice_mut().get_mut(idx).map(|item| {
+        self.get_mut(idx).map(|item| {
             *item &= !(Self::Bit::one() << bit);
             if val {
                 *item |= Self::Bit::one() << bit;
@@ -151,52 +142,135 @@ pub trait BitSliceExt: core::fmt::Debug {
         let _ = self.set_bit_opt(pos, val);
     }
 
+    fn iter(&self) -> Self::Iter<'_>;
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_>;
+
     /// Get an iterator over the bit values of this slice
-    fn iter_bits(&self) -> BitIter<'_, Self::Bit> {
-        BitIter::new(self.slice())
+    fn iter_bits(&self) -> BitIter<Self::Iter<'_>> {
+        BitIter::new(self.iter())
     }
 }
 
 impl<I: BitLike> BitSliceExt for [I] {
     type Bit = I;
 
+    type Iter<'a>
+        = Copied<slice::Iter<'a, Self::Bit>>
+    where
+        Self: 'a;
+
+    type IterMut<'a>
+        = slice::IterMut<'a, Self::Bit>
+    where
+        Self: 'a;
+
     #[inline]
-    fn slice(&self) -> &[Self::Bit] {
-        self
+    fn len(&self) -> usize {
+        self.len()
     }
 
     #[inline]
-    fn slice_mut(&mut self) -> &mut [Self::Bit] {
-        self
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        self.iter().copied()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        self.iter_mut()
+    }
+
+    fn get(&self, idx: usize) -> Option<Self::Bit> {
+        self.get(idx).copied()
+    }
+
+    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
+        self.get_mut(idx)
     }
 }
 
 impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
     type Bit = I;
 
+    type Iter<'a>
+        = array::IntoIter<Self::Bit, N>
+    where
+        Self: 'a;
+
+    type IterMut<'a>
+        = slice::IterMut<'a, Self::Bit>
+    where
+        Self: 'a;
+
     #[inline]
-    fn slice(&self) -> &[Self::Bit] {
-        self
+    fn len(&self) -> usize {
+        N
     }
 
     #[inline]
-    fn slice_mut(&mut self) -> &mut [Self::Bit] {
-        self
+    fn is_empty(&self) -> bool {
+        N == 0
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        (*self).into_iter()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        #[allow(clippy::into_iter_on_ref)]
+        self.into_iter()
+    }
+
+    fn get(&self, idx: usize) -> Option<Self::Bit> {
+        <[I]>::get(self, idx).copied()
+    }
+
+    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
+        <[I]>::get_mut(self, idx)
     }
 }
 
-#[cfg(feature = "std")]
-impl<I: BitLike> BitSliceExt for alloc::vec::Vec<I> {
+#[cfg(feature = "alloc")]
+impl<I: BitLike> BitSliceExt for Vec<I> {
     type Bit = I;
 
+    type Iter<'a>
+        = Copied<slice::Iter<'a, Self::Bit>>
+    where
+        Self: 'a;
+
+    type IterMut<'a>
+        = slice::IterMut<'a, Self::Bit>
+    where
+        Self: 'a;
+
     #[inline]
-    fn slice(&self) -> &[Self::Bit] {
-        self
+    fn len(&self) -> usize {
+        self.len()
     }
 
     #[inline]
-    fn slice_mut(&mut self) -> &mut [Self::Bit] {
-        self
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        <&[I]>::into_iter(self).copied()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        <&mut [I]>::into_iter(self)
+    }
+
+    fn get(&self, idx: usize) -> Option<Self::Bit> {
+        <[I]>::get(self, idx).copied()
+    }
+
+    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
+        <[I]>::get_mut(self, idx)
     }
 }
 
@@ -220,8 +294,8 @@ pub trait BitVecExt: BitSliceExt {
     }
 }
 
-#[cfg(feature = "std")]
-impl<I: BitLike> BitVecExt for alloc::vec::Vec<I> {
+#[cfg(feature = "alloc")]
+impl<I: BitLike> BitVecExt for Vec<I> {
     fn extend(&mut self, len: usize, val: Self::Bit) {
         if len > self.len() {
             self.resize(len, val);
@@ -232,6 +306,7 @@ impl<I: BitLike> BitVecExt for alloc::vec::Vec<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "alloc")]
     use alloc::vec;
 
     #[test]
@@ -245,22 +320,23 @@ mod tests {
 
     #[test]
     fn test_get_bit() {
-        let slice = &[0b1010101010101010u16, 0b1010101010101010];
+        let slice = &[0b1010_1010_1010_1010u16, 0b1010_1010_1010_1010];
         for idx in 0..32 {
-            let b = slice.get_bit(idx);
+            let b = slice.get_bit(idx).unwrap();
             assert_eq!(b, (idx % 2) != 0);
         }
     }
 
     #[test]
     fn test_set_bit() {
-        let mut data = [0b1010101010101010u16, 0b1010101010101010];
+        let mut data = [0b1010_1010_1010_1010u16, 0b1010_1010_1010_1010];
         let slice = &mut data;
         slice.set_bit(0, true);
         slice.set_bit(31, false);
-        assert_eq!(slice, &[0b1010101010101011, 0b0010101010101010])
+        assert_eq!(slice, &[0b1010_1010_1010_1011, 0b0010_1010_1010_1010])
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_extend() {
         let mut data = vec![0u8; 1];

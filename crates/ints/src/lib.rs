@@ -4,17 +4,17 @@
 //! Unbounded, or 'big' integers, are only available on crate feature `alloc`.
 
 #![no_std]
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod big_int;
 mod i;
 mod u;
 // #[cfg(test)]
 // mod tests;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use big_int::BigInt;
 pub use i::I;
 pub use u::U;

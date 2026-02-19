@@ -42,7 +42,7 @@ pub trait Gcd<Rhs = Self> {
 
 /// The common trigonometric operators. These can be understood geometrically as
 /// various values for a given angle in relation to the unit circle (a circle of radius 1).
-/// Each of the common functions has an
+/// Each of the common functions has an inverse equivalent.
 ///
 /// The following is a graphical representation of the various trigonometric functions on a circle:
 /// ![](https://upload.wikimedia.org/wikipedia/commons/4/46/Unit_Circle_Definitions_of_Six_Trigonometric_Functions.svg)
@@ -101,8 +101,8 @@ pub trait TrigOps {
     /// Equal to the side adjacent to the given angle over the side opposite the given angle.
     ///
     /// ## Unit-circle
-    /// The length where the ray from the center of the unit circle to its edge at a given angle has
-    /// a Y value equal to 1.
+    /// The length where the ray from the center of the unit circle towards its edge at a given
+    /// angle has a Y value equal to 1.
     fn cot(self) -> Self;
 }
 

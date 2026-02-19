@@ -45,12 +45,11 @@ macro_rules! impl_snz {
             }
 
             fn is_positive(&self) -> bool {
-                self.get().is_positive()
+                <$ty>::is_positive(*self)
             }
 
             fn is_negative(&self) -> bool {
-                // TODO: Change once nonzero_negation_ops stabilizes
-                self.get().is_negative()
+                <$ty>::is_negative(*self)
             }
         }
 

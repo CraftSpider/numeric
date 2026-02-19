@@ -6,10 +6,11 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-std = ["numeric-traits/std"]
+alloc = ["numeric-traits/alloc"]
+std = ["numeric-traits/std", "alloc"]
 ints = ["numeric-ints"]
 
 [dependencies]
-numeric-traits = { path = "../traits" }
-numeric-utils = { path = "../utils" }
-numeric-ints = { path = "../ints", optional = true }
+numeric-traits = { path = "../traits", default-features = false }
+numeric-utils = { path = "../utils", default-features = false }
+numeric-ints = { path = "../ints", optional = true, default-features = false }

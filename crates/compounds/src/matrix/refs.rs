@@ -1,4 +1,6 @@
-use crate::matrix::{DynMatrix, Matrix};
+#[cfg(feature = "alloc")]
+use crate::matrix::DynMatrix;
+use crate::matrix::Matrix;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
@@ -57,7 +59,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a Matrix<T, ROW, COL>> fo
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl<'a, T> From<&'a DynMatrix<T>> for MatrixRef<'a, T> {
     fn from(value: &'a DynMatrix<T>) -> Self {
         MatrixRef::new(value.as_ptr(), value.rows(), value.cols())
@@ -106,7 +108,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl<'a, T> From<&'a mut DynMatrix<T>> for MatrixMut<'a, T> {
     fn from(value: &'a mut DynMatrix<T>) -> Self {
         MatrixMut::new(value.as_mut_ptr(), value.rows(), value.cols())

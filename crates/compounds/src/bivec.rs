@@ -74,8 +74,8 @@ mod tests {
         assert_eq!(choose_n(3, 2), 3);
         assert_eq!(choose_n(4, 2), 6);
         assert_eq!(choose_n(25, 2), 300);
-        assert_eq!(choose_n(23, 17), 100947);
-        assert_eq!(choose_n(1000000000, 2), 499999999500000000);
+        assert_eq!(choose_n(23, 17), 100_947);
+        assert_eq!(choose_n(1_000_000_000, 2), 499_999_999_500_000_000);
     }
 
     #[test]

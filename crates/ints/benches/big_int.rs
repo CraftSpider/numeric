@@ -1,4 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use core::hint::black_box;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
 use numeric_ints::BigInt;
 use numeric_traits::ops::Pow;
