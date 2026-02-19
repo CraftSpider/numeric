@@ -39,7 +39,7 @@ impl<
             + Copy,
     > BitLike for T
 {
-    const BIT_LEN: usize = mem::size_of::<T>() * 8;
+    const BIT_LEN: usize = size_of::<T>() * 8;
 }
 
 /// Trait for things that can be considered slices of bits. This includes slices obviously, as well

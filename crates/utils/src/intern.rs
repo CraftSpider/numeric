@@ -53,7 +53,7 @@ impl<T> Interned<T> {
 #[repr(transparent)]
 pub struct InternId(usize);
 
-static_assert!(mem::size_of::<InternId>() == mem::size_of::<usize>());
+static_assert!(size_of::<InternId>() == size_of::<usize>());
 
 impl InternId {
     pub fn from_usize(val: usize) -> InternId {

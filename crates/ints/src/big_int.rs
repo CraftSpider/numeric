@@ -8,7 +8,7 @@ use core::borrow::Borrow;
 use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::hint::unreachable_unchecked;
-use core::{fmt, mem, num, ops, ptr};
+use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
     AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, ShlAlgo, ShrAlgo,
     SubAlgo,
@@ -185,7 +185,7 @@ impl MaybeInline<'_> {
 /// many bytes the running computer can reasonably hold in memory.
 pub struct BigInt(TaggedOffset);
 
-static_assert!(mem::size_of::<BigInt>() == mem::size_of::<usize>());
+static_assert!(size_of::<BigInt>() == size_of::<usize>());
 static_assert_traits!(BigInt: Send + Sync);
 
 impl BigInt {
@@ -454,7 +454,7 @@ impl OutOfRangeError {
 }
 
 const fn arr_size<T>() -> usize {
-    (mem::size_of::<T>() / mem::size_of::<usize>()) + 1
+    (size_of::<T>() / size_of::<usize>()) + 1
 }
 
 impl_for_int!(i8, u8);
