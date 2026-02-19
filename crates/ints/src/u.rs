@@ -107,7 +107,7 @@ impl<const N: usize> U<N> {
             let digit =
                 u8::from_checked(scratch % base).expect("Mod base should always be less than 255");
             digits.push(digit);
-            scratch = scratch / base;
+            scratch /= base;
         }
 
         if digits.is_empty() {

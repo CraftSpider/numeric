@@ -1,6 +1,5 @@
 use core::borrow::Borrow;
 use core::cell::UnsafeCell;
-use core::mem;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::linked::UnsyncLinked;

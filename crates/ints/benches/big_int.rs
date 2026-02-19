@@ -146,7 +146,7 @@ pub fn bench_stress(c: &mut Criterion) {
     let mut cur = max;
     for _ in 0..1000 {
         vec.push(cur.clone());
-        cur = cur + BigInt::one();
+        cur += BigInt::one();
     }
 
     let one = BigInt::one();
@@ -155,7 +155,7 @@ pub fn bench_stress(c: &mut Criterion) {
     c.benchmark_group("BigInt stress").bench_with_input(
         BenchmarkId::new("add", "<large>, 1"),
         &(one, r),
-        |b, (one, &ref r)| b.iter(|| black_box(r) + black_box(one)),
+        |b, (one, r)| b.iter(|| black_box(*r) + black_box(one)),
     );
 }
 
