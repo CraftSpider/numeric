@@ -4,8 +4,10 @@ use rand::prelude::{Distribution, Rng};
 use rand::Fill;
 
 impl<const N: usize> Fill for I<N> {
-    fn fill<R: Rng + ?Sized>(&mut self, rng: &mut R) {
-        self.0.fill(rng)
+    fn fill_slice<R: Rng + ?Sized>(val: &mut [Self], rng: &mut R) {
+        for v in val {
+            u8::fill_slice(&mut v.0, rng)
+        }
     }
 }
 
