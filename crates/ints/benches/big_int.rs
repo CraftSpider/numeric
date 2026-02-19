@@ -2,6 +2,7 @@ use core::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
 use numeric_ints::BigInt;
+use numeric_traits::identity::One;
 use numeric_traits::ops::Pow;
 
 pub fn bench_from(c: &mut Criterion) {
@@ -139,9 +140,28 @@ pub fn bench_shl(c: &mut Criterion) {
         );
 }
 
+pub fn bench_stress(c: &mut Criterion) {
+    let max = BigInt::from(usize::MAX);
+    let mut vec = Vec::new();
+    let mut cur = max;
+    for _ in 0..1000 {
+        vec.push(cur.clone());
+        cur = cur + BigInt::one();
+    }
+
+    let one = BigInt::one();
+    let r = vec.last().unwrap();
+
+    c.benchmark_group("BigInt stress").bench_with_input(
+        BenchmarkId::new("add", "<large>, 1"),
+        &(one, r),
+        |b, (one, &ref r)| b.iter(|| black_box(r) + black_box(one)),
+    );
+}
+
 criterion_group!(
     name = benches;
     config = make_criterion();
-    targets = bench_from, bench_clone, bench_add, bench_sub, bench_mul, bench_div, bench_shl
+    targets = bench_from, bench_clone, bench_add, bench_sub, bench_mul, bench_div, bench_shl, bench_stress
 );
 criterion_main!(benches);
