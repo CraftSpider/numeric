@@ -56,18 +56,6 @@ impl Tag {
             _ => unreachable_unchecked(),
         }
     }
-
-    #[must_use]
-    #[inline]
-    pub const fn inline(self) -> bool {
-        matches!(self, Tag::Inline | Tag::InlineNeg)
-    }
-
-    #[must_use]
-    #[inline]
-    pub const fn negative(self) -> bool {
-        matches!(self, Tag::Neg | Tag::InlineNeg)
-    }
 }
 
 impl TryFrom<usize> for Tag {
@@ -110,44 +98,56 @@ union TaggedOffset {
 impl TaggedOffset {
     #[must_use]
     #[inline]
-    pub const fn new(offset: usize, tag: Tag) -> TaggedOffset {
+    pub const fn new(offset: usize, neg: bool) -> TaggedOffset {
         assert!(offset <= usize::MAX >> 2);
         TaggedOffset {
-            val: (offset << 2) | (tag as usize),
+            val: (offset << 2) | 2 | (neg as usize),
         }
     }
 
     #[must_use]
     #[inline]
-    pub fn new_ptr(r: *const InternedInt, tag: Tag) -> TaggedOffset {
+    pub fn new_ptr(r: *const InternedInt, neg: bool) -> TaggedOffset {
         assert_eq!(r.addr() % 4, 0, "Pointer has insufficient alignment");
         TaggedOffset {
-            ptr: r.map_addr(|r| r | (tag as usize)),
+            ptr: r.map_addr(|r| r | neg as usize),
         }
     }
 
     #[must_use]
     #[inline]
-    pub const fn invert_neg(self) -> TaggedOffset {
+    pub fn invert_neg(self) -> TaggedOffset {
         TaggedOffset {
-            val: unsafe { self.val ^ 0b1 },
+            ptr: unsafe { self.ptr.map_addr(|a| a ^ 0b1) },
         }
     }
 
     #[must_use]
     #[inline]
-    pub fn get(self) -> (TaggedVal<'static>, Tag) {
-        (self.offset(), self.tag())
+    pub fn get(self) -> (TaggedVal<'static>, bool) {
+        (self.offset(), self.negative())
     }
 
     #[must_use]
     #[inline]
     pub fn offset(self) -> TaggedVal<'static> {
-        if self.tag().inline() {
+        if self.inline() {
             TaggedVal::Literal(unsafe { self.val >> 2 })
         } else {
             TaggedVal::Big(unsafe { &*self.ptr.map_addr(|a| a & !0b11) })
         }
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn inline(self) -> bool {
+        unsafe { self.val & 0b10 != 0 }
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn negative(self) -> bool {
+        unsafe { self.val & 0b1 != 0 }
     }
 
     #[must_use]
@@ -211,14 +211,7 @@ impl BigInt {
 
     #[inline]
     const fn new_inline(val: usize, neg: bool) -> BigInt {
-        BigInt(TaggedOffset::new(
-            val,
-            if val != 0 && neg {
-                Tag::InlineNeg
-            } else {
-                Tag::Inline
-            },
-        ))
+        BigInt(TaggedOffset::new(val, val != 0 && neg))
     }
 
     fn new_intern<V>(val: V, neg: bool) -> BigInt
@@ -226,10 +219,7 @@ impl BigInt {
         V: Borrow<[usize]> + Into<Box<[usize]>>,
     {
         let (_, val) = INT_STORE.add::<_, [usize]>(val);
-        BigInt(TaggedOffset::new_ptr(
-            ptr::from_ref(val),
-            if neg { Tag::Neg } else { Tag::None },
-        ))
+        BigInt(TaggedOffset::new_ptr(ptr::from_ref(val), neg))
     }
 
     fn new_slice<V>(val: V, neg: bool) -> BigInt
@@ -276,14 +266,14 @@ impl BigInt {
     #[must_use]
     #[inline]
     pub const fn is_inline(&self) -> bool {
-        self.0.tag().inline()
+        self.0.inline()
     }
 
     /// Check whether this value is stored in the global interner
     #[must_use]
     #[inline]
     pub const fn is_interned(&self) -> bool {
-        !self.0.tag().inline()
+        !self.0.inline()
     }
 
     /// Generate an approximation of this value as a float
@@ -394,7 +384,7 @@ impl PartialEq for BigInt {
     fn eq(&self, other: &Self) -> bool {
         if self.0 == other.0 {
             true
-        } else if self.0.tag() == other.0.tag() && !self.0.tag().inline() {
+        } else if self.0.tag() == other.0.tag() && !self.0.inline() {
             Self::with_slices(self, other, |this, other| this == other)
         } else {
             false
@@ -654,7 +644,7 @@ impl Zero for BigInt {
     }
 
     fn is_zero(&self) -> bool {
-        self.0.get() == (TaggedVal::Literal(0), Tag::Inline)
+        self.0.get() == (TaggedVal::Literal(0), false)
     }
 }
 
@@ -664,7 +654,7 @@ impl One for BigInt {
     }
 
     fn is_one(&self) -> bool {
-        self.0.get() == (TaggedVal::Literal(1), Tag::Inline)
+        self.0.get() == (TaggedVal::Literal(1), false)
     }
 }
 
@@ -749,11 +739,11 @@ impl Signed for BigInt {
     // }
 
     fn is_positive(&self) -> bool {
-        !self.0.tag().negative()
+        !self.0.negative()
     }
 
     fn is_negative(&self) -> bool {
-        self.0.tag().negative()
+        self.0.negative()
     }
 }
 
