@@ -761,8 +761,10 @@ impl_sign_cast!(isize);
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "alloc")]
     use alloc::string::ToString;
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_display() {
         let one: U<1> = U::one();

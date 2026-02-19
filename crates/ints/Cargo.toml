@@ -26,3 +26,4 @@ numeric-bench-util = { path = "../bench-util" }
 [[bench]]
 name = "big_int"
 harness = false
+required-features = ["alloc"]

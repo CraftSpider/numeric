@@ -374,9 +374,9 @@ impl_sint!(i64);
 impl_sint!(i128);
 impl_sint!(isize);
 
-#[cfg(feature = "std")]
 macro_rules! impl_float {
     ($ty:ident) => {
+        #[cfg(feature = "std")]
         impl crate::class::Numeric for $ty {}
 
         impl crate::class::Signed for $ty {
@@ -396,6 +396,7 @@ macro_rules! impl_float {
             }
         }
 
+        #[cfg(feature = "std")]
         impl crate::class::Real for $ty {
             fn floor(self) -> Self {
                 <$ty>::floor(self)
@@ -426,8 +427,10 @@ macro_rules! impl_float {
             }
         }
 
+        #[cfg(feature = "std")]
         impl crate::class::RealSigned for $ty {}
 
+        #[cfg(feature = "std")]
         impl crate::class::Float for $ty {
             fn nan() -> Self {
                 <$ty>::NAN
@@ -520,6 +523,7 @@ macro_rules! impl_float {
             }
         }
 
+        #[cfg(feature = "std")]
         impl crate::ops::Pow for $ty {
             type Output = $ty;
 
@@ -528,6 +532,7 @@ macro_rules! impl_float {
             }
         }
 
+        #[cfg(feature = "std")]
         impl crate::ops::TrigOps for $ty {
             fn sin(self) -> Self {
                 <$ty>::sin(self)
@@ -554,6 +559,7 @@ macro_rules! impl_float {
             }
         }
 
+        #[cfg(feature = "std")]
         impl crate::ops::HypTrigOps for $ty {
             fn sinh(self) -> Self {
                 <$ty>::sinh(self)
@@ -598,9 +604,7 @@ macro_rules! impl_float {
     };
 }
 
-#[cfg(feature = "std")]
 impl_float!(f32);
-#[cfg(feature = "std")]
 impl_float!(f64);
 
 macro_rules! saturate_uint_impl {

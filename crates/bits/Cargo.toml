@@ -23,7 +23,9 @@ pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
 [[bench]]
 name = "bit_slice"
 harness = false
+required-features = ["alloc"]
 
 [[bench]]
 name = "utils"
 harness = false
+required-features = ["alloc"]
