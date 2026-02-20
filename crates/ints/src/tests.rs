@@ -1,14 +1,14 @@
 use std::fmt;
 use numeric_traits::class::{Integral, Signed};
 use numeric_traits::cast::FromPrim;
-use crate::{BigInt, U, I};
+use crate::{IBig, U, I};
 
 trait TestInt: fmt::Debug + Clone + Integral + FromPrim {}
 impl<T: fmt::Debug + Clone + Integral + FromPrim> TestInt for T {}
 
 #[test]
 fn test_big_int() {
-    test_int_signed::<BigInt>();
+    test_int_signed::<IBig>();
 }
 
 #[test]

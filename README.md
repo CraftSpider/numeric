@@ -8,21 +8,21 @@ toolbox for many kinds of mathematical work in Rust.
 ## Features
 
 - Extended integer types
-  - `U<N>` - N-byte unsigned integer
-  - `I<N>` - N-byte signed integer
-  - `BigInt` - Unbounded signed integer
+    - `U<N>` - N-byte unsigned integer
+    - `I<N>` - N-byte signed integer
+    - `IBig` - Unbounded signed integer
 - Extended real-valued types
-  - `F<N>` - N-byte floating point value
-  - `P<N>` - N-byte posit value
-  - `Fixed<T, N>` - N-**bit** fixed point value stored as integer `T`
-  - `Rat<T>` - Real value number stored as integer `T / T`
+    - `F<N>` - N-byte floating point value
+    - `P<N>` - N-byte posit value
+    - `Fixed<T, N>` - N-**bit** fixed point value stored as integer `T`
+    - `Rat<T>` - Real value number stored as integer `T / T`
 - Compounds, Matrices, and more
-  - All `T` represent a numeric type of minimal bounds to be useful.
-  - `Vec<T, N>` - N long vector
-  - `Matrix<T, N, M>` - NxM matrix
-  - `Complex<T>` - Imaginary value
-  - `Rotor<T, N>` - N-dimension rotor
-  - `BiVector<T, N>` - N-dimension bivector
+    - All `T` represent a numeric type of minimal bounds to be useful.
+    - `Vec<T, N>` - N long vector
+    - `Matrix<T, N, M>` - NxM matrix
+    - `Complex<T>` - Imaginary value
+    - `Rotor<T, N>` - N-dimension rotor
+    - `BiVector<T, N>` - N-dimension bivector
 
 ## FAQ
 
@@ -42,17 +42,11 @@ eventually, to allow other crates that use it to support `numeric` types transpa
 
 ## Design Thoughts
 
-### Ideas
-
-- Replace TaggedOffset with a TaggedPtr into the linked list
-- Use fetch_add in interner adder to prevent race conditions
-- Maybe we should change `BigInt` to `IBig` for consistency, and a potential future `UBig`.
-
 ### Even More Number Types
 
 - P-adics
-  - How do these get represented? Every useful one is infinite
-  - May be useful to work with truncated representations, as long as they can produce outputs
+    - How do these get represented? Every useful one is infinite
+    - May be useful to work with truncated representations, as long as they can produce outputs
 
 ### Other Math Stuff
 
