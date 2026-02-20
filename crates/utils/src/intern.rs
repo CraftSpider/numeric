@@ -76,7 +76,11 @@ impl<T> Interned<T> {
         }
     }
 
-    /// Get a reference to the value. Panics if the value is dead (refcount is zero).
+    /// Get a reference to the value.
+    ///
+    /// # Panics
+    ///
+    /// If the value is dead (refcount is zero).
     pub fn get(&self) -> &T {
         if self.refs.load(Ordering::Relaxed) == 0 {
             panic!("Attempted to get value of dead interned value");

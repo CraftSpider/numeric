@@ -110,7 +110,7 @@ impl TaggedOffset {
     pub fn new_ptr(r: *const InternedInt, neg: bool) -> TaggedOffset {
         assert_eq!(r.addr() % 4, 0, "Pointer has insufficient alignment");
         TaggedOffset {
-            ptr: r.map_addr(|r| r | neg as usize),
+            ptr: r.map_addr(|r| r | usize::from(neg)),
         }
     }
 
