@@ -1,9 +1,9 @@
 #[cfg(feature = "alloc")]
 use crate::algos::{AddAlgo, ShlAlgo};
 use crate::algos::{AssignMulAlgo, Bitwise, Element, MulAlgo};
-use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
-use crate::utils::IntSlice;
+use crate::array::IntSlice;
+use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};

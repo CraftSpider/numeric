@@ -13,7 +13,7 @@ use numeric_bits::algos::{
     AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
     Bitwise, Element,
 };
-use numeric_bits::utils::const_reverse;
+use numeric_bits::array::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
 use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Signed};

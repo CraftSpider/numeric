@@ -1,9 +1,9 @@
 use crate::algos::{AssignShlAlgo, AssignShrAlgo, Bitwise, Element, ShlAlgo, ShrAlgo};
 #[cfg(feature = "alloc")]
+use crate::array::IntSlice;
+#[cfg(feature = "alloc")]
 use crate::bit_slice::BitVecExt;
 use crate::bit_slice::{BitLike, BitSliceExt};
-#[cfg(feature = "alloc")]
-use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::class::Bounded;
