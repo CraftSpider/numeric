@@ -21,4 +21,4 @@ missing_docs = "warn"
 [workspace.lints.clippy]
 ptr_as_ptr = "warn"
 unreadable_literal = "warn"
-#undocumented_unsafe_blocks = "warn"
+undocumented_unsafe_blocks = "warn"
