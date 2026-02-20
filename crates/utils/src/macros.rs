@@ -1,3 +1,4 @@
+/// Create a static assertion, failing compilation if the expression is false.
 #[macro_export]
 macro_rules! static_assert {
     ($expr:expr) => {
@@ -8,6 +9,16 @@ macro_rules! static_assert {
     };
 }
 
+/// Create a static assertion that a type implements a set of traits. Generics can be used to ensure
+/// the type blanket implements the trait.
+///
+/// # Examples
+/// ```
+/// # use numeric_utils::static_assert_traits;
+/// # use std::fmt::Debug;
+/// static_assert_traits!(u8: Send + Sync);
+/// static_assert_traits!([T: Debug] Vec<T>: Debug);
+/// ```
 #[macro_export]
 macro_rules! static_assert_traits {
     ([$($bounds:tt)*] $ty:ty: $( $traits:tt )*) => {

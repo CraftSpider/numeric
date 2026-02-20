@@ -193,7 +193,7 @@ impl BigInt {
     fn val(&self) -> MaybeInline<'_> {
         match self.0.offset() {
             TaggedVal::Inline(val) => MaybeInline::Inline(val),
-            TaggedVal::Slice(val) => MaybeInline::Slice(INT_STORE.get(val)),
+            TaggedVal::Slice(val) => MaybeInline::Slice(val.get()),
         }
     }
 
@@ -359,7 +359,7 @@ impl Clone for BigInt {
     fn clone(&self) -> Self {
         let (val, _) = self.0.get();
         if let TaggedVal::Slice(val) = val {
-            INT_STORE.incr_val(val);
+            val.incr();
         }
         BigInt(self.0)
     }
@@ -369,7 +369,7 @@ impl Drop for BigInt {
     fn drop(&mut self) {
         let (val, _) = self.0.get();
         if let TaggedVal::Slice(val) = val {
-            INT_STORE.decr_val(val);
+            val.decr();
         }
     }
 }

@@ -1,3 +1,5 @@
+//! Simple interner used by the default big integer implementation in `numeric-ints`.
+
 use core::borrow::Borrow;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -12,6 +14,7 @@ enum Find<T> {
     None,
 }
 
+/// An interned value. Must be dereferenced through the original `Interner` instance currently.
 pub struct Interned<T> {
     refs: AtomicUsize,
     val: UnsafeCell<Option<T>>,
@@ -45,9 +48,46 @@ impl<T> Interned<T> {
     unsafe fn set_val(&self, val: T) {
         *self.val.get() = Some(val);
     }
+
+    /// Increment the reference count of an interned value.
+    #[inline]
+    pub fn incr(&self) {
+        let val = self.refs.fetch_add(1, Ordering::AcqRel);
+        debug_assert_ne!(val, usize::MAX - 1, "Too many instances of a single value!");
+    }
+
+    /// Decrement the reference count of an interned value.
+    #[inline]
+    pub fn decr(&self) {
+        let _ = self
+            .refs
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |val| {
+                val.checked_sub(1)
+            });
+    }
+
+    /// Attempt to get a reference to the value. Returns `None` if the value is dead (refcount is
+    /// zero).
+    pub fn try_get(&self) -> Option<&T> {
+        if self.refs.load(Ordering::Relaxed) == 0 {
+            None
+        } else {
+            Some(self.val())
+        }
+    }
+
+    /// Get a reference to the value. Panics if the value is dead (refcount is zero).
+    pub fn get(&self) -> &T {
+        if self.refs.load(Ordering::Relaxed) == 0 {
+            panic!("Attempted to get value of dead interned value");
+        } else {
+            self.val()
+        }
+    }
 }
 
-/// An optimized container that supports cross-thread, lock-free-ish
+/// An optimized container that supports cross-thread, lock-free-ish behavior. Users are responsible
+/// for reference counting currently, as an implementation choice.
 pub struct Interner<T> {
     inner: UnsyncLinked<[Interned<T>; CHUNK_SIZE]>,
 }
@@ -56,6 +96,7 @@ impl<T> Interner<T>
 where
     T: PartialEq,
 {
+    /// Create a new interner.
     #[must_use]
     pub const fn new() -> Interner<T> {
         Interner {
@@ -63,6 +104,7 @@ where
         }
     }
 
+    /// Create a new interner with a given capacity pre-allocated.
     pub fn with_capacity(capacity: usize) -> Interner<T> {
         let list = UnsyncLinked::new();
         for _ in 0..((capacity + CHUNK_SIZE - 1) / 32) {
@@ -106,21 +148,6 @@ where
         Find::None
     }
 
-    #[inline]
-    pub fn incr_val(&self, interned: &Interned<T>) {
-        let val = interned.refs.fetch_add(1, Ordering::AcqRel);
-        debug_assert_ne!(val, usize::MAX - 1, "Too many instances of a single value!");
-    }
-
-    #[inline]
-    pub fn decr_val(&self, interned: &Interned<T>) {
-        let _ = interned
-            .refs
-            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |val| {
-                val.checked_sub(1)
-            });
-    }
-
     /// Get or insert an item into the interner. Note that this takes `O(N)` time with respect
     /// to the number of items in the interner, so avoid calling it in a hot loop if possible.
     pub fn add<U, V>(&self, val: U) -> &Interned<T>
@@ -133,7 +160,7 @@ where
         match find {
             Find::Exists((loc1, loc2)) => {
                 let interned = &self.inner[loc1][loc2];
-                self.incr_val(interned);
+                interned.incr();
                 interned
             }
             Find::Dead((loc1, loc2)) => {
@@ -148,27 +175,11 @@ where
                     .inner
                     .push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
                 let interned = &self.inner[len - 1][0];
-                self.incr_val(interned);
+                interned.incr();
                 // SAFETY: Slot is empty, we're making it live, we are the only ones with access
                 unsafe { interned.set_val(val.into()) };
                 interned
             }
-        }
-    }
-
-    pub fn try_get<'a>(&self, val: &'a Interned<T>) -> Option<&'a T> {
-        if val.refs.load(Ordering::Relaxed) == 0 {
-            None
-        } else {
-            Some(val.val())
-        }
-    }
-
-    pub fn get<'a>(&self, val: &'a Interned<T>) -> &'a T {
-        if val.refs.load(Ordering::Relaxed) == 0 {
-            panic!("Attempted to get value of dead interned value");
-        } else {
-            val.val()
         }
     }
 }
@@ -222,7 +233,7 @@ mod tests {
         let val1 = interner.add(0);
         assert_eq!(val1.refs.load(Ordering::Relaxed), 1);
         // Kill the location
-        interner.decr_val(val1);
+        val1.decr();
         assert_eq!(val1.refs.load(Ordering::Relaxed), 0);
         // Revive it
         let val2 = interner.add(0);
@@ -236,7 +247,7 @@ mod tests {
         let interner = Interner::<i32>::new();
 
         let val1 = interner.add(-1);
-        interner.decr_val(val1);
-        assert!(interner.try_get(val1).is_none());
+        val1.decr();
+        assert!(val1.try_get().is_none());
     }
 }
