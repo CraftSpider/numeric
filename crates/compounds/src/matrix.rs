@@ -1,3 +1,7 @@
+//! Mathematical matrices of various types.
+//!
+//! Support is included for both fixed and dynamic sized matrices, as well as views into such.
+
 #[macro_use]
 mod macros;
 #[cfg(feature = "alloc")]

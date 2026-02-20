@@ -50,6 +50,7 @@ macro_rules! gauss_elim {
 
 macro_rules! row_reduce {
     () => {
+        /// [Row reduction](https://en.wikipedia.org/wiki/Gaussian_elimination) of this matrix
         pub fn row_reduce(self) -> Self {
             self.gauss_elim().0
         }
