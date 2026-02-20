@@ -8,13 +8,20 @@
 extern crate alloc;
 
 #[cfg(feature = "alloc")]
-mod big_int;
+#[macro_use]
+mod big_utils;
 mod i;
+#[cfg(feature = "alloc")]
+mod ibig;
 mod u;
+#[cfg(feature = "alloc")]
+mod ubig;
 // #[cfg(test)]
 // mod tests;
 
-#[cfg(feature = "alloc")]
-pub use big_int::BigInt;
 pub use i::I;
+#[cfg(feature = "alloc")]
+pub use ibig::IBig;
 pub use u::U;
+#[cfg(feature = "alloc")]
+pub use ubig::UBig;

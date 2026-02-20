@@ -1,55 +1,55 @@
 use core::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
-use numeric_ints::BigInt;
+use numeric_ints::IBig;
 use numeric_traits::identity::One;
 use numeric_traits::ops::Pow;
 
 pub fn bench_from(c: &mut Criterion) {
-    c.benchmark_group("<BigInt as From<u*>>")
+    c.benchmark_group("<IBig as From<u*>>")
         .bench_function(BenchmarkId::new("From<u8>", "0"), |b| {
-            b.iter(|| BigInt::from(black_box(0u8)))
+            b.iter(|| IBig::from(black_box(0u8)))
         })
         .bench_function(BenchmarkId::new("From<u8>", "MAX"), |b| {
-            b.iter(|| BigInt::from(black_box(u8::MAX)))
+            b.iter(|| IBig::from(black_box(u8::MAX)))
         })
         .bench_function(BenchmarkId::new("From<u16>", "0"), |b| {
-            b.iter(|| BigInt::from(black_box(0u16)))
+            b.iter(|| IBig::from(black_box(0u16)))
         })
         .bench_function(BenchmarkId::new("From<u16>", "MAX"), |b| {
-            b.iter(|| BigInt::from(black_box(u16::MAX)))
+            b.iter(|| IBig::from(black_box(u16::MAX)))
         })
         .bench_function(BenchmarkId::new("From<u32>", "0"), |b| {
-            b.iter(|| BigInt::from(black_box(0u32)))
+            b.iter(|| IBig::from(black_box(0u32)))
         })
         .bench_function(BenchmarkId::new("From<u32>", "MAX"), |b| {
-            b.iter(|| BigInt::from(black_box(u32::MAX)))
+            b.iter(|| IBig::from(black_box(u32::MAX)))
         })
         .bench_function(BenchmarkId::new("From<u64>", "0"), |b| {
-            b.iter(|| BigInt::from(black_box(0u64)))
+            b.iter(|| IBig::from(black_box(0u64)))
         })
         .bench_function(BenchmarkId::new("From<u64>", "MAX"), |b| {
-            b.iter(|| BigInt::from(black_box(u64::MAX)))
+            b.iter(|| IBig::from(black_box(u64::MAX)))
         })
         .bench_function(BenchmarkId::new("From<u128>", "0"), |b| {
-            b.iter(|| BigInt::from(black_box(0u128)))
+            b.iter(|| IBig::from(black_box(0u128)))
         })
         .bench_function(BenchmarkId::new("From<u128>", "MAX"), |b| {
-            b.iter(|| BigInt::from(black_box(u128::MAX)))
+            b.iter(|| IBig::from(black_box(u128::MAX)))
         })
         .bench_function(BenchmarkId::new("From<usize>", "0"), |b| {
-            b.iter(|| BigInt::from(black_box(0usize)))
+            b.iter(|| IBig::from(black_box(0usize)))
         })
         .bench_function(BenchmarkId::new("From<usize>", "MAX"), |b| {
-            b.iter(|| BigInt::from(black_box(usize::MAX)))
+            b.iter(|| IBig::from(black_box(usize::MAX)))
         });
 }
 
 pub fn bench_clone(c: &mut Criterion) {
-    let zero = BigInt::from(0);
-    let max = BigInt::from(usize::MAX);
+    let zero = IBig::from(0);
+    let max = IBig::from(usize::MAX);
 
-    c.benchmark_group("BigInt::clone")
+    c.benchmark_group("IBig::clone")
         .bench_with_input(BenchmarkId::from_parameter("0"), &zero, |b, zero| {
             b.iter(|| black_box(zero).clone())
         })
@@ -59,10 +59,10 @@ pub fn bench_clone(c: &mut Criterion) {
 }
 
 pub fn bench_add(c: &mut Criterion) {
-    let one = BigInt::from(1);
-    let max = BigInt::from(usize::MAX);
+    let one = IBig::from(1);
+    let max = IBig::from(usize::MAX);
 
-    c.benchmark_group("BigInt::add")
+    c.benchmark_group("IBig::add")
         .bench_with_input(BenchmarkId::from_parameter("1, 1"), &one, |b, one| {
             b.iter(|| black_box(one) + black_box(one))
         })
@@ -74,10 +74,10 @@ pub fn bench_add(c: &mut Criterion) {
 }
 
 pub fn bench_sub(c: &mut Criterion) {
-    let one = BigInt::from(1);
-    let max = BigInt::from(usize::MAX);
+    let one = IBig::from(1);
+    let max = IBig::from(usize::MAX);
 
-    c.benchmark_group("BigInt::sub")
+    c.benchmark_group("IBig::sub")
         .bench_with_input(BenchmarkId::from_parameter("1, 1"), &one, |b, one| {
             b.iter(|| black_box(one) - black_box(one))
         })
@@ -89,10 +89,10 @@ pub fn bench_sub(c: &mut Criterion) {
 }
 
 pub fn bench_mul(c: &mut Criterion) {
-    let one = BigInt::from(1);
-    let max = BigInt::from(usize::MAX);
+    let one = IBig::from(1);
+    let max = IBig::from(usize::MAX);
 
-    c.benchmark_group("BigInt::mul")
+    c.benchmark_group("IBig::mul")
         .bench_with_input(BenchmarkId::from_parameter("1, 1"), &one, |b, one| {
             b.iter(|| black_box(one) * black_box(one))
         })
@@ -104,12 +104,12 @@ pub fn bench_mul(c: &mut Criterion) {
 }
 
 pub fn bench_div(c: &mut Criterion) {
-    let one = BigInt::from(1);
-    let two = BigInt::from(2);
-    let max = BigInt::from(usize::MAX);
-    let really_big = max.clone().pow(BigInt::from(2));
+    let one = IBig::from(1);
+    let two = IBig::from(2);
+    let max = IBig::from(usize::MAX);
+    let really_big = max.clone().pow(IBig::from(2));
 
-    c.benchmark_group("BigInt::div")
+    c.benchmark_group("IBig::div")
         .bench_with_input(BenchmarkId::from_parameter("1, 1"), &one, |b, one| {
             b.iter(|| black_box(one) / black_box(one))
         })
@@ -126,10 +126,10 @@ pub fn bench_div(c: &mut Criterion) {
 }
 
 pub fn bench_shl(c: &mut Criterion) {
-    let one = BigInt::from(1);
-    let max = BigInt::from(usize::MAX);
+    let one = IBig::from(1);
+    let max = IBig::from(usize::MAX);
 
-    c.benchmark_group("BigInt::shl")
+    c.benchmark_group("IBig::shl")
         .bench_with_input(BenchmarkId::from_parameter("1, 1"), &one, |b, one| {
             b.iter(|| black_box(one) << black_box(one))
         })
@@ -141,18 +141,18 @@ pub fn bench_shl(c: &mut Criterion) {
 }
 
 pub fn bench_stress(c: &mut Criterion) {
-    let max = BigInt::from(usize::MAX);
+    let max = IBig::from(usize::MAX);
     let mut vec = Vec::new();
     let mut cur = max;
     for _ in 0..1000 {
         vec.push(cur.clone());
-        cur += BigInt::one();
+        cur += IBig::one();
     }
 
-    let one = BigInt::one();
+    let one = IBig::one();
     let r = vec.last().unwrap();
 
-    c.benchmark_group("BigInt stress").bench_with_input(
+    c.benchmark_group("IBig stress").bench_with_input(
         BenchmarkId::new("add", "<large>, 1"),
         &(one, r),
         |b, (one, r)| b.iter(|| black_box(*r) + black_box(one)),
