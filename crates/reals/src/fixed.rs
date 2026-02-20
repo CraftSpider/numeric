@@ -20,14 +20,18 @@ fn mask<T: Integral, const N: usize>() -> T {
 pub struct Fixed<T, const N: usize>(T);
 
 impl<T: Integral, const N: usize> Fixed<T, N> {
+    /// Create a new instance with the default value (0)
     pub fn new() -> Self {
         Fixed(T::zero())
     }
 
+    /// Create a new instance from the given value. The value will be rounded to the nearest
+    /// representable value.
     pub fn from_val(val: T) -> Self {
         Fixed(val << N)
     }
 
+    /// Create a new instance from the given value, assuming it is already in fixed-point format.
     pub fn from_raw(val: T) -> Self {
         Fixed(val)
     }
@@ -200,12 +204,12 @@ impl<T: Integral + Bounded, const N: usize> Bounded for Fixed<T, N> {
 }
 
 impl<T: Integral + Bounded + Signed, const N: usize> BoundedSigned for Fixed<T, N> {
-    fn max_negative() -> Self {
-        Fixed(-T::one())
-    }
-
     fn min_positive() -> Self {
         Fixed(T::one())
+    }
+
+    fn max_negative() -> Self {
+        Fixed(-T::one())
     }
 }
 
