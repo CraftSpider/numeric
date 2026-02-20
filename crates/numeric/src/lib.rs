@@ -1,4 +1,4 @@
-//! Central trait for the `numeric` family of crates
+//! Central crate for the `numeric` family of crates
 //!
 //! # What is `numeric`?
 //!
@@ -7,18 +7,14 @@
 //! and rational real numbers, and more.
 //!
 
-pub mod int {
-    pub use numeric_ints::*;
-}
+#[doc(inline)]
+pub use numeric_ints as int;
 
-pub mod real {
-    pub use numeric_reals::*;
-}
+#[doc(inline)]
+pub use numeric_reals as real;
 
-pub mod compound {
-    pub use numeric_compounds::*;
-}
+#[doc(inline)]
+pub use numeric_compounds as compound;
 
-pub mod traits {
-    pub use numeric_traits::*;
-}
+#[doc(inline)]
+pub use numeric_traits as traits;

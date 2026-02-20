@@ -1,5 +1,8 @@
+//! Static length iterator adapters
+
 use super::StaticIter;
 
+/// See [`StaticIter::map`]
 pub struct Map<T, F> {
     pub(crate) inner: T,
     pub(crate) func: F,
@@ -18,6 +21,7 @@ where
     }
 }
 
+/// See [`StaticIter::zip`]
 pub struct Zip<I1, I2> {
     pub(crate) left: I1,
     pub(crate) right: I2,
@@ -36,6 +40,7 @@ where
     }
 }
 
+/// See [`StaticIter::enumerate`]
 pub struct Enumerate<I> {
     pub(crate) inner: I,
 }

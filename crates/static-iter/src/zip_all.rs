@@ -1,9 +1,15 @@
+//! Support for zipping up N many static length iterators into one.
+
 use crate::{IntoStaticIter, StaticIter};
 
+/// Trait for iterators that can be zipped into one.
 pub trait ZipAll<const N: usize> {
+    /// Item type of the resulting iterator.
     type Item;
+    /// The iterator type that will be returned.
     type Iter: StaticIter<N, Item = Self::Item>;
 
+    /// Convert this value into a zipped iterator. See [`zip_all`] for more details.
     fn into_zip_iter(self) -> Self::Iter;
 }
 
@@ -21,6 +27,7 @@ where
     }
 }
 
+/// Iterator over an array of static length iterators. N iterators, each of length M.
 pub struct ArrayZipIter<T, const N: usize, const M: usize> {
     arrs: [T; N],
 }
@@ -51,6 +58,7 @@ where
     }
 }
 
+/// Iterator over a tuple of static length iterators.
 pub struct TupleZipIter<T> {
     iters: T,
 }
@@ -67,6 +75,8 @@ where
     }
 }
 
+/// Zip up many static length iterators, all of the same length, into one. The resulting iterator
+/// will return one value from each of the zipped iterators for each iteration.
 pub fn zip_all<T: ZipAll<N>, const N: usize>(val: T) -> T::Iter {
     val.into_zip_iter()
 }

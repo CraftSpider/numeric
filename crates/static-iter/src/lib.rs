@@ -1,3 +1,7 @@
+//! Implementation of a static-length variant of the [`Iterator`] trait. This often allows
+//! for better codegen, and also is just generally more convenient when working with arrays or
+//! homogenous tuples.
+
 #![no_std]
 
 use adapter::{Enumerate, Map, Zip};
@@ -7,10 +11,30 @@ use core::mem::MaybeUninit;
 use core::ops::{Add, ControlFlow, Mul};
 use numeric_traits::identity::{One, Zero};
 
+pub mod adapter;
+pub mod array;
+#[cfg(test)]
+pub mod codegen;
+pub mod tuple;
+pub mod zip_all;
+
+pub use zip_all::zip_all;
+
+/// Types that can be collected from a static length iterator.
 pub trait FromStaticIter<T, const N: usize>: Sized {
+    /// The uninitialized state of the collection. This is used to build up the collection, and then
+    /// call `finish` to convert it into a final collection.
     type Uninit;
+
+    /// The type returned if a write fails, and iteration should stop early. For iterators where
+    /// write can't fail except in bug cases, this will be [`Infallible`].
     type Break;
+
+    /// Create a new uninitialized collection.
     fn uninit() -> Self::Uninit;
+
+    /// Write a value into the collection at the given index. Out of bounds writes must be sound,
+    /// but may panic or otherwise misbehave.
     fn write(this: Self::Uninit, idx: usize, val: T) -> ControlFlow<Self::Break, Self::Uninit>;
 
     /// # Safety
@@ -21,6 +45,8 @@ pub trait FromStaticIter<T, const N: usize>: Sized {
     /// 2) Write returned `ControlFlow::Break` at any point
     unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self;
 
+    /// Helper to build this collection from a static length iterator, without having to manage the
+    /// unsafe details of indexing and finishing.
     fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
         let uninit = (0..N).try_fold(Self::uninit(), |acc, idx| {
             let val = unsafe { iter.idx(idx) };
@@ -53,7 +79,6 @@ impl<T, const N: usize> FromStaticIter<T, N> for [T; N] {
     }
 }
 
-// TODO: Figure out how to make this generic over the inner collection
 impl<T, C, const N: usize> FromStaticIter<Option<T>, N> for Option<C>
 where
     C: FromStaticIter<T, N>,
@@ -116,7 +141,11 @@ where
     }
 }
 
+/// Static length iterators. These are similar to [`Iterator`], but have a length known at compile-
+/// time. This allows them to be collected directly into arrays, homogenous tuples, or other similar
+/// types infallibly. It also sometimes allows for improved codegen of loops.
 pub trait StaticIter<const N: usize>: Sized {
+    /// The type of values returned by the iterator.
     type Item;
 
     /// # Safety
@@ -125,11 +154,13 @@ pub trait StaticIter<const N: usize>: Sized {
     /// The index must be in the range 0..N
     unsafe fn idx(&mut self, idx: usize) -> Self::Item;
 
+    /// Takes a closure, and returns an iterator which calls that closure on each element.
     #[inline]
     fn map<T, F: FnMut(Self::Item) -> T>(self, func: F) -> Map<Self, F> {
         Map { inner: self, func }
     }
 
+    /// 'Zips up' two iterators into a single iterator of pairs.
     #[inline]
     fn zip<I>(self, other: I) -> Zip<Self, I::Iter>
     where
@@ -141,11 +172,15 @@ pub trait StaticIter<const N: usize>: Sized {
         }
     }
 
+    /// Returns an iterator that will yield a tuple of (index, value) for each item in this
+    /// iterator.
     #[inline]
     fn enumerate(self) -> Enumerate<Self> {
         Enumerate { inner: self }
     }
 
+    /// Given a starting value and a closure, call the closure with either the starting value or
+    /// the result of the previous call and the next iteration value for every item in the iterator.
     #[inline]
     fn fold<T, F: FnMut(T, Self::Item) -> T>(mut self, start: T, mut func: F) -> T {
         (0..N).fold(start, |acc, idx| {
@@ -156,12 +191,17 @@ pub trait StaticIter<const N: usize>: Sized {
     }
 
     // TODO: This really wants to use `Try`
+    /// Given a starting value and a closure, call the closure with either the starting value or
+    /// the result of the previous call and the next iteration value for every item in the iterator.
+    ///
+    /// If any call returns an error, stop iterating immediately and return that error.
     #[inline]
     fn try_fold<T, E, F: FnMut(T, Self::Item) -> Result<T, E>>(
         mut self,
         start: T,
         mut func: F,
     ) -> Result<T, E> {
+        // TODO: This leaks un-called values
         (0..N).try_fold(start, |acc, idx| {
             // SAFETY: Follows contract of `idx` - we call exactly once for each value from `0..N`
             let item = unsafe { self.idx(idx) };
@@ -169,19 +209,23 @@ pub trait StaticIter<const N: usize>: Sized {
         })
     }
 
+    /// Collect the values from this iterator into an output collection
     fn collect<C: FromStaticIter<Self::Item, N>>(self) -> C {
         C::from_static_iter(self)
     }
 
+    /// Apply a closure to every item in this iterator, returning true if any call returns true.
     fn any<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
         self.try_fold((), |(), x| if func(x) { Err(()) } else { Ok(()) }) == Err(())
     }
 
+    /// Apply a closure to every item in this iterator, returning true if all calls return true.
     fn all<F: FnMut(Self::Item) -> bool>(self, mut func: F) -> bool {
         self.try_fold((), |(), x| if func(x) { Ok(()) } else { Err(()) }) == Ok(())
     }
 
     // TODO: Move this and sum to an extension in numeric-traits? Makes static_iter stand alone
+    /// Sum the values in this iterator.
     fn sum(self) -> Self::Item
     where
         Self::Item: Zero + Add<Output = Self::Item>,
@@ -189,6 +233,7 @@ pub trait StaticIter<const N: usize>: Sized {
         self.fold(Self::Item::zero(), |acc, val| acc + val)
     }
 
+    /// Get the product of the values in this iterator.
     fn product(self) -> Self::Item
     where
         Self::Item: One + Mul<Output = Self::Item>,
@@ -197,10 +242,14 @@ pub trait StaticIter<const N: usize>: Sized {
     }
 }
 
+/// Types that can be converted into a static length iterator.
 pub trait IntoStaticIter<const N: usize> {
+    /// The type of values returned by the iterator.
     type Item;
+    /// The type of the iterator returned by [`Self::into_static_iter`].
     type Iter: StaticIter<N, Item = Self::Item>;
 
+    /// Convert this value into a static length iterator.
     fn into_static_iter(self) -> Self::Iter;
 }
 
@@ -213,6 +262,7 @@ impl<I: StaticIter<N>, const N: usize> IntoStaticIter<N> for I {
     }
 }
 
+/// Type similar to `..N`, but with compile-time value
 pub struct StaticRangeTo<const N: usize>;
 
 impl<const N: usize> IntoStaticIter<N> for StaticRangeTo<N> {
@@ -224,6 +274,7 @@ impl<const N: usize> IntoStaticIter<N> for StaticRangeTo<N> {
     }
 }
 
+/// Iterator type for [`StaticRangeTo`]
 pub struct StaticRangeToIter<const N: usize>(());
 
 impl<const N: usize> StaticIter<N> for StaticRangeToIter<N> {
@@ -233,13 +284,6 @@ impl<const N: usize> StaticIter<N> for StaticRangeToIter<N> {
         idx
     }
 }
-
-pub mod adapter;
-pub mod array;
-pub mod codegen;
-pub mod zip_all;
-
-pub use zip_all::zip_all;
 
 #[cfg(test)]
 mod tests {

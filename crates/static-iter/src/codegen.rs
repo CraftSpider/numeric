@@ -1,3 +1,7 @@
+//! Codegen tests for static length iterators
+
+#![allow(missing_docs)]
+
 use crate::*;
 
 #[inline(never)]

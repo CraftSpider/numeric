@@ -1,3 +1,5 @@
+//! Static length iterators over arrays
+
 use super::{IntoStaticIter, StaticIter};
 use core::mem::MaybeUninit;
 
@@ -21,6 +23,7 @@ impl<'a, T, const N: usize> IntoStaticIter<N> for &'a [T; N] {
     }
 }
 
+/// Static iterator over owned values of an array
 pub struct IntoIter<T, const N: usize> {
     inner: [MaybeUninit<T>; N],
 }
@@ -44,6 +47,7 @@ impl<T, const N: usize> StaticIter<N> for IntoIter<T, N> {
     }
 }
 
+/// Static iterator over borrowed values of an array
 pub struct RefIter<'a, T, const N: usize> {
     inner: &'a [T; N],
 }
