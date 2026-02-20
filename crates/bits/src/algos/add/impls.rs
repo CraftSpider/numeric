@@ -1,10 +1,10 @@
 use super::{AddAlgo, AssignAddAlgo};
 use crate::algos::{Bitwise, Element};
+#[cfg(feature = "alloc")]
+use crate::array::IntSlice;
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use crate::bit_slice::BitVecExt;
-#[cfg(feature = "alloc")]
-use crate::utils::IntSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use core::hint::unreachable_unchecked;
