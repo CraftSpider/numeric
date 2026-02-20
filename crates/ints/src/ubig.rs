@@ -1,6 +1,7 @@
 use crate::big_utils::{
     arr_size, MaybeInline, OutOfRangeError, Side, TaggedOffset, TaggedVal, INT_STORE,
 };
+use crate::IBig;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::borrow::Borrow;
@@ -12,8 +13,8 @@ use numeric_bits::algos::{
     SubAlgo,
 };
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
-use numeric_traits::cast::FromChecked;
-use numeric_traits::class::{Integral, Numeric, Unsigned};
+use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
+use numeric_traits::class::{Integral, Numeric, Signed, Unsigned};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
 use numeric_utils::{static_assert, static_assert_traits};
@@ -72,7 +73,7 @@ impl UBig {
     }
 
     #[inline]
-    fn with_slice<R>(&self, f: impl FnOnce(&[usize]) -> R) -> R {
+    pub(crate) fn with_slice<R>(&self, f: impl FnOnce(&[usize]) -> R) -> R {
         f(self.val().slice())
     }
 
@@ -462,6 +463,36 @@ impl_for_int!(i32, u32);
 impl_for_int!(i64, u64);
 impl_for_int!(i128, u128);
 impl_for_int!(isize, usize);
+
+impl TryFrom<IBig> for UBig {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: IBig) -> Result<Self, Self::Error> {
+        if value.is_negative() {
+            Err(OutOfRangeError::below())
+        } else {
+            Ok(IBig::with_slice(&value, |slice| UBig::new_slice(slice)))
+        }
+    }
+}
+
+impl FromChecked<IBig> for UBig {
+    fn from_checked(val: IBig) -> Option<Self> {
+        Self::try_from(val).ok()
+    }
+}
+
+impl FromSaturating<IBig> for UBig {
+    fn saturate_from(val: IBig) -> Self {
+        Self::try_from(val).unwrap_or(UBig::zero())
+    }
+}
+
+impl FromTruncating<IBig> for UBig {
+    fn truncate_from(val: IBig) -> Self {
+        IBig::with_slice(&val, |slice| UBig::new_slice(slice))
+    }
+}
 
 impl_op!(add(self: UBig, rhs) => {
     let out = UBig::with_slices(self, rhs, |this, other| {

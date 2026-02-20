@@ -5,6 +5,7 @@
 use crate::big_utils::{
     arr_size, MaybeInline, OutOfRangeError, Side, TaggedOffset, TaggedVal, INT_STORE,
 };
+use crate::UBig;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::borrow::Borrow;
@@ -17,7 +18,7 @@ use numeric_bits::algos::{
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSliceExt;
-use numeric_traits::cast::{FromChecked, FromStrRadix};
+use numeric_traits::cast::{FromChecked, FromSaturating, FromStrRadix, FromTruncating};
 use numeric_traits::class::{Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
@@ -77,7 +78,7 @@ impl IBig {
     }
 
     #[inline]
-    fn with_slice<R>(&self, f: impl FnOnce(&[usize]) -> R) -> R {
+    pub(crate) fn with_slice<R>(&self, f: impl FnOnce(&[usize]) -> R) -> R {
         f(self.val().slice())
     }
 
@@ -521,6 +522,30 @@ impl_for_int!(i32, u32);
 impl_for_int!(i64, u64);
 impl_for_int!(i128, u128);
 impl_for_int!(isize, usize);
+
+impl From<UBig> for IBig {
+    fn from(value: UBig) -> Self {
+        UBig::with_slice(&value, |slice| IBig::new_slice(slice, false))
+    }
+}
+
+impl FromChecked<UBig> for IBig {
+    fn from_checked(val: UBig) -> Option<Self> {
+        Some(Self::from(val))
+    }
+}
+
+impl FromSaturating<UBig> for IBig {
+    fn saturate_from(val: UBig) -> Self {
+        Self::from(val)
+    }
+}
+
+impl FromTruncating<UBig> for IBig {
+    fn truncate_from(val: UBig) -> Self {
+        Self::from(val)
+    }
+}
 
 impl_op!(add(self: IBig, rhs) => {
     let (out, neg) = IBig::with_slices(self, rhs, |this, other| {
