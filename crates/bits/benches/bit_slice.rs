@@ -10,6 +10,7 @@ use numeric_bits::algos::{
     AddAlgo, AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo, Bitwise,
     CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo, SubAlgo,
 };
+use numeric_bits::bit_slice::BitSliceExt;
 use std::time::Duration;
 
 type LongFn = fn(&[usize], &[usize]) -> Vec<usize>;
@@ -435,11 +436,47 @@ pub fn bench_shl(c: &mut Criterion) {
         );
 }
 
+pub fn bench_iter(c: &mut Criterion) {
+    let end = &[0x00000001u32];
+    let start = &[0x80000000u32];
+    let alternating = &[0x66666666u32];
+    let long = &[0u32, 0, 0, 0, 0, 0, 0, 1];
+
+    c.benchmark_group("BitSliceExt::iter_bits")
+        .bench_function(BenchmarkId::new("all(==1)", "[0x00000001]"), |b| {
+            b.iter(|| black_box(end).iter_bits().all(|v| v == true))
+        })
+        .bench_function(BenchmarkId::new("all(==1)", "[0x80000000]"), |b| {
+            b.iter(|| black_box(start).iter_bits().all(|v| v == true))
+        })
+        .bench_function(
+            BenchmarkId::new("all(==0)", "[0, 0, 0, 0, 0, 0, 0, 1]"),
+            |b| b.iter(|| black_box(long).iter_bits().all(|v| v == false)),
+        )
+        .bench_function(BenchmarkId::new("sum", "[0x00000001]"), |b| {
+            b.iter(|| black_box(end).iter_bits().map(usize::from).sum::<usize>())
+        })
+        .bench_function(BenchmarkId::new("sum", "[0x80000000]"), |b| {
+            b.iter(|| black_box(start).iter_bits().map(usize::from).sum::<usize>())
+        })
+        .bench_function(BenchmarkId::new("sum", "[0x66666666]"), |b| {
+            b.iter(|| {
+                black_box(alternating)
+                    .iter_bits()
+                    .map(usize::from)
+                    .sum::<usize>()
+            })
+        })
+        .bench_function(BenchmarkId::new("sum", "[0, 0, 0, 0, 0, 0, 0, 1]"), |b| {
+            b.iter(|| black_box(long).iter_bits().map(usize::from).sum::<usize>())
+        });
+}
+
 criterion_group!(
     name = benches;
     config = make_criterion()
         .warm_up_time(Duration::from_secs(1))
         .measurement_time(Duration::from_secs(3));
-    targets = bench_shl, bench_add, bench_sub, bench_mul, bench_div, bench_cmp
+    targets = bench_shl, bench_add, bench_sub, bench_mul, bench_div, bench_cmp, bench_iter
 );
 criterion_main!(benches);

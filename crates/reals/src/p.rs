@@ -3,6 +3,8 @@
 use core::cmp::Ordering;
 use core::ops::{Add, Neg, Sub};
 use numeric_bits::bit_slice::BitSliceExt;
+use numeric_traits::cast::FromSaturating;
+use numeric_traits::identity::Zero;
 
 /// N-byte posit value.
 ///
@@ -21,11 +23,12 @@ use numeric_bits::bit_slice::BitSliceExt;
 pub struct P<const N: usize>([u8; N]);
 
 impl<const N: usize> P<N> {
-    const FRAC_LEN: usize = N*8 - 5;
+    #[allow(unused)]
+    const FRAC_LEN: usize = N * 8 - 5;
 
     const NAR: Self = {
         let mut out = P([0; N]);
-        out.0[0] | 0x1;
+        out.0[0] |= 0x1;
         out
     };
 
@@ -58,8 +61,7 @@ impl<const N: usize> P<N> {
     fn regime(self) -> (bool, usize) {
         let mut iter = self.0.iter_bits().skip(1);
         let first = iter.next().unwrap();
-        let count = iter.take_while(|&v| v == first)
-            .count();
+        let count = iter.take_while(|&v| v == first).count();
         (first, count)
     }
 }
@@ -67,12 +69,6 @@ impl<const N: usize> P<N> {
 impl<const N: usize> Default for P<N> {
     fn default() -> Self {
         P::new()
-    }
-}
-
-impl<const N: usize> From<i32> for P<N> {
-    fn from(value: i32) -> Self {
-        todo!()
     }
 }
 
@@ -101,7 +97,7 @@ impl<const N: usize> Neg for P<N> {
 
 impl<const N: usize> Add for P<N> {
     type Output = P<N>;
-    
+
     fn add(self, rhs: Self) -> Self::Output {
         match (self.is_zero(), rhs.is_zero()) {
             (true, _) => return rhs,
@@ -110,8 +106,10 @@ impl<const N: usize> Add for P<N> {
         };
 
         if self.is_nar() || rhs.is_nar() {
-            return Self::NAR
+            return Self::NAR;
         }
+
+        todo!()
 
         // S = s
         // r = if R0 == 0 { -k } else { k-1 }
@@ -159,6 +157,22 @@ impl<const N: usize> Sub for P<N> {
     }
 }
 
+impl<const N: usize> Zero for P<N> {
+    fn zero() -> Self {
+        Self::new()
+    }
+
+    fn is_zero(&self) -> bool {
+        self.0.iter().all(|b| b == 0)
+    }
+}
+
+impl<const N: usize> FromSaturating<i32> for P<N> {
+    fn saturate_from(_: i32) -> Self {
+        todo!()
+    }
+}
+
 /// 8-bit posit. Range of `[2^-24, 2^24]`, with max integer value of `2^4` (16)
 #[allow(non_camel_case_types)]
 pub type p8 = P<1>;
@@ -195,12 +209,12 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let p1 = p32::from(1);
-        let p2 = p32::from(-1);
+        let p1 = p32::saturate_from(1);
+        let p2 = p32::saturate_from(-1);
 
-        assert_eq!(p1 + p1, p32::from(2));
-        assert_eq!(p1 + p2, p32::from(0));
-        assert_eq!(p2 + p1, p32::from(0));
-        assert_eq!(p2 + p2, p32::from(-2));
+        assert_eq!(p1 + p1, p32::saturate_from(2));
+        assert_eq!(p1 + p2, p32::saturate_from(0));
+        assert_eq!(p2 + p1, p32::saturate_from(0));
+        assert_eq!(p2 + p2, p32::saturate_from(-2));
     }
 }
