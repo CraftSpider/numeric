@@ -63,6 +63,7 @@ macro_rules! tuple_impl {
                     $(
                         $num => mem::replace(&mut self.tuple.$num, MaybeUninit::uninit()).assume_init(),
                     )*
+                    // SAFETY: Safety requirement of the caller that idx in 0..N
                     _ => unsafe { unreachable_unchecked() },
                 }
             }
@@ -86,6 +87,7 @@ macro_rules! tuple_impl {
                     $(
                         $num => &self.0.$num,
                     )*
+                    // SAFETY: Safety requirement of the caller that idx in 0..N
                     _ => unsafe { unreachable_unchecked() },
                 }
             }

@@ -98,6 +98,7 @@ impl<T> IndexMut<(usize, usize)> for MatrixMut<'_, T> {
             index.0,
             index.1
         );
+        // SAFETY: Internal pointer guaranteed valid for reads and writes up to rows * cols
         unsafe { &mut *self.data.as_ptr().add(index.0 * self.cols + index.1) }
     }
 }

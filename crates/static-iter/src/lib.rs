@@ -49,9 +49,11 @@ pub trait FromStaticIter<T, const N: usize>: Sized {
     /// unsafe details of indexing and finishing.
     fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
         let uninit = (0..N).try_fold(Self::uninit(), |acc, idx| {
+            // SAFETY: idx is in 0..N, and takes each value at most once
             let val = unsafe { iter.idx(idx) };
             Self::write(acc, idx, val)
         });
+        // SAFETY: We either reach the end and wrote all values from 0..N, or have a break value
         unsafe { Self::finish(uninit) }
     }
 }
@@ -71,10 +73,13 @@ impl<T, const N: usize> FromStaticIter<T, N> for [T; N] {
 
     unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self {
         let ControlFlow::Continue(c) = this;
+        // SAFETY: `[T; N]` and `[MaybeUninit<T>; N]` have the same layout
+        //         caller requirement that all values are initialized
         unsafe { mem::transmute_copy(&c) }
     }
 
     fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
+        // SAFETY: `from_fn` closure is guaranteed to be called exactly once for each index 0..N
         core::array::from_fn(|idx| unsafe { iter.idx(idx) })
     }
 }

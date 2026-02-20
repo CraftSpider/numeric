@@ -114,11 +114,23 @@ impl TaggedOffset {
         }
     }
 
+    #[inline(always)]
+    const fn val(self) -> usize {
+        // SAFETY: Always sound to access internals as a usize
+        unsafe { self.val }
+    }
+
+    #[inline(always)]
+    const fn ptr(self) -> *const InternedInt {
+        // SAFETY: Always sound to access internals as a pointer, if not derefed
+        unsafe { self.ptr }
+    }
+
     #[must_use]
     #[inline]
     pub fn invert_neg(self) -> TaggedOffset {
         TaggedOffset {
-            ptr: unsafe { self.ptr.map_addr(|a| a ^ 0b1) },
+            ptr: self.ptr().map_addr(|a| a ^ 0b1),
         }
     }
 
@@ -132,38 +144,41 @@ impl TaggedOffset {
     #[inline]
     pub fn offset(self) -> TaggedVal<'static> {
         if self.inline() {
-            TaggedVal::Inline(unsafe { self.val >> 2 })
+            TaggedVal::Inline(self.val() >> 2)
         } else {
-            TaggedVal::Slice(unsafe { &*self.ptr.map_addr(|a| a & !0b11) })
+            // SAFETY: If tag isn't inline, internal value is guaranteed to be a valid pointer
+            TaggedVal::Slice(unsafe { &*self.ptr().map_addr(|a| a & !0b11) })
         }
     }
 
     #[must_use]
     #[inline]
     pub const fn inline(self) -> bool {
-        unsafe { self.val & 0b10 != 0 }
+        self.val() & 0b10 != 0
     }
 
     #[must_use]
     #[inline]
     pub const fn negative(self) -> bool {
-        unsafe { self.val & 0b1 != 0 }
+        self.val() & 0b1 != 0
     }
 
     #[must_use]
     #[inline]
     pub const fn tag(self) -> Tag {
-        Tag::from_usize_truncate(unsafe { self.val })
+        Tag::from_usize_truncate(self.val())
     }
 }
 
 impl PartialEq for TaggedOffset {
     fn eq(&self, other: &Self) -> bool {
-        unsafe { self.val == other.val }
+        self.val() == other.val()
     }
 }
 
+// SAFETY: TaggedOffset pointee is guaranteed Send + Sync
 unsafe impl Send for TaggedOffset {}
+// SAFETY: TaggedOffset pointee is guaranteed Send + Sync
 unsafe impl Sync for TaggedOffset {}
 
 enum MaybeInline<'a> {

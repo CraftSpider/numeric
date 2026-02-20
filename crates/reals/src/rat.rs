@@ -58,9 +58,12 @@ impl<T: Integral> Rat<T> {
             || num.clone() % denom.clone() == T::zero()
             || denom.clone() % num.clone() == T::zero()
         {
+            // SAFETY: We just verified denom isn't zero and value is already reduced
             unsafe { Rat::new_unchecked(num, denom) }
         } else {
             let gcd = num.clone().gcd(denom.clone());
+            // SAFETY: Dividing by gcd guaranteed to not result in zero denominator and produce
+            // maximally reduced values.
             unsafe { Rat::new_unchecked(num / gcd.clone(), denom / gcd) }
         }
     }
@@ -163,12 +166,14 @@ impl<T: Integral + Neg<Output = T>> Neg for Rat<T> {
     type Output = Rat<T>;
 
     fn neg(self) -> Self::Output {
+        // SAFETY: Internal values already guaranteed to be reduced
         unsafe { Rat::new_unchecked(-self.num, self.denom) }
     }
 }
 
 impl<T: Integral> Zero for Rat<T> {
     fn zero() -> Self {
+        // SAFETY: Trivially reduced value
         unsafe { Rat::new_unchecked(T::zero(), T::one()) }
     }
 
@@ -179,6 +184,7 @@ impl<T: Integral> Zero for Rat<T> {
 
 impl<T: Integral> One for Rat<T> {
     fn one() -> Self {
+        // SAFETY: Trivially reduced value
         unsafe { Rat::new_unchecked(T::one(), T::one()) }
     }
 
@@ -189,6 +195,7 @@ impl<T: Integral> One for Rat<T> {
 
 impl<T: Integral + Signed> Signed for Rat<T> {
     fn abs(self) -> Self {
+        // SAFETY: Internal values guaranteed to be reduced
         unsafe { Rat::new_unchecked(self.num.abs(), self.denom) }
     }
 
@@ -203,20 +210,24 @@ impl<T: Integral + Signed> Signed for Rat<T> {
 
 impl<T: Integral + Bounded> Bounded for Rat<T> {
     fn min_value() -> Self {
+        // SAFETY: Trivially reduced value
         unsafe { Rat::new_unchecked(T::min_value(), T::one()) }
     }
 
     fn max_value() -> Self {
+        // SAFETY: Trivially reduced value
         unsafe { Rat::new_unchecked(T::max_value(), T::one()) }
     }
 }
 
 impl<T: Integral + BoundedSigned> BoundedSigned for Rat<T> {
     fn min_positive() -> Self {
+        // SAFETY: Trivially reduced value
         unsafe { Rat::new_unchecked(T::min_positive(), T::max_value()) }
     }
 
     fn max_negative() -> Self {
+        // SAFETY: Trivially reduced value
         unsafe { Rat::new_unchecked(T::max_negative(), T::max_value()) }
     }
 }

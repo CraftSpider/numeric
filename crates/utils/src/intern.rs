@@ -175,9 +175,9 @@ where
                     .inner
                     .push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
                 let interned = &self.inner[len - 1][0];
-                interned.incr();
                 // SAFETY: Slot is empty, we're making it live, we are the only ones with access
                 unsafe { interned.set_val(val.into()) };
+                interned.incr();
                 interned
             }
         }

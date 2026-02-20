@@ -6,6 +6,7 @@ use crate::array::IntSlice;
 use crate::bit_slice::BitSliceExt;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
+use core::mem;
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingSub;
 
@@ -149,12 +150,7 @@ impl SubAlgo for Bitwise {
             let l = left.get_bit(idx).unwrap_or(false);
             let r = right.get_bit(idx).unwrap_or(false);
 
-            let c = if carry {
-                carry = false;
-                true
-            } else {
-                false
-            };
+            let c = mem::take(&mut carry);
 
             let new = match (l, r, c) {
                 (true, false, false) => true,
@@ -192,12 +188,7 @@ impl SubAlgo for Bitwise {
             let l = left.get_bit(idx).unwrap_or(false);
             let r = right.get_bit(idx).unwrap_or(false);
 
-            let c = if carry {
-                carry = false;
-                true
-            } else {
-                false
-            };
+            let c = mem::take(&mut carry);
 
             let new = match (l, r, c) {
                 (true, false, false) => true,
@@ -232,12 +223,7 @@ impl AssignSubAlgo for Bitwise {
             let l = left.get_bit(idx).unwrap_or(false);
             let r = right.get_bit(idx).unwrap_or(false);
 
-            let c = if carry {
-                carry = false;
-                true
-            } else {
-                false
-            };
+            let c = mem::take(&mut carry);
 
             let new = match (l, r, c) {
                 (true, false, false) => true,
