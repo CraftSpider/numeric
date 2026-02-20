@@ -6,12 +6,18 @@ use numeric_static_iter::{zip_all, IntoStaticIter, StaticIter};
 use numeric_traits::class::RealSigned;
 use numeric_traits::identity::{One, Zero};
 
+/// A matrix with both rows and columns of the same length.
 pub type SquareMatrix<T, const N: usize> = Matrix<T, N, N>;
 
+/// Arbitrary type matrix with a fixed number of rows and columns.
+///
+/// This type will generally be more optimized than a [`DynMatrix`], and is available even when
+/// allocation isn't, but can take up quite a bit of stack space if `ROW` and `COL` are large.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Matrix<T, const ROW: usize, const COL: usize>([[T; COL]; ROW]);
 
 impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
+    /// Create a new matrix from a 2D array of rows and columns.
     pub const fn new(rows: [[T; COL]; ROW]) -> Matrix<T, ROW, COL> {
         Matrix(rows)
     }
@@ -24,14 +30,17 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
         NonNull::from(&mut self.0).cast()
     }
 
+    /// Create a matrix from an array of vector rows
     pub fn from_columns(vecs: [Vector<T, ROW>; COL]) -> Matrix<T, ROW, COL> {
         Matrix(zip_all(vecs.map(<[T; ROW]>::from)).collect())
     }
 
+    /// Create a matrix from an array of vector columns
     pub fn from_rows(vecs: [Vector<T, COL>; ROW]) -> Matrix<T, ROW, COL> {
         Matrix(vecs.into_static_iter().map(Vector::into).collect())
     }
 
+    /// Convert this matrix into a 2D array of rows and columns.
     pub fn into_arrays(self) -> [[T; COL]; ROW] {
         self.0
     }
@@ -44,8 +53,14 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
         Matrix::new(zip_all(self.0).collect())
     }
 
+    /// Swap two rows of the matrix
     pub fn swap_rows(&mut self, a: usize, b: usize) {
         self.0.swap(a, b);
+    }
+
+    /// Swap two columns of the matrix
+    pub fn swap_columns(&mut self, a: usize, b: usize) {
+        self.0.iter_mut().for_each(|row| row.swap(a, b));
     }
 }
 
@@ -55,12 +70,14 @@ impl<T: RealSigned, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
 }
 
 impl<T: Clone, const N: usize> SquareMatrix<T, N> {
+    /// Get the diagonal of the matrix as a vector.
     pub fn diag(&self) -> Vector<T, N> {
         array::from_fn(|idx| self[(idx, idx)].clone()).into()
     }
 }
 
 impl<T: RealSigned, const N: usize> SquareMatrix<T, N> {
+    /// Calculate the matrix determinant
     pub fn determinant(&self) -> T {
         // Optimize small matrices, which have short determinant formulas that should be faster than
         // doing a full row-reduction.
@@ -215,6 +232,19 @@ impl<T, const ROW: usize, const COL: usize> IndexMut<Vec2<usize>> for Matrix<T, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_swap() {
+        let a = Matrix::new([[1, 2, 3], [4, 5, 6]]);
+
+        let mut b = a.clone();
+        b.swap_rows(0, 1);
+        assert_eq!(b, Matrix::new([[4, 5, 6], [1, 2, 3]]));
+
+        let mut b = a.clone();
+        b.swap_columns(0, 2);
+        assert_eq!(b, Matrix::new([[3, 2, 1], [6, 5, 4]]));
+    }
 
     #[test]
     fn test_mul() {

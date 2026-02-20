@@ -1,3 +1,6 @@
+//! N-dimensional bivectors, an exterior algebra type useful for rotations and studying areas,
+//! volumes, and higher-dimension analogues.
+
 use alloc::vec::Vec;
 
 // Bivector contains dC2 components - one for each pair of axes in the dimension
@@ -34,6 +37,10 @@ const fn choose_n(mut n: usize, mut r: usize) -> usize {
     out
 }
 
+/// A 2-blade, or 2-vector, representing the wedge product of two vectors.
+///
+/// An important component of a [`Rotor`](super::rotor::Rotor), a generalizable rotation primitive
+/// for `N` dimensions.
 #[allow(dead_code)]
 pub struct BiVector<T, const DIM: usize>(Vec<T>);
 

@@ -1,9 +1,12 @@
+//! Complex numbers, values of the form `Ai + B`.
+
 use core::ops::{Add, Div, Mul, Sub};
 
 use numeric_traits::class::Real;
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::NumOps;
 
+/// Complex number pair, containing both a real and imaginary component.
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Complex<T> {
     real: T,
@@ -11,20 +14,26 @@ pub struct Complex<T> {
 }
 
 impl<T> Complex<T> {
+    /// Create a complex number from its real and imaginary components.
     pub const fn new(real: T, imag: T) -> Complex<T> {
         Complex { real, imag }
     }
 
+    /// Get the real component of this complex number.
+    #[inline]
     pub fn real(&self) -> &T {
         &self.real
     }
 
+    /// Get the imaginary component of this complex number.
+    #[inline]
     pub fn imag(&self) -> &T {
         &self.imag
     }
 }
 
 impl<T: Zero> Complex<T> {
+    /// Create a complex number with the provided real value, and a zero imaginary component.
     pub fn from_real(real: T) -> Complex<T> {
         Complex {
             real,
@@ -32,6 +41,7 @@ impl<T: Zero> Complex<T> {
         }
     }
 
+    /// Create a complex number with a zero real component, and the provided imaginary value.
     pub fn from_imag(imag: T) -> Complex<T> {
         Complex {
             real: T::zero(),
@@ -41,10 +51,14 @@ impl<T: Zero> Complex<T> {
 }
 
 impl<T: Real> Complex<T> {
+    /// Get the squared absolute value of this complex number.
+    ///
+    /// This is equivalent to the sum of the squares of the real and imaginary components.
     pub fn abs_squared(&self) -> T {
         self.real.clone() * self.real.clone() + self.imag.clone() * self.imag.clone()
     }
 
+    /// Get the absolute value of this complex number
     pub fn abs(&self) -> T {
         self.abs_squared().sqrt()
     }

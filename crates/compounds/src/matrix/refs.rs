@@ -25,6 +25,7 @@ macro_rules! ref_common {
     };
 }
 
+/// Immutable reference view into a matrix.
 pub struct MatrixRef<'a, T> {
     data: NonNull<T>,
     rows: usize,
@@ -66,6 +67,7 @@ impl<'a, T> From<&'a DynMatrix<T>> for MatrixRef<'a, T> {
     }
 }
 
+/// Mutable reference view into a matrix.
 pub struct MatrixMut<'a, T> {
     data: NonNull<T>,
     rows: usize,

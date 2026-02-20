@@ -5,6 +5,10 @@ use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
 use numeric_traits::class::RealSigned;
 
+/// Arbitrary type matrix with a dynamic number of rows and columns.
+///
+/// This type will generally be slightly slower than [`Matrix`], but won't explode stack size of
+/// large row and column sizes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DynMatrix<T> {
     data: Vec<T>,
@@ -13,6 +17,8 @@ pub struct DynMatrix<T> {
 }
 
 impl<T> DynMatrix<T> {
+    /// Create a new matrix from a vector, and the number of rows and columns to split it into.
+    /// Note that the length of the data must be exactly equal to `rows * cols`.
     pub fn new(data: Vec<T>, rows: usize, cols: usize) -> DynMatrix<T> {
         assert_eq!(
             data.len(),
@@ -35,14 +41,17 @@ impl<T> DynMatrix<T> {
         NonNull::new(self.data.as_mut_ptr()).unwrap()
     }
 
+    /// Get the number of rows in the matrix
     pub fn rows(&self) -> usize {
         self.rows
     }
 
+    /// Get the number of columns in the matrix
     pub fn cols(&self) -> usize {
         self.cols
     }
 
+    /// Swap two rows of the matrix
     pub fn swap_rows(&mut self, a: usize, b: usize) {
         if a == b {
             return;
@@ -53,6 +62,16 @@ impl<T> DynMatrix<T> {
         let start = &mut start[l * self.cols..(l + 1) * self.cols];
         let end = &mut end[..self.cols];
         start.swap_with_slice(end);
+    }
+
+    /// Swap two columns of the matrix
+    pub fn swap_columns(&mut self, a: usize, b: usize) {
+        if a == b {
+            return;
+        }
+        for i in 0..self.rows {
+            self.data.swap(i * self.cols + a, i * self.cols + b);
+        }
     }
 }
 
@@ -127,6 +146,19 @@ impl<T> IndexMut<Vec2<usize>> for DynMatrix<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_swap() {
+        let a = DynMatrix::from([[1, 2, 3], [4, 5, 6]]);
+
+        let mut b = a.clone();
+        b.swap_rows(0, 1);
+        assert_eq!(b, DynMatrix::from([[4, 5, 6], [1, 2, 3]]));
+
+        let mut b = a.clone();
+        b.swap_columns(0, 2);
+        assert_eq!(b, DynMatrix::from([[3, 2, 1], [6, 5, 4]]));
+    }
 
     #[test]
     fn test_index() {
