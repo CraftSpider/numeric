@@ -1,3 +1,7 @@
+//! Widening arithmetic operations. Widening operations are similar to
+//! [`overflowing`](super::overflowing) operations, but return the overflowed value instead of a
+//! boolean as the second tuple value.
+
 use crate::cast::{FromTruncating, IntoTruncating};
 
 /// Trait for types that implement 'widening' multiplication

@@ -573,15 +573,15 @@ macro_rules! impl_float {
                 <$ty>::tanh(self)
             }
 
-            fn asinh(self) -> Self {
+            fn csch(self) -> Self {
                 1. / self.sinh()
             }
 
-            fn acosh(self) -> Self {
+            fn sech(self) -> Self {
                 1. / self.cosh()
             }
 
-            fn atanh(self) -> Self {
+            fn coth(self) -> Self {
                 1. / self.tanh()
             }
         }

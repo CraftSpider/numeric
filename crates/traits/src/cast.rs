@@ -24,7 +24,10 @@ pub trait FromChecked<T>: Sized {
     fn from_checked(val: T) -> Option<Self>;
 }
 
+/// Similar to [`TryInto`], but for numeric types. Users should prefer implementing [`FromChecked`]
 pub trait IntoChecked<T> {
+    /// Attempt to convert this value into `T`, returning `None` if the value is outside the valid
+    /// range.
     fn into_checked(self) -> Option<T>;
 }
 
@@ -47,7 +50,11 @@ pub trait FromSaturating<T> {
     fn saturate_from(val: T) -> Self;
 }
 
+/// Trait for numeric types that can be converted between, rounding to the nearest valid value if
+/// the provided instance is out of range. Users should prefer implementing [`FromSaturating`].
 pub trait IntoSaturating<T> {
+    /// Convert this value into `T`, rounding to the nearest valid value if it cannot be represented
+    /// exactly.
     fn saturate(self) -> T;
 }
 
@@ -60,11 +67,18 @@ where
     }
 }
 
+/// Trait for numeric types that can be converted between, truncating if the provided instance is
+/// out of range. For integer conversions, this tends to mean simply cutting off the high bits,
+/// but users shouldn't rely on this behavior.
 pub trait FromTruncating<T> {
+    /// Create this type from an instance of another, truncating if the value is out of range.
     fn truncate_from(val: T) -> Self;
 }
 
+/// Trait for numeric types that can be converted between, truncating if the provided instance is
+/// out of range. Users should prefer implementing [`FromTruncating`].
 pub trait IntoTruncating<T> {
+    /// Convert this value into `T`, truncating if the value is out of range.
     fn truncate(self) -> T;
 }
 
@@ -77,14 +91,12 @@ where
     }
 }
 
-pub trait FromApproximating<T> {
-    fn approx(val: T) -> Self;
-}
-
+/// Trait combining [`FromChecked`], [`FromSaturating`], and [`FromTruncating`].
 pub trait FromAll<T>: FromChecked<T> + FromSaturating<T> + FromTruncating<T> {}
 
 impl<T, U> FromAll<U> for T where T: FromChecked<U> + FromSaturating<U> + FromTruncating<U> {}
 
+/// Trait for types that support checked conversion from primitive integer types.
 pub trait FromPrimChecked:
     FromChecked<u8>
     + FromChecked<u16>
@@ -109,6 +121,7 @@ impl<T> FromPrimChecked for T where
 {
 }
 
+/// Trait for types that support all conversions from primitive integer types.
 pub trait FromPrim:
     FromAll<u8>
     + FromAll<u16>

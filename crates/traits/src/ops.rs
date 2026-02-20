@@ -35,8 +35,10 @@ pub trait Factorial {
 /// multiple') operation. Gets the largest integer `N` such that for `a` and `b`, `a / N` and
 /// `b / N` are integers.
 pub trait Gcd<Rhs = Self> {
+    /// The output of the greatest common denominator operation.
     type Output;
 
+    /// Calculate the greatest common denominator of this and the right-hand side.
     fn gcd(self, other: Rhs) -> Self::Output;
 }
 
@@ -106,12 +108,24 @@ pub trait TrigOps {
     fn cot(self) -> Self;
 }
 
+/// The hyperbolic trigonometric operators. These are analogous to the regular trigonometric
+/// operators, except that they operate on the unit hyperbola instead of the unit circle.
+/// Each of the common functions has an inverse equivalent.
+///
+/// The following is a graphical representation of the various hyperbolic functions on a hyperbola:
+/// ![](https://i.sstatic.net/DgGWEm.png)
 pub trait HypTrigOps {
+    /// The hyperbolic `sine` function.
     fn sinh(self) -> Self;
+    /// The hyperbolic `cosine` function.
     fn cosh(self) -> Self;
+    /// The hyperbolic `tangent` function.
     fn tanh(self) -> Self;
 
-    fn asinh(self) -> Self;
-    fn acosh(self) -> Self;
-    fn atanh(self) -> Self;
+    /// The hyperbolic `cosecant` function, the multiplicative inverse of `sine`.
+    fn csch(self) -> Self;
+    /// The hyperbolic `secant` function, the multiplicative inverse of `cosine`.
+    fn sech(self) -> Self;
+    /// The hyperbolic `cotangent` function, the multiplicative inverse of `tangent`.
+    fn coth(self) -> Self;
 }
