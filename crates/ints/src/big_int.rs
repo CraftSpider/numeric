@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 use core::borrow::Borrow;
 use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
-use core::hint::unreachable_unchecked;
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
     AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, ShlAlgo, ShrAlgo,
@@ -27,51 +26,6 @@ mod macros;
 
 type InternedInt = Interned<Box<[usize]>>;
 static INT_STORE: Interner<Box<[usize]>> = Interner::new();
-
-/// The tag associated with a `TaggedOffset`
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum Tag {
-    None = 0,
-    Neg = 1,
-    Inline = 2,
-    InlineNeg = 3,
-}
-
-impl Tag {
-    #[must_use]
-    #[inline]
-    pub const fn from_usize_truncate(val: usize) -> Tag {
-        // SAFETY: We truncate val to only contain valid values
-        unsafe { Self::from_usize_unsafe(val & 0b11) }
-    }
-
-    #[must_use]
-    #[inline]
-    pub const unsafe fn from_usize_unsafe(val: usize) -> Tag {
-        match val {
-            0 => Tag::None,
-            1 => Tag::Neg,
-            2 => Tag::Inline,
-            3 => Tag::InlineNeg,
-            _ => unreachable_unchecked(),
-        }
-    }
-}
-
-impl TryFrom<usize> for Tag {
-    type Error = ();
-
-    #[inline]
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => Tag::None,
-            1 => Tag::Neg,
-            2 => Tag::Inline,
-            3 => Tag::InlineNeg,
-            _ => return Err(()),
-        })
-    }
-}
 
 enum TaggedVal<'a> {
     Inline(usize),
@@ -162,12 +116,6 @@ impl TaggedOffset {
     pub const fn negative(self) -> bool {
         self.val() & 0b1 != 0
     }
-
-    #[must_use]
-    #[inline]
-    pub const fn tag(self) -> Tag {
-        Tag::from_usize_truncate(self.val())
-    }
 }
 
 impl PartialEq for TaggedOffset {
@@ -175,6 +123,8 @@ impl PartialEq for TaggedOffset {
         self.val() == other.val()
     }
 }
+
+impl Eq for TaggedOffset {}
 
 // SAFETY: TaggedOffset pointee is guaranteed Send + Sync
 unsafe impl Send for TaggedOffset {}
@@ -399,7 +349,7 @@ impl PartialEq for BigInt {
     fn eq(&self, other: &Self) -> bool {
         if self.0 == other.0 {
             true
-        } else if self.0.tag() == other.0.tag() && !self.0.inline() {
+        } else if self.0.negative() == other.0.negative() && !self.0.inline() && !other.0.inline() {
             Self::with_slices(self, other, |this, other| this == other)
         } else {
             false
@@ -893,6 +843,17 @@ mod tests {
         assert_eq!(
             BigInt::from(usize::MAX) << BigInt::from(1),
             BigInt::from((usize::MAX as u128) * 2)
+        );
+    }
+
+    #[test]
+    fn test_shr() {
+        assert_eq!(BigInt::from(2) >> BigInt::from(1), BigInt::from(1));
+        assert_eq!(BigInt::from(6) >> BigInt::from(1), BigInt::from(3));
+
+        assert_eq!(
+            BigInt::from((usize::MAX as u128) * 2) >> 1,
+            BigInt::from(usize::MAX)
         );
     }
 
