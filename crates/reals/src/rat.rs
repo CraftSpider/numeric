@@ -65,10 +65,12 @@ impl<T: Integral> Rat<T> {
         }
     }
 
+    /// Get the numerator of this value
     pub fn numerator(&self) -> &T {
         &self.num
     }
 
+    /// Get the denominator of this value
     pub fn denominator(&self) -> &T {
         &self.denom
     }
