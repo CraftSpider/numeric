@@ -50,10 +50,12 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// The bit container type contained in this slice
     type Bit: BitLike;
 
+    /// Iterator over the items in this slice
     type Iter<'a>: Iterator<Item = Self::Bit> + ExactSizeIterator + DoubleEndedIterator + 'a
     where
         Self: 'a;
 
+    /// Iterator over mutable references to the items in this slice
     type IterMut<'a>: Iterator<Item = &'a mut Self::Bit>
         + ExactSizeIterator
         + DoubleEndedIterator
@@ -144,8 +146,10 @@ pub trait BitSliceExt: core::fmt::Debug {
         let _ = self.set_bit_opt(pos, val);
     }
 
+    /// Get an iterator over the values of this slice
     fn iter(&self) -> Self::Iter<'_>;
 
+    /// Get an iterator over mutable references to the values of this slice
     fn iter_mut(&mut self) -> Self::IterMut<'_>;
 
     /// Get an iterator over the bit values of this slice
@@ -177,20 +181,20 @@ impl<I: BitLike> BitSliceExt for [I] {
         self.is_empty()
     }
 
-    fn iter(&self) -> Self::Iter<'_> {
-        self.iter().copied()
-    }
-
-    fn iter_mut(&mut self) -> Self::IterMut<'_> {
-        self.iter_mut()
-    }
-
     fn get(&self, idx: usize) -> Option<Self::Bit> {
         self.get(idx).copied()
     }
 
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
         self.get_mut(idx)
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        self.iter().copied()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        self.iter_mut()
     }
 }
 
@@ -217,6 +221,14 @@ impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
         N == 0
     }
 
+    fn get(&self, idx: usize) -> Option<Self::Bit> {
+        <[I]>::get(self, idx).copied()
+    }
+
+    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
+        <[I]>::get_mut(self, idx)
+    }
+
     fn iter(&self) -> Self::Iter<'_> {
         (*self).into_iter()
     }
@@ -224,14 +236,6 @@ impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
     fn iter_mut(&mut self) -> Self::IterMut<'_> {
         #[allow(clippy::into_iter_on_ref)]
         self.into_iter()
-    }
-
-    fn get(&self, idx: usize) -> Option<Self::Bit> {
-        <[I]>::get(self, idx).copied()
-    }
-
-    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
-        <[I]>::get_mut(self, idx)
     }
 }
 
@@ -259,20 +263,20 @@ impl<I: BitLike> BitSliceExt for Vec<I> {
         self.is_empty()
     }
 
-    fn iter(&self) -> Self::Iter<'_> {
-        <&[I]>::into_iter(self).copied()
-    }
-
-    fn iter_mut(&mut self) -> Self::IterMut<'_> {
-        <&mut [I]>::into_iter(self)
-    }
-
     fn get(&self, idx: usize) -> Option<Self::Bit> {
         <[I]>::get(self, idx).copied()
     }
 
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
         <[I]>::get_mut(self, idx)
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        <&[I]>::into_iter(self).copied()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        <&mut [I]>::into_iter(self)
     }
 }
 
