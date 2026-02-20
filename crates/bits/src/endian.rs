@@ -1,3 +1,6 @@
+//! Slices for [`BitSliceExt`] which have different endianness, meaning they may iterate in
+//! a different order from normal slices by default.
+
 use crate::bit_slice::{BitLike, BitSliceExt};
 use core::iter::{Copied, Rev};
 use core::{fmt, slice};
@@ -34,6 +37,7 @@ macro_rules! impl_from {
     };
 }
 
+/// Little-endian slice. This is the default iteration order for slices.
 #[repr(transparent)]
 pub struct LeSlice<T>([T]);
 
@@ -82,6 +86,7 @@ impl<T: BitLike> BitSliceExt for LeSlice<T> {
     }
 }
 
+/// Big-endian slice. This is reverse iteration order for slices.
 #[repr(transparent)]
 pub struct BeSlice<T>([T]);
 
@@ -132,6 +137,7 @@ impl<T: BitLike> BitSliceExt for BeSlice<T> {
     }
 }
 
+/// Native-endian slice. This will be either little or big endian depending on the target.
 #[repr(transparent)]
 pub struct NeSlice<T>(
     #[cfg(target_endian = "little")] LeSlice<T>,
