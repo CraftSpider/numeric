@@ -1,7 +1,12 @@
+//! Interner implementation used by the default bigint implementation in numeric. Optimized for
+//! frequent insertions and removals.
+
 #![no_std]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
 #[cfg(feature = "alloc")]
 pub mod intern;

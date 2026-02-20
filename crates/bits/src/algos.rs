@@ -1,3 +1,9 @@
+//! Various big integer algorithms.
+//!
+//! Algorithms that work on [bit-slice](crate::bit_slice) types to perform various mathematical
+//! operations on arbitrary length, or even unbounded, integers. This provides a low-level base on
+//! which to build various integer types not natively available in Rust.
+
 mod add;
 mod bits;
 mod cmp;

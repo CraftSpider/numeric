@@ -4,6 +4,7 @@ lints.workspace = true
 name = "numeric-bench-util"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }

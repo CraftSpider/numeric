@@ -14,7 +14,7 @@ use numeric_bits::algos::{
     AssignAddAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
 };
 use numeric_bits::algos::{AssignMulAlgo, Element};
-use numeric_bits::utils::const_reverse;
+use numeric_bits::array::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
 use numeric_traits::class::{Bounded, Integral, Numeric, Unsigned};

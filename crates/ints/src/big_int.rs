@@ -13,8 +13,8 @@ use numeric_bits::algos::{
     AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, ShlAlgo, ShrAlgo,
     SubAlgo,
 };
+use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSliceExt;
-use numeric_bits::utils::*;
 use numeric_traits::cast::{FromChecked, FromStrRadix};
 use numeric_traits::class::{Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};
