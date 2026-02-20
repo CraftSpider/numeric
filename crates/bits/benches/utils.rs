@@ -1,7 +1,7 @@
 use core::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
-use numeric_bits::utils::{int_to_arr, IntSlice};
+use numeric_bits::array::{int_to_arr, IntSlice};
 
 fn bench_int_arr(c: &mut Criterion) {
     c.benchmark_group("int_to_arr")

@@ -1,4 +1,4 @@
-//! A type for bitwise operations on slices of integers
+//! Traits for bitwise operations on slices of integers
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -19,8 +19,10 @@ fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
     (idx / T::Bit::BIT_LEN, idx % T::Bit::BIT_LEN)
 }
 
-/// Trait for types that can be used as 'bit containers'. This means integers that support the
-/// common bit ops, in addition to being copyable and bounded.
+/// Types that can be used as 'bit containers'. This means integers that support the common bit ops,
+/// in addition to being copyable and bounded.
+///
+/// Note: This may be sealed or the auto-impl may be removed in future breaking versions.
 pub trait BitLike:
     Integral + NumAssignOps + BitAssignOps + BoundedBit + OverflowingOps + WideningMul + Ord + Copy
 {
@@ -42,8 +44,8 @@ impl<
     const BIT_LEN: usize = size_of::<T>() * 8;
 }
 
-/// Trait for things that can be considered slices of bits. This includes slices obviously, as well
-/// as vectors and other slice-like containers.
+/// Things that can be considered slices of bits. This includes slices obviously, as well as vectors
+/// and other slice-like containers.
 pub trait BitSliceExt: core::fmt::Debug {
     /// The bit container type contained in this slice
     type Bit: BitLike;
@@ -274,8 +276,8 @@ impl<I: BitLike> BitSliceExt for Vec<I> {
     }
 }
 
-/// Trait for things that can be considered growable vectors of bits. This includes vectors and
-/// any vector-like object.
+/// Things that can be considered growable vectors of bits. This includes [`Vec`] and similar
+/// list-like objects.
 pub trait BitVecExt: BitSliceExt {
     /// Extend this type with `val` up to `len`
     fn extend(&mut self, len: usize, val: Self::Bit);

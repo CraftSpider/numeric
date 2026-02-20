@@ -1,3 +1,5 @@
+//! Int array utilities.
+
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use core::ops::Deref;
@@ -6,7 +8,9 @@ use numeric_traits::class::{Bounded, Integral, Unsigned};
 use numeric_traits::ops::checked::CheckedShl;
 use numeric_traits::ops::core::NumAssignOps;
 
+/// Extension for slices of integers
 pub trait IntSlice<T>: Deref<Target = [T]> {
+    /// Remove trailing zeroes from the slice.
     fn shrink(self) -> Self;
 }
 
@@ -26,6 +30,10 @@ impl<T: Integral + Copy> IntSlice<T> for Vec<T> {
     }
 }
 
+/// Convert an integer into an array of a different integral type. Any part of the value that
+/// doesn't in the output will be discarded.
+///
+/// Reverse of [`arr_to_int`]
 pub fn int_to_arr<T, U, const N: usize>(val: T) -> [U; N]
 where
     T: Integral + FromAll<U> + Bounded + Copy + Unsigned,
@@ -38,8 +46,8 @@ where
     match U::from_checked(val) {
         Some(u) => out[0] = u,
         None => {
-            // This is fine to truncate - if our value didn't fit in a `T`, we should
-            // have succeeded our earlier check
+            // This is fine to truncate - if `U::max_value()` didn't fit in a `T`, we should
+            // have succeeded our earlier checked conversion
             let max: T = T::truncate_from(U::max_value()) + T::one();
 
             let mut left = val;
@@ -63,6 +71,10 @@ where
     out
 }
 
+/// Convert a slice of integers into a single integral of a different type. If the array doesn't fit
+/// in the output type, then `None` is returned.
+///
+/// Revers of [`int_to_arr`]
 pub fn arr_to_int<
     T: Integral + Copy,
     U: Integral + CheckedShl<usize, Output = U> + NumAssignOps + FromChecked<T> + Copy,
@@ -78,6 +90,8 @@ pub fn arr_to_int<
     Some(out)
 }
 
+/// Reverse an array during const evaluation.
+// FIXME(const-hack)
 pub const fn const_reverse<const N: usize>(mut bytes: [u8; N]) -> [u8; N] {
     let mut idx = 0;
     while idx < N / 2 {
