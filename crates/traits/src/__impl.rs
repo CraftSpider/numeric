@@ -146,7 +146,7 @@ macro_rules! impl_int {
             type Output = $ty;
 
             fn pow(self, rhs: Self) -> Self::Output {
-                <$ty>::pow(self, rhs as u32)
+                <$ty>::pow(self, rhs.try_into().unwrap())
             }
         }
 
@@ -194,6 +194,7 @@ macro_rules! impl_int {
             type Output = $ty;
 
             fn wrapping_shl(self, rhs: Self) -> Self::Output {
+                #[allow(clippy::cast_lossless)]
                 <$ty>::wrapping_shl(self, rhs as u32)
             }
         }
@@ -202,6 +203,7 @@ macro_rules! impl_int {
             type Output = $ty;
 
             fn wrapping_shr(self, rhs: Self) -> Self::Output {
+                #[allow(clippy::cast_lossless)]
                 <$ty>::wrapping_shr(self, rhs as u32)
             }
         }
@@ -266,6 +268,7 @@ macro_rules! impl_int {
             type Output = $ty;
 
             fn checked_shl(self, rhs: Self) -> Option<Self> {
+                #[allow(clippy::cast_lossless)]
                 <$ty>::checked_shl(self, rhs as u32)
             }
         }
@@ -274,6 +277,7 @@ macro_rules! impl_int {
             type Output = $ty;
 
             fn checked_shr(self, rhs: Self) -> Option<Self> {
+                #[allow(clippy::cast_lossless)]
                 <$ty>::checked_shr(self, rhs as u32)
             }
         }

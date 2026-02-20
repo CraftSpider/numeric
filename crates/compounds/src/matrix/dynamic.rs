@@ -19,6 +19,10 @@ pub struct DynMatrix<T> {
 impl<T> DynMatrix<T> {
     /// Create a new matrix from a vector, and the number of rows and columns to split it into.
     /// Note that the length of the data must be exactly equal to `rows * cols`.
+    ///
+    /// # Panics
+    ///
+    /// If the length of the data isn't exactly `rows * cols`
     pub fn new(data: Vec<T>, rows: usize, cols: usize) -> DynMatrix<T> {
         assert_eq!(
             data.len(),

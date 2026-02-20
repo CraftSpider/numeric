@@ -133,7 +133,7 @@ impl ShlAlgo for Element {
 }
 
 impl AssignShlAlgo for Element {
-    fn overflowing<'a, L>(left: &mut L, right: usize) -> bool
+    fn overflowing<L>(left: &mut L, right: usize) -> bool
     where
         L: ?Sized + BitSliceExt,
     {
@@ -236,7 +236,7 @@ impl ShrAlgo for Element {
 }
 
 impl AssignShrAlgo for Element {
-    fn overflowing<'a, L>(left: &mut L, right: usize) -> bool
+    fn overflowing<L>(left: &mut L, right: usize) -> bool
     where
         L: ?Sized + BitSliceExt,
     {

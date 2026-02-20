@@ -16,9 +16,22 @@ members = [
 debug = true
 
 [workspace.lints.rust]
+elided_lifetimes_in_paths = "warn"
+explicit_outlives_requirements = "warn"
+missing_abi = "warn"
 missing_docs = "warn"
+noop_method_call = "warn"
+semicolon_in_expressions_from_macros = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
 
 [workspace.lints.clippy]
 ptr_as_ptr = "warn"
 unreadable_literal = "warn"
 undocumented_unsafe_blocks = "warn"
+missing_panics_doc = "warn"
+doc_markdown = "warn"
+cloned_instead_of_copied = "warn"
+type_repetition_in_bounds = "warn"
+cast_lossless = "warn"
+ptr_cast_constness = "warn"
