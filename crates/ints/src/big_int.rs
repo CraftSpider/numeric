@@ -193,7 +193,7 @@ impl BigInt {
     fn val(&self) -> MaybeInline<'_> {
         match self.0.offset() {
             TaggedVal::Inline(val) => MaybeInline::Inline(val),
-            TaggedVal::Slice(val) => MaybeInline::Slice(INT_STORE.get_val(val)),
+            TaggedVal::Slice(val) => MaybeInline::Slice(INT_STORE.get(val)),
         }
     }
 
@@ -218,7 +218,7 @@ impl BigInt {
     where
         V: Borrow<[usize]> + Into<Box<[usize]>>,
     {
-        let (_, val) = INT_STORE.add::<_, [usize]>(val);
+        let val = INT_STORE.add::<_, [usize]>(val);
         BigInt(TaggedOffset::new_ptr(ptr::from_ref(val), neg))
     }
 
