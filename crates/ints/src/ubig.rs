@@ -220,6 +220,9 @@ macro_rules! impl_assign_for_int {
         impl_assign_for_int!($ty, *, MulAssign, mul_assign);
         impl_assign_for_int!($ty, /, DivAssign, div_assign);
         impl_assign_for_int!($ty, %, RemAssign, rem_assign);
+
+        impl_assign_for_int!($ty, <<, ShlAssign, shl_assign);
+        impl_assign_for_int!($ty, >>, ShrAssign, shr_assign);
     };
     ($ty:ty, $op:tt, $trait:ident, $meth:ident) => {
         impl core::ops::$trait<$ty> for UBig {
@@ -450,9 +453,7 @@ macro_rules! impl_for_int {
 
         // Operations
 
-        // impl_ops_for_int!($signed);
         impl_ops_for_int!($unsigned);
-        // impl_assign_for_int!($signed);
         impl_assign_for_int!($unsigned);
     };
 }
@@ -597,6 +598,11 @@ impl_assign_op!(sub(self: UBig, rhs) => { *self = &*self - rhs });
 impl_assign_op!(mul(self: UBig, rhs) => { *self = &*self * rhs });
 impl_assign_op!(div(self: UBig, rhs) => { *self = &*self / rhs });
 impl_assign_op!(rem(self: UBig, rhs) => { *self = &*self % rhs });
+impl_assign_op!(shl(self: UBig, rhs) => { *self = &*self << rhs });
+impl_assign_op!(shr(self: UBig, rhs) => { *self = &*self >> rhs });
+impl_assign_op!(bitand(self: UBig, rhs) => { *self = &*self & rhs });
+impl_assign_op!(bitor(self: UBig, rhs) => { *self = &*self | rhs });
+impl_assign_op!(bitxor(self: UBig, rhs) => { *self = &*self ^ rhs });
 
 impl Zero for UBig {
     fn zero() -> Self {

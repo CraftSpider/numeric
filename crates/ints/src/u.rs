@@ -6,8 +6,8 @@ use arrayvec::ArrayVec;
 use core::cmp::Ordering;
 use core::iter::Product;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Not, Rem, RemAssign,
-    Shl, Shr, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
+    Mul, MulAssign, Not, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
 use core::{array, fmt, iter};
 use numeric_bits::algos::{
@@ -430,6 +430,45 @@ impl<const N: usize> DivAssign for U<N> {
 impl<const N: usize> RemAssign for U<N> {
     fn rem_assign(&mut self, rhs: Self) {
         <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+    }
+}
+
+impl<const N: usize> ShlAssign for U<N> {
+    fn shl_assign(&mut self, rhs: Self) {
+        <Element as AssignShlAlgo>::wrapping(&mut self.0, usize::from_checked(rhs).unwrap())
+    }
+}
+
+impl<const N: usize> ShrAssign for U<N> {
+    fn shr_assign(&mut self, rhs: Self) {
+        <Element as AssignShrAlgo>::wrapping(&mut self.0, usize::from_checked(rhs).unwrap())
+    }
+}
+
+impl<const N: usize> BitAndAssign for U<N> {
+    fn bitand_assign(&mut self, rhs: Self) {
+        (&mut self.0)
+            .into_static_iter()
+            .zip((&rhs.0).into_static_iter())
+            .for_each(|(l, r)| *l &= r);
+    }
+}
+
+impl<const N: usize> BitOrAssign for U<N> {
+    fn bitor_assign(&mut self, rhs: Self) {
+        (&mut self.0)
+            .into_static_iter()
+            .zip((&rhs.0).into_static_iter())
+            .for_each(|(l, r)| *l |= r);
+    }
+}
+
+impl<const N: usize> BitXorAssign for U<N> {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        (&mut self.0)
+            .into_static_iter()
+            .zip((&rhs.0).into_static_iter())
+            .for_each(|(l, r)| *l ^= r);
     }
 }
 

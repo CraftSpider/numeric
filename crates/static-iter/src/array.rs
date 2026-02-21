@@ -2,6 +2,7 @@
 
 use super::{IntoStaticIter, StaticIter};
 use core::mem::MaybeUninit;
+use core::ptr;
 
 impl<T, const N: usize> IntoStaticIter<N> for [T; N] {
     type Item = T;
@@ -20,6 +21,16 @@ impl<'a, T, const N: usize> IntoStaticIter<N> for &'a [T; N] {
     #[inline]
     fn into_static_iter(self) -> Self::Iter {
         RefIter::new(self)
+    }
+}
+
+impl<'a, T, const N: usize> IntoStaticIter<N> for &'a mut [T; N] {
+    type Item = &'a mut T;
+    type Iter = MutIter<'a, T, N>;
+
+    #[inline]
+    fn into_static_iter(self) -> Self::Iter {
+        MutIter::new(self)
     }
 }
 
@@ -65,5 +76,28 @@ impl<'a, T, const N: usize> StaticIter<N> for RefIter<'a, T, N> {
     #[inline]
     unsafe fn idx(&mut self, idx: usize) -> Self::Item {
         &self.inner[idx]
+    }
+}
+
+/// Static iterator over mutably borrowed values of an array
+pub struct MutIter<'a, T, const N: usize> {
+    inner: &'a mut [T; N],
+}
+
+impl<'a, T, const N: usize> MutIter<'a, T, N> {
+    #[inline]
+    fn new(inner: &'a mut [T; N]) -> MutIter<'a, T, N> {
+        MutIter { inner }
+    }
+}
+
+impl<'a, T, const N: usize> StaticIter<N> for MutIter<'a, T, N> {
+    type Item = &'a mut T;
+
+    #[inline]
+    unsafe fn idx(&mut self, idx: usize) -> Self::Item {
+        // SAFETY: Since this function can only be called once per index, each created reference
+        //         points to a unique location, and can't outlive the underlying `'a` borrow.
+        &mut *ptr::from_mut(&mut self.inner[idx]).cast::<Self::Item>()
     }
 }

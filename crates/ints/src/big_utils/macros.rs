@@ -78,6 +78,21 @@ macro_rules! impl_assign_op {
     (rem($self:ident: $ty:ty, $rhs:ident) => $block:block) => {
         impl_assign_op!($ty, rem_assign, RemAssign, $self, $rhs, $block);
     };
+    (shl($self:ident: $ty:ty, $rhs:ident) => $block:block) => {
+        impl_assign_op!($ty, shl_assign, ShlAssign, $self, $rhs, $block);
+    };
+    (shr($self:ident: $ty:ty, $rhs:ident) => $block:block) => {
+        impl_assign_op!($ty, shr_assign, ShrAssign, $self, $rhs, $block);
+    };
+    (bitand($self:ident: $ty:ty, $rhs:ident) => $block:block) => {
+        impl_assign_op!($ty, bitand_assign, BitAndAssign, $self, $rhs, $block);
+    };
+    (bitor($self:ident: $ty:ty, $rhs:ident) => $block:block) => {
+        impl_assign_op!($ty, bitor_assign, BitOrAssign, $self, $rhs, $block);
+    };
+    (bitxor($self:ident: $ty:ty, $rhs:ident) => $block:block) => {
+        impl_assign_op!($ty, bitxor_assign, BitXorAssign, $self, $rhs, $block);
+    };
     ($ty:ty, $meth:ident, $trait:ident, $self:ident, $rhs:ident, $block:block) => {
         impl core::ops::$trait<$ty> for $ty {
             fn $meth(&mut self, rhs: $ty) {
