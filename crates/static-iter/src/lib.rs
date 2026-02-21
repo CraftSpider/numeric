@@ -214,6 +214,13 @@ pub trait StaticIter<const N: usize>: Sized {
         })
     }
 
+    /// Given a closure, call it for each item in the iterator eagerly. This immediately consumes
+    /// the iterator, and is equivalent to `for _ in _`.
+    #[inline]
+    fn for_each<F: FnMut(Self::Item)>(self, mut func: F) {
+        self.fold((), |(), i| func(i))
+    }
+
     /// Collect the values from this iterator into an output collection
     fn collect<C: FromStaticIter<Self::Item, N>>(self) -> C {
         C::from_static_iter(self)

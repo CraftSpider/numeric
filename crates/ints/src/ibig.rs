@@ -691,6 +691,11 @@ impl_assign_op!(sub(self: IBig, rhs) => { *self = &*self - rhs });
 impl_assign_op!(mul(self: IBig, rhs) => { *self = &*self * rhs });
 impl_assign_op!(div(self: IBig, rhs) => { *self = &*self / rhs });
 impl_assign_op!(rem(self: IBig, rhs) => { *self = &*self % rhs });
+impl_assign_op!(shl(self: IBig, rhs) => { *self = &*self << rhs });
+impl_assign_op!(shr(self: IBig, rhs) => { *self = &*self >> rhs });
+impl_assign_op!(bitand(self: IBig, rhs) => { *self = &*self & rhs });
+impl_assign_op!(bitor(self: IBig, rhs) => { *self = &*self | rhs });
+impl_assign_op!(bitxor(self: IBig, rhs) => { *self = &*self ^ rhs });
 
 impl Zero for IBig {
     fn zero() -> Self {
