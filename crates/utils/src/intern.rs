@@ -1,10 +1,10 @@
 //! Simple interner used by the default big integer implementation in `numeric-ints`.
 
+use crate::linked::UnsyncLinked;
+use core::array;
 use core::borrow::Borrow;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
-
-use crate::linked::UnsyncLinked;
 
 const CHUNK_SIZE: usize = 32;
 
@@ -22,9 +22,9 @@ pub struct Interned<T> {
 
 impl<T> Interned<T> {
     #[inline]
-    fn new_uninit() -> Interned<T> {
+    fn new_uninit(refs: usize) -> Interned<T> {
         Interned {
-            refs: AtomicUsize::new(0),
+            refs: AtomicUsize::new(refs),
             val: UnsafeCell::new(None),
         }
     }
@@ -49,21 +49,46 @@ impl<T> Interned<T> {
         *self.val.get() = Some(val);
     }
 
-    /// Increment the reference count of an interned value.
+    /// Increment the reference count of this interned value.
     #[inline]
     pub fn incr(&self) {
-        let val = self.refs.fetch_add(1, Ordering::AcqRel);
-        debug_assert_ne!(val, usize::MAX - 1, "Too many instances of a single value!");
+        while let Err(_) = self
+            .refs
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |refs| {
+                debug_assert_ne!(
+                    refs,
+                    usize::MAX - 1,
+                    "Too many instances of a single value!"
+                );
+
+                if refs == usize::MAX {
+                    None
+                } else {
+                    Some(refs + 1)
+                }
+            })
+        {}
     }
 
-    /// Decrement the reference count of an interned value.
+    /// Decrement the reference count of this interned value.
     #[inline]
     pub fn decr(&self) {
-        let _ = self
+        while let Err(_) = self
             .refs
-            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |val| {
-                val.checked_sub(1)
-            });
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |refs| {
+                if refs == usize::MAX {
+                    None
+                } else {
+                    refs.checked_sub(1)
+                }
+            })
+        {}
+    }
+
+    /// Get the current reference count of this interned value
+    #[inline]
+    pub fn refcount(&self) -> usize {
+        self.refs.load(Ordering::Acquire)
     }
 
     /// Attempt to get a reference to the value. Returns `None` if the value is dead (refcount is
@@ -82,7 +107,7 @@ impl<T> Interned<T> {
     ///
     /// If the value is dead (refcount is zero).
     pub fn get(&self) -> &T {
-        if self.refs.load(Ordering::Relaxed) == 0 {
+        if self.refs.load(Ordering::Acquire) == 0 {
             panic!("Attempted to get value of dead interned value");
         } else {
             self.val()
@@ -112,7 +137,7 @@ where
     pub fn with_capacity(capacity: usize) -> Interner<T> {
         let list = UnsyncLinked::new();
         for _ in 0..((capacity + CHUNK_SIZE - 1) / 32) {
-            list.push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
+            list.push([(); CHUNK_SIZE].map(|_| Interned::new_uninit(0)));
         }
         Interner { inner: list }
     }
@@ -127,14 +152,14 @@ where
                 // This intentionally allows reviving dead slots - saves work if you're rapidly
                 // dropping and creating references to a value
 
-                // We use 0xFFFFFFFF to indicate a value currently being watched by another thread
+                // We use usize::MAX to indicate a value currently being watched by another thread
                 // This is effectively locking, but it means we have a very small locking surface
                 // (a single interned item at once). We also only need to hold that lock if we
                 // intend to set the value.
 
                 let count = loop {
-                    let count = i.refs.swap(0xFFFF_FFFF, Ordering::AcqRel);
-                    if count == 0xFFFF_FFFF {
+                    let count = i.refs.swap(usize::MAX, Ordering::AcqRel);
+                    if count == usize::MAX {
                         continue;
                     } else {
                         break count;
@@ -175,13 +200,17 @@ where
                 interned
             }
             Find::None => {
-                let len = self
-                    .inner
-                    .push([(); CHUNK_SIZE].map(|_| Interned::new_uninit()));
+                let len = self.inner.push(array::from_fn(|i| {
+                    if i == 0 {
+                        Interned::new_uninit(usize::MAX)
+                    } else {
+                        Interned::new_uninit(0x0)
+                    }
+                }));
                 let interned = &self.inner[len - 1][0];
                 // SAFETY: Slot is empty, we're making it live, we are the only ones with access
                 unsafe { interned.set_val(val.into()) };
-                interned.incr();
+                interned.refs.store(1, Ordering::Release);
                 interned
             }
         }

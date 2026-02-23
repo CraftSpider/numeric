@@ -3,9 +3,9 @@
 use crate::{FromStaticIter, IntoStaticIter, StaticIter};
 use core::convert::Infallible;
 use core::hint::unreachable_unchecked;
-use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::ControlFlow;
+use core::{mem, ptr};
 
 macro_rules! tuple_impl {
     ($len:tt => $first_num:tt $first_ty:tt $($num:tt $ty:tt)*) => {
@@ -93,6 +93,39 @@ macro_rules! tuple_impl {
             }
         }
 
+        impl<'a, T> IntoStaticIter<$len> for &'a mut ($first_ty, $($ty,)*) {
+            type Item = &'a mut T;
+            type Iter = MutIter<'a, ($first_ty, $($ty,)*)>;
+
+            fn into_static_iter(self) -> Self::Iter {
+                MutIter::new(self)
+            }
+        }
+
+        impl<'a, T> StaticIter<$len> for MutIter<'a, ($first_ty, $($ty,)*)> {
+            type Item = &'a mut T;
+
+            unsafe fn idx(&mut self, idx: usize) -> Self::Item {
+                type Tuple<T> = ($first_ty, $($ty,)*);
+
+                let ptr = ptr::from_mut(self.0);
+                match idx {
+                    $first_num => {
+                        let offset = mem::offset_of!(Tuple<T>, $first_num);
+                        &mut *ptr.byte_add(offset).cast::<T>()
+                    }
+                    $(
+                        $num => {
+                            let offset = mem::offset_of!(Tuple<T>, $num);
+                            &mut *ptr.byte_add(offset).cast::<T>()
+                        }
+                    )*
+                    // SAFETY: Safety requirement of the caller that idx in 0..N
+                    _ => unsafe { unreachable_unchecked() },
+                }
+            }
+        }
+
         tuple_impl!($first_num => $($num $ty)*);
     };
     (0 =>) => {}
@@ -135,5 +168,47 @@ impl<'a, T> RefIter<'a, T> {
     #[inline]
     fn new(tuple: &'a T) -> Self {
         Self(tuple)
+    }
+}
+
+/// Static iterator over mutably borrowed values of a homogenous tuple
+pub struct MutIter<'a, T>(&'a mut T);
+
+impl<'a, T> MutIter<'a, T> {
+    #[inline]
+    fn new(tuple: &'a mut T) -> Self {
+        Self(tuple)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_into_iter() {
+        let iter = (1, 2, 3, 4).into_static_iter();
+        assert_eq!(iter.fold(0, |acc, val| acc + val), 10);
+    }
+
+    #[test]
+    fn test_ref_iter() {
+        let iter = (&(1, 2, 3, 4)).into_static_iter();
+        assert_eq!(iter.fold(0, |acc, val| acc + *val), 10);
+    }
+
+    #[test]
+    fn test_mut_iter() {
+        let mut tuple = (1, 2, 3, 4);
+        let iter = (&mut tuple).into_static_iter();
+        iter.for_each(|val| *val += 1);
+        assert_eq!(tuple, (2, 3, 4, 5))
+    }
+
+    #[test]
+    fn test_collect() {
+        let tuple = (1, 2, 3, 4).into_static_iter().collect::<(_, _, _, _)>();
+
+        assert_eq!(tuple, (1, 2, 3, 4))
     }
 }

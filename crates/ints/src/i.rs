@@ -990,4 +990,25 @@ mod tests {
         assert_eq!(I::<2>::from_checked(i8::MIN), Some(I([0x80, 0xFF])));
         assert_eq!(I::<2>::from_checked(i8::MAX), Some(I([0x7F, 0x00])));
     }
+
+    #[test]
+    fn test_from_bytes() {
+        assert_eq!(I::from_le_bytes([0, 1, 2]), I([0, 1, 2]));
+        assert_eq!(I::from_be_bytes([2, 1, 0]), I([0, 1, 2]));
+        #[cfg(target_endian = "little")]
+        assert_eq!(I::from_ne_bytes([0, 1, 2]), I([0, 1, 2]));
+        #[cfg(target_endian = "big")]
+        assert_eq!(I::from_ne_bytes([2, 1, 0]), I([0, 1, 2]));
+    }
+
+    #[test]
+    fn test_into_bytes() {
+        let val = I([0, 1, 2]);
+        assert_eq!(val.to_le_bytes(), [0, 1, 2]);
+        assert_eq!(val.to_be_bytes(), [2, 1, 0]);
+        #[cfg(target_endian = "little")]
+        assert_eq!(val.to_ne_bytes(), [0, 1, 2]);
+        #[cfg(target_endian = "big")]
+        assert_eq!(val.to_ne_bytes(), [2, 1, 0]);
+    }
 }

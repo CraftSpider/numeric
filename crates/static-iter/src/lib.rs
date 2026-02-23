@@ -5,15 +5,12 @@
 #![no_std]
 
 use adapter::{Enumerate, Map, Zip};
-use core::convert::Infallible;
-use core::mem;
-use core::mem::MaybeUninit;
 use core::ops::{Add, ControlFlow, Mul};
 use numeric_traits::identity::{One, Zero};
 
 pub mod adapter;
 pub mod array;
-#[cfg(test)]
+#[cfg(false)]
 pub mod codegen;
 pub mod tuple;
 pub mod zip_all;
@@ -55,32 +52,6 @@ pub trait FromStaticIter<T, const N: usize>: Sized {
         });
         // SAFETY: We either reach the end and wrote all values from 0..N, or have a break value
         unsafe { Self::finish(uninit) }
-    }
-}
-
-impl<T, const N: usize> FromStaticIter<T, N> for [T; N] {
-    type Uninit = [MaybeUninit<T>; N];
-    type Break = Infallible;
-
-    fn uninit() -> Self::Uninit {
-        [const { MaybeUninit::uninit() }; N]
-    }
-
-    fn write(mut this: Self::Uninit, idx: usize, val: T) -> ControlFlow<Self::Break, Self::Uninit> {
-        this[idx].write(val);
-        ControlFlow::Continue(this)
-    }
-
-    unsafe fn finish(this: ControlFlow<Self::Break, Self::Uninit>) -> Self {
-        let ControlFlow::Continue(c) = this;
-        // SAFETY: `[T; N]` and `[MaybeUninit<T>; N]` have the same layout
-        //         caller requirement that all values are initialized
-        unsafe { mem::transmute_copy(&c) }
-    }
-
-    fn from_static_iter(mut iter: impl StaticIter<N, Item = T>) -> Self {
-        // SAFETY: `from_fn` closure is guaranteed to be called exactly once for each index 0..N
-        core::array::from_fn(|idx| unsafe { iter.idx(idx) })
     }
 }
 
@@ -300,6 +271,7 @@ impl<const N: usize> StaticIter<N> for StaticRangeToIter<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::str::FromStr;
 
     #[test]
     fn test_zip_add() {
@@ -350,5 +322,51 @@ mod tests {
             .map(|_| None)
             .collect::<Option<_>>();
         assert!(res.is_none());
+    }
+
+    #[test]
+    fn test_result_collect() {
+        let res: [u32; 4] = ["1", "2", "3", "4"]
+            .into_static_iter()
+            .map(|v| u32::from_str(v))
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(res, [1, 2, 3, 4]);
+
+        let res: Result<[u32; 4], _> = ["1", "2", "-3", "4"]
+            .into_static_iter()
+            .map(|l| u32::from_str(l))
+            .collect();
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_enumerate() {
+        let res = [5, 9, 1, 4]
+            .into_static_iter()
+            .enumerate()
+            .fold(0, |acc, (idx, _)| {
+                assert_eq!(idx, acc);
+                acc + 1
+            });
+        assert_eq!(res, 4);
+    }
+
+    #[test]
+    fn test_any() {
+        let res = [1, 3, 5, 7].into_static_iter().any(|v| v % 2 == 0);
+        assert!(!res);
+
+        let res = [1, 3, 4, 7].into_static_iter().any(|v| v % 2 == 0);
+        assert!(res);
+    }
+
+    #[test]
+    fn test_all() {
+        let res = [1, 3, 5, 7].into_static_iter().all(|v| v % 2 == 1);
+        assert!(res);
+
+        let res = [1, 3, 4, 7].into_static_iter().all(|v| v % 2 == 1);
+        assert!(!res);
     }
 }

@@ -47,7 +47,7 @@ impl PartialEq for TaggedVal<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Inline(a), Self::Inline(b)) if a == b => true,
-            (Self::Slice(a), Self::Slice(b)) if ptr::addr_eq(a, b) => true,
+            (Self::Slice(a), Self::Slice(b)) if ptr::addr_eq(*a, *b) => true,
             _ => false,
         }
     }

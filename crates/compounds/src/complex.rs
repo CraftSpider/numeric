@@ -7,7 +7,7 @@ use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::NumOps;
 
 /// Complex number pair, containing both a real and imaginary component.
-#[derive(Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Complex<T> {
     real: T,
     imag: T,
