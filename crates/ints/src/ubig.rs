@@ -652,6 +652,7 @@ impl Pow<UBig> for UBig {
 mod tests {
     use super::*;
     use alloc::string::ToString;
+    use approx::assert_ulps_eq;
 
     #[test]
     fn test_new() {
@@ -786,5 +787,22 @@ mod tests {
         assert!(a > -1);
 
         assert!(b > 0);
+    }
+
+    #[test]
+    fn test_approx_float() {
+        let zero = UBig::zero();
+        let one = UBig::one();
+        let max_int = UBig::from(9007199254740991u64);
+        let max_u64 = UBig::from(u64::MAX);
+        let pretty_big = max_u64.clone().pow(UBig::from(5u32));
+        let very_big = max_u64.clone().pow(UBig::from(20u32));
+
+        assert_eq!(zero.approx_float(), 0.0);
+        assert_eq!(one.approx_float(), 1.0);
+        assert_eq!(max_int.approx_float(), 9007199254740991.0);
+        assert_eq!(max_u64.approx_float(), 18446744073709552000.0);
+        assert_ulps_eq!(pretty_big.approx_float(), 2.13598703592091e96);
+        assert_eq!(very_big.approx_float(), f64::INFINITY);
     }
 }

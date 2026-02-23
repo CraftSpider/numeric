@@ -85,6 +85,9 @@ pub fn arr_to_int<
     let mut out = U::zero();
     for (idx, &i) in arr.iter().enumerate() {
         let t = U::from_checked(i)?;
+        if t.is_zero() {
+            continue;
+        }
         out += t.checked_shl(idx * bit_len)?;
     }
     Some(out)
@@ -182,5 +185,7 @@ mod tests {
 
         assert_eq!(arr_to_int::<u8, usize>(&[0, 1, 2, 3]), Some(0x0302_0100));
         assert_eq!(arr_to_int::<u8, usize>(&[u8::MAX]), Some(255));
+        assert_eq!(arr_to_int::<u8, u16>(&[u8::MAX, u8::MAX, 0]), Some(0xFFFF));
+        assert_eq!(arr_to_int::<u8, u16>(&[u8::MAX, u8::MAX, 1]), None);
     }
 }

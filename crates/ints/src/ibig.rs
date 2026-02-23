@@ -828,6 +828,7 @@ impl Pow<IBig> for IBig {
 mod tests {
     use super::*;
     use alloc::string::ToString;
+    use approx::assert_ulps_eq;
 
     #[test]
     fn test_new() {
@@ -839,6 +840,22 @@ mod tests {
         assert!(b2.is_interned());
         let b3 = IBig::new_slice(&[0usize, 1] as &[_], false);
         assert!(b3.is_interned());
+    }
+
+    #[test]
+    fn test_zero() {
+        assert!(IBig::zero().is_inline());
+        assert!(IBig::zero().with_slice(|s| s == &[0]));
+        assert!(IBig::zero().is_zero());
+        assert!(!IBig::one().is_zero());
+    }
+
+    #[test]
+    fn test_one() {
+        assert!(IBig::one().is_inline());
+        assert!(IBig::one().with_slice(|s| s == &[1]));
+        assert!(IBig::one().is_one());
+        assert!(!IBig::one().is_zero());
     }
 
     #[test]
@@ -955,6 +972,28 @@ mod tests {
     }
 
     #[test]
+    fn test_neg_pos() {
+        let neg_one = -IBig::one();
+        assert!(neg_one.is_inline());
+        assert!(neg_one.is_negative());
+        assert!(neg_one.with_slice(|s| s == &[1]));
+
+        let neg = IBig::from(-0x0102_0304);
+        assert!(neg.is_negative());
+        let pos = -neg.clone();
+        assert!(pos.is_positive());
+    }
+
+    #[test]
+    fn test_abs() {
+        let neg = IBig::from(-0x0102_0304);
+        let pos = -neg.clone();
+
+        assert_eq!(neg.abs(), pos);
+        assert_eq!(pos.clone().abs(), pos);
+    }
+
+    #[test]
     fn test_eq() {
         let a = IBig::from(0);
         let b = IBig::from(1);
@@ -969,6 +1008,19 @@ mod tests {
 
         assert_ne!(a, 1i32);
         assert_ne!(b, 0i32);
+
+        let big_a = IBig::from(usize::MAX);
+        let big_b = IBig::from(usize::MAX - 1);
+        let big_c = IBig::from(&big_b + &big_a - &big_b);
+
+        assert_ne!(big_a, big_b);
+        assert_eq!(big_a, big_c);
+
+        assert_eq!(big_a, usize::MAX);
+        assert_eq!(big_b, usize::MAX - 1);
+
+        assert_ne!(big_a, usize::MAX - 1);
+        assert_ne!(big_b, usize::MAX);
     }
 
     #[test]
@@ -989,5 +1041,22 @@ mod tests {
         assert!(b > 0);
 
         assert!(c < 0);
+    }
+
+    #[test]
+    fn test_approx_float() {
+        let zero = IBig::zero();
+        let one = IBig::one();
+        let max_int = IBig::from(9007199254740991u64);
+        let max_u64 = IBig::from(u64::MAX);
+        let pretty_big = max_u64.clone().pow(IBig::from(5));
+        let very_big = max_u64.clone().pow(IBig::from(20));
+
+        assert_eq!(zero.approx_float(), 0.0);
+        assert_eq!(one.approx_float(), 1.0);
+        assert_eq!(max_int.approx_float(), 9007199254740991.0);
+        assert_eq!(max_u64.approx_float(), 18446744073709552000.0);
+        assert_ulps_eq!(pretty_big.approx_float(), 2.13598703592091e96);
+        assert_eq!(very_big.approx_float(), f64::INFINITY);
     }
 }

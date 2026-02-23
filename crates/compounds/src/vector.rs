@@ -49,6 +49,11 @@ impl<T, const N: usize> Vector<T, N> {
         Vector::new(arr)
     }
 
+    /// Convert this [`Vector`] into an array of length `N`
+    pub fn into_array(self) -> [T; N] {
+        self.0
+    }
+
     /// Convert this [`Vector`] into a single-row [`Matrix`]
     pub fn into_row(self) -> Matrix<T, 1, N> {
         Matrix::new([self.into()])
@@ -507,5 +512,117 @@ where
             .map(|(l, r)| l.checked_sub(r))
             .collect::<Option<_>>()?;
         Some(Vector(new))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::complex::Complex;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn test_zero() {
+        let v1 = Vec3::<f64>::zeroed();
+        assert_eq!(v1.into_array(), [0.0, 0.0, 0.0]);
+        let v2 = Vec3::zero();
+        assert_eq!(v1, v2);
+        assert!(v2.is_zero());
+
+        let v3 = Vec2::<Complex<u8>>::zeroed();
+        assert_eq!(v3.clone().into_array(), [Complex::zero(), Complex::zero()]);
+        let v4 = Vec2::zero();
+        assert_eq!(v3, v4);
+        assert!(v4.is_zero());
+    }
+
+    #[test]
+    fn test_from_scalar() {
+        let v = Vec3::<f64>::from_scalar(2.5);
+        assert_eq!(v.into_array(), [2.5, 2.5, 2.5]);
+    }
+
+    #[test]
+    fn test_2d() {
+        let mut v = Vec2::from_xy(1.0, 2.5);
+        assert_eq!(v.into_array(), [1.0, 2.5]);
+        assert_eq!(*v.x(), 1.0);
+        assert_eq!(*v.y(), 2.5);
+
+        v.set_x(1.1);
+        v.set_y(2.2);
+
+        assert_eq!(*v.x(), 1.1);
+        assert_eq!(*v.y(), 2.2);
+
+        *v.x_mut() += 0.1;
+        *v.y_mut() += 0.2;
+
+        assert_relative_eq!(*v.x(), 1.2);
+        assert_relative_eq!(*v.y(), 2.4);
+    }
+
+    #[test]
+    fn test_3d() {
+        let mut v = Vec3::from_xyz(1.0, 2.5, 3.6);
+        assert_eq!(v.into_array(), [1.0, 2.5, 3.6]);
+        assert_eq!(*v.x(), 1.0);
+        assert_eq!(*v.y(), 2.5);
+        assert_eq!(*v.z(), 3.6);
+
+        v.set_x(1.1);
+        v.set_y(2.2);
+        v.set_z(3.3);
+
+        assert_eq!(*v.x(), 1.1);
+        assert_eq!(*v.y(), 2.2);
+        assert_eq!(*v.z(), 3.3);
+
+        *v.x_mut() += 0.1;
+        *v.y_mut() += 0.2;
+        *v.z_mut() += 0.3;
+
+        assert_relative_eq!(*v.x(), 1.2);
+        assert_relative_eq!(*v.y(), 2.4);
+        assert_relative_eq!(*v.z(), 3.6);
+    }
+
+    #[test]
+    fn test_cross() {
+        let a = Vec3::from_xyz(-9., -1., 3.);
+        let b = Vec3::from_xyz(3., -2., -7.);
+
+        assert_eq!(a.cross(b), Vec3::from_xyz(13., -54., 21.));
+        assert_eq!(b.cross(a), Vec3::from_xyz(-13., 54., -21.));
+    }
+
+    #[test]
+    fn test_4d() {
+        let mut v = Vec4::from_xyzw(1.0, 2.5, 3.6, 4.25);
+        assert_eq!(v.into_array(), [1.0, 2.5, 3.6, 4.25]);
+        assert_eq!(*v.x(), 1.0);
+        assert_eq!(*v.y(), 2.5);
+        assert_eq!(*v.z(), 3.6);
+        assert_eq!(*v.w(), 4.25);
+
+        v.set_x(1.1);
+        v.set_y(2.2);
+        v.set_z(3.3);
+        v.set_w(4.4);
+
+        assert_eq!(*v.x(), 1.1);
+        assert_eq!(*v.y(), 2.2);
+        assert_eq!(*v.z(), 3.3);
+        assert_eq!(*v.w(), 4.4);
+
+        *v.x_mut() += 0.1;
+        *v.y_mut() += 0.2;
+        *v.z_mut() += 0.3;
+        *v.w_mut() += 0.4;
+
+        assert_relative_eq!(*v.x(), 1.2);
+        assert_relative_eq!(*v.y(), 2.4);
+        assert_relative_eq!(*v.z(), 3.6);
+        assert_relative_eq!(*v.w(), 4.8);
     }
 }

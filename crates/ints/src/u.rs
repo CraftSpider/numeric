@@ -673,7 +673,7 @@ macro_rules! impl_unsign_cast {
             fn truncate_from(val: U<N>) -> Self {
                 const SIZE: usize = size_of::<$num>();
                 let mut arr = [0; SIZE];
-                for i in 0..N {
+                for i in 0..SIZE {
                     arr[i] = val.0[i];
                 }
                 <$num>::from_le_bytes(arr)
@@ -704,6 +704,24 @@ macro_rules! impl_unsign_cast {
                 }
             }
         }
+
+        impl<const N: usize> FromSaturating<$num> for U<N> {
+            fn saturate_from(val: $num) -> Self {
+                U::from_checked(val).unwrap_or(U::max_value())
+            }
+        }
+
+        impl<const N: usize> FromTruncating<$num> for U<N> {
+            fn truncate_from(val: $num) -> Self {
+                const SIZE: usize = size_of::<$num>();
+                let bytes = val.to_le_bytes();
+                let mut arr = [0; N];
+                for i in 0..usize::min(N, SIZE) {
+                    arr[i] = bytes[i];
+                }
+                U::from_le_bytes(arr)
+            }
+        }
     };
 }
 
@@ -713,14 +731,14 @@ macro_rules! impl_sign_cast {
             fn from_checked(val: U<N>) -> Option<Self> {
                 const SIZE: usize = size_of::<$num>();
                 let mut arr = [0; SIZE];
-                if const { N <= SIZE } {
-                    for i in 0..SIZE {
+                if const { N < SIZE } {
+                    for i in 0..N {
                         arr[i] = val.0[i];
                     }
                     Some(<$num>::from_le_bytes(arr))
                 } else {
                     for i in 0..N {
-                        if i <= SIZE {
+                        if i < SIZE - 1 || (i == SIZE - 1 && val.0[i] < 0x80) {
                             arr[i] = val.0[i];
                         } else {
                             if val.0[i] != 0 {
@@ -746,7 +764,7 @@ macro_rules! impl_sign_cast {
             fn truncate_from(val: U<N>) -> Self {
                 const SIZE: usize = size_of::<$num>();
                 let mut arr = [0; SIZE];
-                for i in 0..N {
+                for i in 0..SIZE {
                     arr[i] = val.0[i];
                 }
                 <$num>::from_le_bytes(arr)
@@ -778,6 +796,33 @@ macro_rules! impl_sign_cast {
                     }
                     Some(U::from_le_bytes(arr))
                 }
+            }
+        }
+
+        impl<const N: usize> FromSaturating<$num> for U<N> {
+            fn saturate_from(val: $num) -> Self {
+                match <U<N>>::from_checked(val) {
+                    Some(val) => val,
+                    None => {
+                        if val.is_negative() {
+                            U::min_value()
+                        } else {
+                            U::max_value()
+                        }
+                    }
+                }
+            }
+        }
+
+        impl<const N: usize> FromTruncating<$num> for U<N> {
+            fn truncate_from(val: $num) -> Self {
+                const SIZE: usize = size_of::<$num>();
+                let bytes = val.to_le_bytes();
+                let mut arr = [0; N];
+                for i in 0..usize::min(N, SIZE) {
+                    arr[i] = bytes[i];
+                }
+                U::from_le_bytes(arr)
             }
         }
     };
@@ -880,18 +925,26 @@ mod tests {
     }
 
     #[test]
-    fn test_from_checked() {
+    fn test_from_checked_unsigned() {
         assert_eq!(U::<1>::from_checked(0u8), Some(U::zero()));
         assert_eq!(U::<1>::from_checked(255u8), Some(U::max_value()));
-        assert_eq!(U::<1>::from_checked(-1i8), None);
-        assert_eq!(U::<1>::from_checked(-128i8), None);
-        assert_eq!(U::<1>::from_checked(1i8), Some(U::one()));
-        assert_eq!(U::<1>::from_checked(127i8), Some(U([0x7F])));
 
         assert_eq!(U::<1>::from_checked(0u16), Some(U::zero()));
         assert_eq!(U::<1>::from_checked(255u16), Some(U::max_value()));
         assert_eq!(U::<1>::from_checked(256u16), None);
         assert_eq!(U::<1>::from_checked(u16::MAX), None);
+
+        assert_eq!(U::<2>::from_checked(0u8), Some(U::zero()));
+        assert_eq!(U::<2>::from_checked(255u8), Some(U([255, 0])));
+    }
+
+    #[test]
+    fn test_from_checked_signed() {
+        assert_eq!(U::<1>::from_checked(-1i8), None);
+        assert_eq!(U::<1>::from_checked(-128i8), None);
+        assert_eq!(U::<1>::from_checked(1i8), Some(U::one()));
+        assert_eq!(U::<1>::from_checked(127i8), Some(U([0x7F])));
+
         assert_eq!(U::<1>::from_checked(-1i16), None);
         assert_eq!(U::<1>::from_checked(-128i16), None);
         assert_eq!(U::<1>::from_checked(1i16), Some(U::one()));
@@ -900,11 +953,121 @@ mod tests {
         assert_eq!(U::<1>::from_checked(256i16), None);
         assert_eq!(U::<1>::from_checked(i16::MAX), None);
 
-        assert_eq!(U::<2>::from_checked(0u8), Some(U::zero()));
-        assert_eq!(U::<2>::from_checked(255u8), Some(U([255, 0])));
         assert_eq!(U::<2>::from_checked(-1i8), None);
         assert_eq!(U::<2>::from_checked(-128i8), None);
         assert_eq!(U::<2>::from_checked(1i8), Some(U::one()));
         assert_eq!(U::<2>::from_checked(127i8), Some(U([0x7F, 0x0])));
+    }
+
+    #[test]
+    fn test_into_checked_unsigned() {
+        let u8_zero = U::from_u8(0);
+        let u8_one = U::from_u8(1);
+        let u8_max = U::from_u8(u8::MAX);
+
+        let u16_zero = U::from_u16(0);
+        let u16_one = U::from_u16(1);
+        let u16_255 = U::from_u16(255);
+        let u16_256 = U::from_u16(256);
+        let u16_max = U::from_u16(u16::MAX);
+
+        assert_eq!(u8::from_checked(u8_zero), Some(0));
+        assert_eq!(u8::from_checked(u8_one), Some(1));
+        assert_eq!(u8::from_checked(u8_max), Some(255));
+
+        assert_eq!(u8::from_checked(u16_zero), Some(0));
+        assert_eq!(u8::from_checked(u16_one), Some(1));
+        assert_eq!(u8::from_checked(u16_255), Some(255));
+        assert_eq!(u8::from_checked(u16_256), None);
+        assert_eq!(u8::from_checked(u16_max), None);
+
+        assert_eq!(u16::from_checked(u8_zero), Some(0));
+        assert_eq!(u16::from_checked(u8_one), Some(1));
+        assert_eq!(u16::from_checked(u8_max), Some(255));
+
+        assert_eq!(u16::from_checked(u16_zero), Some(0));
+        assert_eq!(u16::from_checked(u16_one), Some(1));
+        assert_eq!(u16::from_checked(u16_255), Some(255));
+        assert_eq!(u16::from_checked(u16_256), Some(256));
+        assert_eq!(u16::from_checked(u16_max), Some(u16::MAX));
+    }
+
+    #[test]
+    fn test_into_checked_signed() {
+        let u8_zero = U::from_u8(0);
+        let u8_one = U::from_u8(1);
+        let u8_127 = U::from_u8(127);
+        let u8_128 = U::from_u8(128);
+        let u8_max = U::from_u8(u8::MAX);
+
+        let u16_zero = U::from_u16(0);
+        let u16_one = U::from_u16(1);
+        let u16_127 = U::from_u16(127);
+        let u16_128 = U::from_u16(128);
+        let u16_32767 = U::from_u16(32_767);
+        let u16_32768 = U::from_u16(32_768);
+        let u16_max = U::from_u16(u16::MAX);
+
+        assert_eq!(i8::from_checked(u8_zero), Some(0));
+        assert_eq!(i8::from_checked(u8_one), Some(1));
+        assert_eq!(i8::from_checked(u8_127), Some(127));
+        assert_eq!(i8::from_checked(u8_128), None);
+        assert_eq!(i8::from_checked(u8_max), None);
+
+        assert_eq!(i8::from_checked(u16_zero), Some(0));
+        assert_eq!(i8::from_checked(u16_one), Some(1));
+        assert_eq!(i8::from_checked(u16_127), Some(127));
+        assert_eq!(i8::from_checked(u16_128), None);
+        assert_eq!(i8::from_checked(u16_max), None);
+
+        assert_eq!(i16::from_checked(u8_zero), Some(0));
+        assert_eq!(i16::from_checked(u8_one), Some(1));
+        assert_eq!(i16::from_checked(u8_127), Some(127));
+        assert_eq!(i16::from_checked(u8_128), Some(128));
+        assert_eq!(i16::from_checked(u8_max), Some(255));
+
+        assert_eq!(i16::from_checked(u16_zero), Some(0));
+        assert_eq!(i16::from_checked(u16_one), Some(1));
+        assert_eq!(i16::from_checked(u16_127), Some(127));
+        assert_eq!(i16::from_checked(u16_128), Some(128));
+        assert_eq!(i16::from_checked(u16_32767), Some(i16::MAX));
+        assert_eq!(i16::from_checked(u16_32768), None);
+        assert_eq!(i16::from_checked(u16_max), None);
+    }
+
+    #[test]
+    fn test_truncate_from_unsigned() {
+        assert_eq!(U::<1>::truncate_from(0u8), U::zero());
+        assert_eq!(U::<1>::truncate_from(255u8), U::max_value());
+
+        assert_eq!(U::<1>::truncate_from(0u16), U::zero());
+        assert_eq!(U::<1>::truncate_from(255u16), U::max_value());
+        assert_eq!(U::<1>::truncate_from(256u16), U::zero());
+        assert_eq!(U::<1>::truncate_from(257u16), U::one());
+        assert_eq!(U::<1>::truncate_from(u16::MAX), U::max_value());
+
+        assert_eq!(U::<2>::truncate_from(0u8), U::zero());
+        assert_eq!(U::<2>::truncate_from(255u8), U([255, 0]));
+    }
+
+    #[test]
+    fn test_from_bytes() {
+        assert_eq!(U::from_le_bytes([0, 1, 2]), U([0, 1, 2]));
+        assert_eq!(U::from_be_bytes([2, 1, 0]), U([0, 1, 2]));
+        #[cfg(target_endian = "little")]
+        assert_eq!(U::from_ne_bytes([0, 1, 2]), U([0, 1, 2]));
+        #[cfg(target_endian = "big")]
+        assert_eq!(U::from_ne_bytes([2, 1, 0]), U([0, 1, 2]));
+    }
+
+    #[test]
+    fn test_into_bytes() {
+        let val = U([0, 1, 2]);
+        assert_eq!(val.to_le_bytes(), [0, 1, 2]);
+        assert_eq!(val.to_be_bytes(), [2, 1, 0]);
+        #[cfg(target_endian = "little")]
+        assert_eq!(val.to_ne_bytes(), [0, 1, 2]);
+        #[cfg(target_endian = "big")]
+        assert_eq!(val.to_ne_bytes(), [2, 1, 0]);
     }
 }
