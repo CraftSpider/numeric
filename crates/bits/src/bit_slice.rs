@@ -2,8 +2,9 @@
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+use core::fmt::Write;
 use core::iter::Copied;
-use core::{array, slice};
+use core::{array, fmt, slice};
 use numeric_traits::class::{BoundedBit, Integral};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::core::{BitAssignOps, NumAssignOps};
@@ -13,6 +14,7 @@ use numeric_traits::ops::widening::WideningMul;
 mod iter;
 
 pub use iter::*;
+use numeric_traits::cast::{FromAll, FromSaturating, IntoSaturating, IntoTruncating};
 
 #[inline]
 fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
@@ -24,7 +26,17 @@ fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
 ///
 /// Note: This may be sealed or the auto-impl may be removed in future breaking versions.
 pub trait BitLike:
-    Integral + NumAssignOps + BitAssignOps + BoundedBit + OverflowingOps + WideningMul + Ord + Copy
+    Integral
+    + NumAssignOps
+    + BitAssignOps
+    + BoundedBit
+    + OverflowingOps
+    + WideningMul
+    + FromAll<u8>
+    + Ord
+    + Copy
+    + IntoSaturating<u8>
+    + IntoTruncating<u8>
 {
     /// The length of this type in bits.
     const BIT_LEN: usize;
@@ -37,11 +49,55 @@ impl<
             + BoundedBit
             + OverflowingOps
             + WideningMul
+            + FromAll<u8>
+            + IntoSaturating<u8>
+            + IntoTruncating<u8>
             + Ord
             + Copy,
     > BitLike for T
 {
     const BIT_LEN: usize = size_of::<T>() * 8;
+}
+
+#[derive(Default, PartialEq)]
+pub enum DisplayFmt {
+    Hex,
+    #[default]
+    Binary,
+}
+
+#[derive(Default)]
+pub struct DisplayOpts {
+    pub format: DisplayFmt,
+}
+
+pub struct BitSliceDisplay<'a, B: ?Sized>(&'a B, DisplayOpts);
+
+impl<B: ?Sized + BitSliceExt> fmt::Display for BitSliceDisplay<'_, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+        match self.1.format {
+            DisplayFmt::Binary => {
+                for b in (0..self.0.bit_len()).rev() {
+                    let b = self.0.get_bit(b).unwrap();
+                    let c = if b { '1' } else { '0' };
+                    f.write_char(c)?;
+                }
+            }
+            DisplayFmt::Hex => {
+                for b in (0..self.0.len()).rev() {
+                    let b = self.0.get(b).unwrap();
+                    for i in (0..(B::Bit::BIT_LEN / 4)).rev() {
+                        let digit: u8 = ((b >> (i * 4)) & B::Bit::saturate_from(0xF)).truncate();
+                        let c = if digit < 10 { digit + 48 } else { digit + 55 };
+                        f.write_char(c as char)?;
+                    }
+                }
+            }
+        }
+        write!(f, "]")?;
+        Ok(())
+    }
 }
 
 /// Things that can be considered slices of bits. This includes slices obviously, as well as vectors
@@ -155,6 +211,10 @@ pub trait BitSliceExt: core::fmt::Debug {
     /// Get an iterator over the bit values of this slice
     fn iter_bits(&self) -> BitIter<Self::Iter<'_>> {
         BitIter::new(self.iter())
+    }
+
+    fn display(&self, opts: Option<DisplayOpts>) -> BitSliceDisplay<'_, Self> {
+        BitSliceDisplay(self, opts.unwrap_or_default())
     }
 }
 
@@ -286,6 +346,9 @@ pub trait BitVecExt: BitSliceExt {
     /// Extend this type with `val` up to `len`
     fn extend(&mut self, len: usize, val: Self::Bit);
 
+    /// Truncate this type to len, which must be <= current len
+    fn truncate(&mut self, len: usize);
+
     /// Set a single value by index on this slice, extending it if the index is out of range
     fn set_push(&mut self, idx: usize, val: Self::Bit) {
         self.extend(idx, Self::Bit::zero());
@@ -306,6 +369,10 @@ impl<I: BitLike> BitVecExt for Vec<I> {
         if len > self.len() {
             self.resize(len, val);
         }
+    }
+
+    fn truncate(&mut self, len: usize) {
+        self.truncate(len);
     }
 }
 
