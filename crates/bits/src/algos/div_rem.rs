@@ -5,6 +5,8 @@ use numeric_traits::identity::Zero;
 
 mod impls;
 
+pub struct NewtonRaphson;
+
 pub trait DivRemAlgo {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
@@ -239,5 +241,11 @@ mod tests {
         test_rem_long::<Bitwise>();
 
         test_div_wrapping::<Bitwise>();
+    }
+
+    #[test]
+    fn test_nr() {
+        #[cfg(feature = "alloc")]
+        test_div_long::<NewtonRaphson>();
     }
 }
