@@ -128,14 +128,14 @@ where
     out.iter_mut().zip(est.iter()).for_each(|(l, r)| *l = r);
 
     // 1.N = 1.N * 0.N, 1 <= rl < 1.5
-    <Element as AssignMulAlgo>::high(out, goal);
+    hi_mul(out, goal);
     // Calculate 2 - l, given that since we are using 1.N format that's equivalent to `0 - l` in
     // modulo arithmetic.
     // 1.N = 2.N - 1.N, 0.5 < 2-rl < 1
     <Element as AssignBitAlgo>::not(out);
     <Element as AssignAddAlgo>::wrapping(out, &[L::Bit::one()]);
     // 1.N = 1.N * 0.N, 0.5 <= l(2-rl) < 1
-    <Element as AssignMulAlgo>::high(out, est);
+    hi_mul(out, est);
     // 0.N = 1.N
     <Element as AssignShlAlgo>::wrapping(out, 1);
 }
@@ -196,7 +196,7 @@ impl DivRemAlgo for NewtonRaphson {
 
         // Calculate quotient estimate and undo normalization
         let mut quotient = est;
-        <Element as AssignMulAlgo>::high(&mut quotient, left);
+        hi_mul(&mut quotient, left);
         <Element as AssignShrAlgo>::wrapping(&mut quotient, len * 8 - 1 - zeroes);
 
         if <Element as CmpAlgo>::cmp(&quotient, &[L::Bit::zero()]).is_gt() {
