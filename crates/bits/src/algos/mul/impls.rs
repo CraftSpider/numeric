@@ -1,11 +1,12 @@
 #[cfg(feature = "alloc")]
 use crate::algos::{AddAlgo, ShlAlgo};
-use crate::algos::{AssignMulAlgo, Bitwise, Element, MulAlgo};
+use crate::algos::{AssignMulAlgo, AssignShrAlgo, Bitwise, Element, MulAlgo};
 #[cfg(feature = "alloc")]
 use crate::array::IntSlice;
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::{BitLike, BitSliceExt};
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
+use numeric_traits::class::Bounded;
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingAdd;
 use numeric_traits::ops::widening::WideningMul;
@@ -176,6 +177,14 @@ impl AssignMulAlgo for Bitwise {
             }
         }
         overflow
+    }
+
+    fn high<L, R>(left: &mut L, right: &R)
+    where
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    {
+        todo!()
     }
 }
 

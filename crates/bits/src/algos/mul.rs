@@ -82,8 +82,8 @@ pub trait AssignMulAlgo {
 
     fn saturating<L, R>(left: &mut L, right: &R)
     where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSliceExt,
+        R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
         let overflow = Self::overflowing(left, right);
         if overflow {
@@ -96,6 +96,7 @@ pub trait AssignMulAlgo {
 mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
+    use alloc::vec;
 
     #[cfg(feature = "alloc")]
     fn test_long<B: MulAlgo>() {
@@ -172,12 +173,42 @@ mod tests {
         assert_eq!(slice7, &[0b100]);
     }
 
+    // fn test_high_assign<B: AssignMulAlgo>() {
+    //     let slice1 = &mut [0b1000_0000u8];
+    //     let slice2 = &[0b0000_0010];
+    //
+    //     B::high(slice1, slice2);
+    //     assert_eq!(slice1, &[0b0000_0001]);
+    //
+    //     let slice3 = &mut [0b1111_1111u8];
+    //     let slice4 = &[2];
+    //     B::high(slice3, slice4);
+    //     assert_eq!(slice3, &[0b1]);
+    //
+    //     let slice5 = &mut [0b1111_1111u8];
+    //     let slice6 = &[0x10u8];
+    //     B::high(slice5, slice6);
+    //     assert_eq!(slice5, &[0b0000_1111]);
+    //
+    //     let slice7 = &mut [0b1000_0000u8, 0b0000_1000];
+    //     let slice8 = &[0b0000_0000, 0b1000_0000];
+    //     B::high(slice7, slice8);
+    //     assert_eq!(slice7, &[0b0100_0000, 0b0000_0100]);
+    //
+    //     let l = &mut [0b1111_1111u8, 0b1111_1111];
+    //     let r = &[0b1111_1111, 0b1111_1111];
+    //     B::high(l, r);
+    //     assert_eq!(l, &[0b11111110, 0b11111111]);
+    // }
+
     #[test]
     fn test_element() {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
         test_wrapping::<Element>();
         test_wrapping_assign::<Element>();
+
+        test_high_assign::<Element>();
     }
 
     #[test]

@@ -8,7 +8,7 @@ use criterion::{
 use numeric_bench_util::make_criterion;
 use numeric_bits::algos::{
     AddAlgo, AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo, Bitwise,
-    CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo, SubAlgo,
+    CmpAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, SubAlgo,
 };
 use std::time::Duration;
 
@@ -360,7 +360,7 @@ pub fn bench_div(c: &mut Criterion) {
         c,
         MathMeths {
             tr: "Div",
-            long_elem: None,
+            long_elem: Some(|l, r| <NewtonRaphson as DivRemAlgo>::long(l, r).0),
             long_bit: Some(|l, r| <Bitwise as DivRemAlgo>::long(l, r).0),
             checked_elem: None,
             checked_bit: Some(|l, r| <Bitwise as AssignDivRemAlgo>::div_checked(l, r, &mut [0; 8])),

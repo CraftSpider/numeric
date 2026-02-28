@@ -13,67 +13,6 @@ use numeric_traits::identity::One;
 #[cfg(feature = "alloc")]
 use numeric_traits::identity::Zero;
 
-extern crate std;
-
-/*
-impl DivRemAlgo for Element {
-    #[cfg(feature = "alloc")]
-    fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
-    where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
-    {
-        let len = usize::max(left.len(), right.len());
-
-        let mut quotient = vec![L::Bit::zero(); len];
-        let mut remainder = vec![L::Bit::zero(); len];
-        let mut one = vec![L::Bit::zero(); len];
-        one[len - 1] = L::Bit::one();
-
-        for idx in (0..len).rev() {
-            // Shift left by 1 element
-            <Element as AssignShlAlgo>::wrapping(&mut remainder, L::Bit::BIT_LEN);
-            // Set new element to left[idx]
-            remainder.set(0, left.get(idx));
-
-            // Mathy stuff:
-            //   The remainder will *always* be no more than one digit greater than the divisor
-            //   Which means the divisor will go into the remainder at most Self::Bit::MAX times
-            //
-            //   (99 / 100, remainder of 99, is the worst case)
-
-            // TODO: This is the slow bit. Maybe do some mul/sub stuff instead?
-            //       Can this not be a loop, maybe nested division or something?
-            //       Remainder is at most Bit::MAX * right. Can we use that?
-            // While remainder is greater than divisor
-            while <Element as CmpAlgo>::ge(&remainder, right) {
-                // Subtract remainder by divisor
-                <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
-                // Add 1 to quotient at idx
-                <Element as AssignAddAlgo>::wrapping(&mut quotient, &one);
-            }
-
-            <Element as AssignShrAlgo>::wrapping(&mut one, L::Bit::BIT_LEN);
-        }
-
-        (IntSlice::shrink(quotient), IntSlice::shrink(remainder))
-    }
-
-    fn overflowing<'a, L, R>(
-        left: &L,
-        right: &R,
-        quotient: &'a mut [L::Bit],
-        remainder: &'a mut [L::Bit],
-    ) -> (&'a [L::Bit], &'a [L::Bit], bool)
-    where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
-    }
-}
- */
-
 impl DivRemAlgo for Bitwise {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
@@ -181,22 +120,24 @@ where
 /// l is treated as fixed 1.N - range [1, 2)
 /// r is treated as fixed 0.N - range [0.5, 1)
 /// output will be fixed 0.N
-fn newton_step<L, R>(l: &mut L, r: &R)
+fn newton_step<L, R>(est: &L, goal: &R, out: &mut Vec<L::Bit>)
 where
     L: ?Sized + BitVecExt,
     R: ?Sized + BitSliceExt<Bit = L::Bit>,
 {
-    // 1.N = 1.N * 0.N, 1 <= lr < 1.5
-    hi_mul(l, r);
+    out.iter_mut().zip(est.iter()).for_each(|(l, r)| *l = r);
+
+    // 1.N = 1.N * 0.N, 1 <= rl < 1.5
+    <Element as AssignMulAlgo>::high(out, goal);
     // Calculate 2 - l, given that since we are using 1.N format that's equivalent to `0 - l` in
     // modulo arithmetic.
-    // 1.N = 2.N - 1.N, 0.5 < 2-lr < 1
-    <Element as AssignBitAlgo>::not(l);
-    <Element as AssignAddAlgo>::wrapping(l, &[L::Bit::one()]);
-    // 1.N = 1.N * 0.N, 0.5 <= x(2-ax) < 1
-    hi_mul(l, r);
+    // 1.N = 2.N - 1.N, 0.5 < 2-rl < 1
+    <Element as AssignBitAlgo>::not(out);
+    <Element as AssignAddAlgo>::wrapping(out, &[L::Bit::one()]);
+    // 1.N = 1.N * 0.N, 0.5 <= l(2-rl) < 1
+    <Element as AssignMulAlgo>::high(out, est);
     // 0.N = 1.N
-    <Element as AssignShlAlgo>::wrapping(l, 1);
+    <Element as AssignShlAlgo>::wrapping(out, 1);
 }
 
 fn leading_zeroes<L>(l: &L) -> usize
@@ -222,22 +163,16 @@ impl DivRemAlgo for NewtonRaphson {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
-        std::println!(
-            "Calculating {} / {}",
-            left.display(None),
-            right.display(None)
-        );
-
         let one = L::Bit::one();
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         let len = usize::max(left.len(), right.len());
 
         let mut norm_r = vec![L::Bit::zero(); len];
         let mut est = vec![L::Bit::zero(); len];
+        let mut new_est = vec![L::Bit::zero(); len];
 
         // Count leading zeroes
         let zeroes = leading_zeroes(right) + L::Bit::BIT_LEN * (len - right.len());
-        std::println!("zeros: {zeroes}");
         // Normalize value to have leading 1
         <Element as ShlAlgo>::wrapping(right, zeroes, &mut norm_r);
 
@@ -250,23 +185,19 @@ impl DivRemAlgo for NewtonRaphson {
         // Convert estimate to fixed 0.N by putting it in high 8 bytes
         est.set_ignore(len - 1, estimate);
 
-        std::println!("Begin Estimate: {}", est.display(None));
-        std::println!("Begin Normalized right: {}", norm_r.display(None));
-
         // Newton estimates to refine reciprocal
         let mut bits = 4;
         while bit_len > bits {
-            newton_step(&mut est, &norm_r);
+            new_est.fill(L::Bit::zero());
+            newton_step(&est, &norm_r, &mut new_est);
+            est.copy_from_slice(&new_est);
             bits *= 2;
-            std::println!("  new estimate: {}", est.display(None));
         }
 
         // Calculate quotient estimate and undo normalization
         let mut quotient = est;
-        hi_mul(&mut quotient, left);
+        <Element as AssignMulAlgo>::high(&mut quotient, left);
         <Element as AssignShrAlgo>::wrapping(&mut quotient, len * 8 - 1 - zeroes);
-
-        std::println!("q0:  {}", quotient.display(None));
 
         if <Element as CmpAlgo>::cmp(&quotient, &[L::Bit::zero()]).is_gt() {
             <Element as AssignSubAlgo>::wrapping(&mut quotient, &[L::Bit::one()]);
@@ -276,14 +207,10 @@ impl DivRemAlgo for NewtonRaphson {
         let mut remainder = norm_r;
         <Element as MulAlgo>::wrapping(&quotient, right, &mut remainder);
 
-        std::println!("re0: {}", remainder.display(None));
-
         // Calculate left - remainder
         <Element as AssignSubAlgo>::wrapping(&mut remainder, left);
         <Element as AssignBitAlgo>::not(&mut remainder);
         <Element as AssignAddAlgo>::wrapping(&mut remainder, &[L::Bit::one()]);
-
-        std::println!("rem: {}", remainder.display(None));
 
         // Correct quotient to handle possible error
         if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
@@ -318,19 +245,6 @@ impl DivRemAlgo for NewtonRaphson {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_hi_mul() {
-        let mut val = vec![0xFFu8];
-        let r = &[2u8];
-        hi_mul(&mut val, r);
-        assert_eq!(val, [0b1]);
-
-        let mut val = vec![0xFFu8];
-        let r = &[0x10u8];
-        hi_mul(&mut val, r);
-        assert_eq!(val, [0b1111]);
-    }
 
     #[test]
     fn test_leading_zeros() {
