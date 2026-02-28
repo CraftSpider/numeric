@@ -178,14 +178,6 @@ impl AssignMulAlgo for Bitwise {
         }
         overflow
     }
-
-    fn high<L, R>(left: &mut L, right: &R)
-    where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
-    {
-        todo!()
-    }
 }
 
 fn add_bit<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize) -> bool {

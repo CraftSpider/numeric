@@ -207,8 +207,6 @@ mod tests {
         test_long::<Element>();
         test_wrapping::<Element>();
         test_wrapping_assign::<Element>();
-
-        test_high_assign::<Element>();
     }
 
     #[test]
