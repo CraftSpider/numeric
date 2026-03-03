@@ -8,7 +8,10 @@ use core::borrow::Borrow;
 use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Write};
 use core::{fmt, num, ops, ptr};
-use numeric_bits::algos::{AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, ShrAlgo, SubAlgo};
+use numeric_bits::algos::{
+    AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
+    ShrAlgo, SubAlgo,
+};
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
 use numeric_traits::class::{Integral, Numeric, Signed, Unsigned};
