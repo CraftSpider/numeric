@@ -6,8 +6,9 @@ use arrayvec::ArrayVec;
 use core::cmp::Ordering;
 use core::iter::Product;
 use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
-    Mul, MulAssign, Not, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, ControlFlow,
+    Div, DivAssign, Mul, MulAssign, Not, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub,
+    SubAssign,
 };
 use core::{array, fmt, iter};
 use numeric_bits::algos::{
@@ -17,7 +18,7 @@ use numeric_bits::algos::{AssignMulAlgo, Element};
 use numeric_bits::array::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
-use numeric_traits::class::{Bounded, Integral, Numeric, Unsigned};
+use numeric_traits::class::{Bounded, BoundedBit, Integral, Numeric, Unsigned};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
 use numeric_traits::ops::saturating::{SaturatingAdd, SaturatingMul, SaturatingSub};
@@ -479,6 +480,39 @@ impl<const N: usize> Bounded for U<N> {
 
     fn max_value() -> Self {
         U([u8::MAX; N])
+    }
+}
+
+impl<const N: usize> BoundedBit for U<N> {
+    fn leading_zeros(self) -> Self {
+        let v = self
+            .0
+            .into_iter()
+            .rev()
+            .try_fold(0, |acc, val| {
+                if val == 0 {
+                    Ok(acc + 8)
+                } else {
+                    Err(acc + val.leading_zeros())
+                }
+            })
+            .unwrap_or_else(|b| b);
+        Self::truncate_from(v)
+    }
+
+    fn trailing_zeros(self) -> Self {
+        let v = self
+            .0
+            .into_iter()
+            .try_fold(0, |acc, val| {
+                if val == 0 {
+                    Ok(acc + 8)
+                } else {
+                    Err(acc + val.trailing_zeros())
+                }
+            })
+            .unwrap_or_else(|b| b);
+        Self::truncate_from(v)
     }
 }
 
@@ -1069,5 +1103,15 @@ mod tests {
         assert_eq!(val.to_ne_bytes(), [0, 1, 2]);
         #[cfg(target_endian = "big")]
         assert_eq!(val.to_ne_bytes(), [2, 1, 0]);
+    }
+
+    #[test]
+    fn test_leading_trailing_zeros() {
+        let val = U::from_u16(0x00E0);
+        assert_eq!(val.leading_zeros(), U::from_u16(8));
+        assert_eq!(val.trailing_zeros(), U::from_u16(5));
+        let val = U::from_u16(0x050C);
+        assert_eq!(val.leading_zeros(), U::from_u16(5));
+        assert_eq!(val.trailing_zeros(), U::from_u16(2));
     }
 }

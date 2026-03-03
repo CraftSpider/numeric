@@ -28,7 +28,7 @@ impl DivRemAlgo for Bitwise {
 
         for idx in (0..bit_len).rev() {
             <Element as AssignShlAlgo>::wrapping(&mut remainder, 1);
-            remainder.set_bit(0, left.get_bit(idx).unwrap());
+            remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(&remainder, right) {
                 // Subtract will never overflow
                 <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
@@ -52,7 +52,7 @@ impl DivRemAlgo for Bitwise {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
             <Element as AssignShlAlgo>::wrapping(remainder, 1);
-            remainder.set_bit(0, left.get_bit(idx).unwrap());
+            remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
                 <Element as AssignSubAlgo>::wrapping(remainder, right);
@@ -75,7 +75,7 @@ impl AssignDivRemAlgo for Bitwise {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
             <Element as AssignShlAlgo>::wrapping(remainder, 1);
-            remainder.set_bit(0, left.get_bit(idx).unwrap());
+            remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
                 <Element as AssignSubAlgo>::wrapping(remainder, right);
@@ -110,10 +110,11 @@ where
     L: ?Sized + BitVecExt,
     R: ?Sized + BitSliceExt<Bit = L::Bit>,
 {
+    // TODO: More efficient implementation
     let len = l.len();
     l.extend(len * 2, L::Bit::zero());
     <Element as AssignMulAlgo>::wrapping(l, r);
-    <Element as AssignShrAlgo>::wrapping(l, len * L::Bit::BIT_LEN);
+    Element::shr_element(l, len);
     l.truncate(len);
 }
 
@@ -188,7 +189,6 @@ impl DivRemAlgo for NewtonRaphson {
         // Newton estimates to refine reciprocal
         let mut bits = 4;
         while bit_len > bits {
-            new_est.fill(L::Bit::zero());
             newton_step(&est, &norm_r, &mut new_est);
             est.copy_from_slice(&new_est);
             bits *= 2;
@@ -199,7 +199,7 @@ impl DivRemAlgo for NewtonRaphson {
         hi_mul(&mut quotient, left);
         <Element as AssignShrAlgo>::wrapping(&mut quotient, len * 8 - 1 - zeroes);
 
-        if <Element as CmpAlgo>::cmp(&quotient, &[L::Bit::zero()]).is_gt() {
+        if quotient.iter().any(|v| v != L::Bit::zero()) {
             <Element as AssignSubAlgo>::wrapping(&mut quotient, &[L::Bit::one()]);
         }
 

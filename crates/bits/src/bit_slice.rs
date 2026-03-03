@@ -102,7 +102,7 @@ impl<B: ?Sized + BitSliceExt> fmt::Display for BitSliceDisplay<'_, B> {
 
 /// Things that can be considered slices of bits. This includes slices obviously, as well as vectors
 /// and other slice-like containers.
-pub trait BitSliceExt: core::fmt::Debug {
+pub trait BitSliceExt: fmt::Debug {
     /// The bit container type contained in this slice
     type Bit: BitLike;
 
@@ -241,18 +241,22 @@ impl<I: BitLike> BitSliceExt for [I] {
         self.is_empty()
     }
 
+    #[inline]
     fn get(&self, idx: usize) -> Option<Self::Bit> {
         self.get(idx).copied()
     }
 
+    #[inline]
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
         self.get_mut(idx)
     }
 
+    #[inline]
     fn iter(&self) -> Self::Iter<'_> {
         self.iter().copied()
     }
 
+    #[inline]
     fn iter_mut(&mut self) -> Self::IterMut<'_> {
         self.iter_mut()
     }
@@ -281,18 +285,22 @@ impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
         N == 0
     }
 
+    #[inline]
     fn get(&self, idx: usize) -> Option<Self::Bit> {
         <[I]>::get(self, idx).copied()
     }
 
+    #[inline]
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
         <[I]>::get_mut(self, idx)
     }
 
+    #[inline]
     fn iter(&self) -> Self::Iter<'_> {
         (*self).into_iter()
     }
 
+    #[inline]
     fn iter_mut(&mut self) -> Self::IterMut<'_> {
         #[allow(clippy::into_iter_on_ref)]
         self.into_iter()
@@ -323,18 +331,22 @@ impl<I: BitLike> BitSliceExt for Vec<I> {
         self.is_empty()
     }
 
+    #[inline]
     fn get(&self, idx: usize) -> Option<Self::Bit> {
         <[I]>::get(self, idx).copied()
     }
 
+    #[inline]
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Bit> {
         <[I]>::get_mut(self, idx)
     }
 
+    #[inline]
     fn iter(&self) -> Self::Iter<'_> {
         <&[I]>::into_iter(self).copied()
     }
 
+    #[inline]
     fn iter_mut(&mut self) -> Self::IterMut<'_> {
         <&mut [I]>::into_iter(self)
     }
