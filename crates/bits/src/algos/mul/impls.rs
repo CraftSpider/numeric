@@ -46,13 +46,11 @@ impl MulAlgo for Element {
         let zero = L::Bit::zero();
 
         let mut overflow = false;
-        for idx in (0..left.len()).rev() {
+        for (idx, l) in left.iter().enumerate() {
             // From the top to bottom, add N shifted copies of M. This can be done by taking each
             // element of the left and doing a widening mul, carrying the upper, and repeating
             let mut new_overflow = false;
             let mut carry = zero;
-
-            let l = left.get(idx).unwrap();
 
             for (offset, r) in right.iter().enumerate() {
                 let (low, high) = L::Bit::widening_mul(l, r, carry);

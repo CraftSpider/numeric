@@ -13,8 +13,8 @@ use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, ShlAlgo, ShrAlgo,
-    SubAlgo,
+    AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
+    ShrAlgo, SubAlgo,
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSliceExt;
@@ -598,14 +598,14 @@ impl_op!(sub(self: IBig, rhs) => {
 
 impl_op!(div(self: IBig, rhs) => {
     let out = IBig::with_slices(self, rhs, |this, other| {
-        <Bitwise as DivRemAlgo>::long(this, other).0
+        <NewtonRaphson as DivRemAlgo>::long(this, other).0
     });
     IBig::new_slice(out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(rem(self: IBig, rhs) => {
     let out = IBig::with_slices(self, rhs, |this, other| {
-        <Bitwise as DivRemAlgo>::long(this, other).1
+        <NewtonRaphson as DivRemAlgo>::long(this, other).1
     });
     IBig::new_slice(out, self.is_negative() != rhs.is_negative())
 });

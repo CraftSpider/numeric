@@ -48,7 +48,7 @@ impl SubAlgo for Element {
         }
 
         if carry {
-            out.set_bit(0, !out.get_bit(0).unwrap());
+            out.set_bit(0, !out.get_bit(0).unwrap_or(false));
             <Element as AssignBitAlgo>::not(&mut out);
         }
 
@@ -169,7 +169,7 @@ impl SubAlgo for Bitwise {
         }
 
         if carry {
-            out.set_bit(0, !out.get_bit(0).unwrap());
+            out.set_bit(0, !out.get_bit(0).unwrap_or(false));
             <Element as AssignBitAlgo>::not(&mut out);
         }
 
