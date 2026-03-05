@@ -9,8 +9,8 @@ use criterion::{
 };
 use numeric_bench_util::make_criterion;
 use numeric_bits::algos::{
-    AddAlgo, AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo, Bitwise,
-    CmpAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, SubAlgo,
+    Add, Algo, AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo,
+    Bitwise, CmpAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, SubAlgo,
 };
 use std::time::Duration;
 
@@ -317,8 +317,8 @@ pub fn bench_add(c: &mut Criterion) {
         c,
         MathMeths {
             tr: "Add",
-            long_elem: Some(<Element as AddAlgo>::long),
-            long_bit: Some(<Bitwise as AddAlgo>::long),
+            long_elem: Some(<Element as Algo<Add>>::wrapping::<_, _, Vec<_>>),
+            long_bit: Some(<Bitwise as Algo<Add>>::wrapping::<_, _, Vec<_>>),
             checked_elem: Some(<Element as AssignAddAlgo>::checked),
             checked_bit: Some(<Bitwise as AssignAddAlgo>::checked),
             wrapping_elem: Some(<Element as AssignAddAlgo>::wrapping),

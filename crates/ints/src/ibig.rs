@@ -13,8 +13,8 @@ use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    AddAlgo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, ShrAlgo,
-    SubAlgo,
+    Add, Algo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
+    ShrAlgo, SubAlgo,
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSliceExt;
@@ -551,7 +551,7 @@ impl_op!(add(self: IBig, rhs) => {
     let (out, neg) = IBig::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, true) | (false, false) => {
-                (<Element as AddAlgo>::long(this, other), self.is_negative())
+                (<Element as Algo<Add>>::wrapping(this, other), self.is_negative())
             }
             (true, _) => {
                 let (out, neg) = <Element as SubAlgo>::long(this, other);
@@ -579,7 +579,7 @@ impl_op!(sub(self: IBig, rhs) => {
     let (out, neg) = IBig::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, false) | (false, true) => {
-                let out = <Element as AddAlgo>::long(this, other);
+                let out = <Element as Algo<Add>>::wrapping(this, other);
                 (out, self.is_negative())
             }
             (true, true) => {

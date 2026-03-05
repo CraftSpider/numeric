@@ -9,8 +9,8 @@ use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    AddAlgo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, ShrAlgo,
-    SubAlgo,
+    Add, Algo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
+    ShrAlgo, SubAlgo,
 };
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
@@ -496,8 +496,8 @@ impl FromTruncating<IBig> for UBig {
 }
 
 impl_op!(add(self: UBig, rhs) => {
-    let out = UBig::with_slices(self, rhs, |this, other| {
-        <Element as AddAlgo>::long(this, other)
+    let out: Vec<_> = UBig::with_slices(self, rhs, |this, other| {
+        <Element as Algo<Add>>::wrapping(this, other)
     });
 
     UBig::new_slice(out)

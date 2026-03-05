@@ -1,6 +1,6 @@
 #[cfg(feature = "alloc")]
-use crate::algos::{AddAlgo, ShlAlgo};
-use crate::algos::{AssignMulAlgo, Bitwise, Element, MulAlgo};
+use crate::algos::ShlAlgo;
+use crate::algos::{Add, Algo, AssignMulAlgo, Bitwise, Element, MulAlgo};
 #[cfg(feature = "alloc")]
 use crate::array::IntSlice;
 use crate::bit_slice::BitSliceExt;
@@ -136,7 +136,7 @@ impl MulAlgo for Bitwise {
         for idx in 0..right.bit_len() {
             let r = right.get_bit(idx).unwrap_or(false);
             if r {
-                out = <Element as AddAlgo>::long(&out, &new_self);
+                out = <Element as Algo<Add>>::wrapping(&out, &new_self);
             }
             new_self = <Element as ShlAlgo>::long(&new_self, 1);
         }
