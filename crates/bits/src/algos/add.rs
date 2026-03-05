@@ -147,12 +147,37 @@ mod tests {
         );
     }
 
+    /// Test some edge cases of the desired AddAlgo API
+    /// - Outputs can be non-zero
+    /// - Inputs can be of different lengths
+    fn test_edges<B: AddAlgo>() {
+        let a = &[1u8, 1];
+        let b = &[1];
+
+        let out = &mut [0xFF; 1];
+        B::wrapping(a, b, out);
+        assert_eq!(out, &[2]);
+
+        let out = &mut [0xFF; 2];
+        B::wrapping(a, b, out);
+        assert_eq!(out, &[2, 1]);
+
+        let out = &mut [0xFF; 1];
+        B::wrapping(b, a, out);
+        assert_eq!(out, &[2]);
+
+        let out = &mut [0xFF; 2];
+        B::wrapping(b, a, out);
+        assert_eq!(out, &[2, 1]);
+    }
+
     #[test]
     fn test_element() {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
         test_wrapping::<Element>();
         test_saturating::<Element>();
+        test_edges::<Element>();
     }
 
     #[test]
@@ -161,5 +186,6 @@ mod tests {
         test_long::<Bitwise>();
         test_wrapping::<Bitwise>();
         test_saturating::<Bitwise>();
+        test_edges::<Bitwise>();
     }
 }

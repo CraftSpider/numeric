@@ -200,12 +200,36 @@ mod tests {
     //     assert_eq!(l, &[0b11111110, 0b11111111]);
     // }
 
+    /// Test some edge cases of the desired MulAlgo API
+    /// - Inputs can be of different lengths
+    fn test_edges<B: MulAlgo>() {
+        let a = &[3u8, 3];
+        let b = &[2];
+
+        let out = &mut [0xFF; 1];
+        B::wrapping(a, b, out);
+        assert_eq!(out, &[6]);
+
+        let out = &mut [0xFF; 2];
+        B::wrapping(a, b, out);
+        assert_eq!(out, &[6, 6]);
+
+        let out = &mut [0xFF; 1];
+        B::wrapping(b, a, out);
+        assert_eq!(out, &[6]);
+
+        let out = &mut [0xFF; 2];
+        B::wrapping(b, a, out);
+        assert_eq!(out, &[6, 6]);
+    }
+
     #[test]
     fn test_element() {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
         test_wrapping::<Element>();
         test_wrapping_assign::<Element>();
+        test_edges::<Element>();
     }
 
     #[test]
@@ -214,5 +238,6 @@ mod tests {
         test_long::<Bitwise>();
         test_wrapping::<Bitwise>();
         test_wrapping_assign::<Bitwise>();
+        test_edges::<Bitwise>();
     }
 }

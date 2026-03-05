@@ -42,30 +42,45 @@ impl MulAlgo for Element {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
-        let zero = L::Bit::zero();
+        fn inner<L: ?Sized + BitSliceExt, R: ?Sized + BitSliceExt<Bit = L::Bit>>(
+            long: &L,
+            short: &R,
+            out: &mut [L::Bit],
+        ) -> bool {
+            let zero = L::Bit::zero();
 
-        let mut overflow = false;
-        for (idx, l) in left.iter().enumerate() {
-            // From the top to bottom, add N shifted copies of M. This can be done by taking each
-            // element of the left and doing a widening mul, carrying the upper, and repeating
-            let mut new_overflow = false;
-            let mut carry = zero;
+            let mut overflow = false;
+            for (idx, l) in long.iter().enumerate() {
+                // From the top to bottom, add N shifted copies of M. This can be done by taking each
+                // element of the left and doing a widening mul, carrying the upper, and repeating
+                let mut new_overflow = false;
+                let mut carry = zero;
 
-            for (offset, r) in right.iter().enumerate() {
-                let (low, high) = L::Bit::widening_mul(l, r, carry);
-                carry = high;
-                if add_item(out, idx + offset, low) {
+                out.set_ignore(idx, zero);
+
+                for (offset, r) in short.iter().enumerate() {
+                    let (low, high) = L::Bit::widening_mul(l, r, carry);
+                    carry = high;
+                    if add_item(out, idx + offset, low) {
+                        new_overflow = true;
+                    }
+                }
+
+                if carry != zero && add_item(out, idx + short.len(), carry) {
                     new_overflow = true;
                 }
+
+                overflow |= new_overflow;
             }
 
-            if carry != zero && add_item(out, idx + right.len(), carry) {
-                new_overflow = true;
-            }
-
-            overflow |= new_overflow;
+            overflow
         }
 
+        let overflow = if left.len() > right.len() {
+            inner(left, right, out)
+        } else {
+            inner(right, left, out)
+        };
         (out, overflow)
     }
 }
@@ -134,6 +149,7 @@ impl MulAlgo for Bitwise {
         L: ?Sized + BitSliceExt,
         R: ?Sized + BitSliceExt<Bit = L::Bit>,
     {
+        out.fill(L::Bit::zero());
         let mut overflow = false;
         for idx in 0..right.bit_len() {
             let r = right.get_bit(idx).unwrap_or(false);
