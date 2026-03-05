@@ -5,14 +5,31 @@
 use core::cmp::Ordering;
 use core::fmt::{self, Write};
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
-use numeric_traits::cast::FromTruncating;
+use numeric_traits::cast::{FromChecked, FromTruncating};
 use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Real, Signed};
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
 
+#[inline(always)]
+const fn const_cmp<const N: usize, const M: usize>() -> Ordering {
+    const {
+        if N < M {
+            Ordering::Less
+        } else if N > M {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+
 /// Get a mask for the fractional part of a fixed value
 fn mask<T: Integral, const N: usize>() -> T {
     (T::one() << N) - T::one()
+}
+
+fn mask_dyn<T: Integral>(size: usize) -> T {
+    (T::one() << size) - T::one()
 }
 
 /// A fixed-precision value. Given a backing integer T, uses its first `N` bits as decimal
@@ -39,6 +56,43 @@ impl<T: Integral, const N: usize> Fixed<T, N> {
 
     fn is_whole(&self) -> bool {
         self.0.clone() & !mask::<T, N>() == self.0
+    }
+}
+
+impl<T: Integral, const N: usize, const M: usize> FromChecked<Fixed<T, M>> for Fixed<T, N> {
+    fn from_checked(val: Fixed<T, M>) -> Option<Self> {
+        let diff = const { N.abs_diff(M) };
+        match const_cmp::<N, M>() {
+            // Lower precision, fractional bits will be lost
+            Ordering::Less => {
+                let mask = mask_dyn(diff);
+                if !(val.0.clone() & mask).is_zero() {
+                    None
+                } else {
+                    Some(Fixed::from_raw(val.0 >> diff))
+                }
+            }
+            Ordering::Equal => Some(Fixed::from_raw(val.0)),
+            Ordering::Greater => {
+                let new = val.0.clone() << diff;
+                if new.clone() >> diff != val.0 {
+                    None
+                } else {
+                    Some(Fixed::from_raw(new))
+                }
+            }
+        }
+    }
+}
+
+impl<T: Integral, const N: usize, const M: usize> FromTruncating<Fixed<T, M>> for Fixed<T, N> {
+    fn truncate_from(val: Fixed<T, M>) -> Self {
+        let diff = const { N.abs_diff(M) };
+        match const_cmp::<N, M>() {
+            Ordering::Less => Fixed::from_raw(val.0 >> diff),
+            Ordering::Equal => Fixed::from_raw(val.0),
+            Ordering::Greater => Fixed::from_raw(val.0 << diff),
+        }
     }
 }
 
@@ -321,6 +375,56 @@ mod tests {
         assert_eq!(
             Fixed::<_, 2>::from_raw(-0b110).fract(),
             Fixed::from_raw(-0b010)
+        );
+    }
+
+    #[test]
+    fn from_checked_unsigned() {
+        // 1.75
+        let a = Fixed::<u8, 2>::from_raw(0b111);
+        // 1.5
+        let b = Fixed::<u8, 2>::from_raw(0b110);
+
+        // 32
+        let c = Fixed::<u8, 2>::from_raw(0b01000000);
+        // 64
+        let d = Fixed::<u8, 2>::from_raw(0b10000000);
+
+        assert_eq!(Fixed::<u8, 1>::from_checked(a), None);
+        assert_eq!(Fixed::<u8, 1>::from_checked(b), Some(Fixed::from_raw(0b11)));
+        assert_eq!(
+            Fixed::<u8, 3>::from_checked(c),
+            Some(Fixed::from_raw(0b10000000))
+        );
+        assert_eq!(Fixed::<u8, 3>::from_checked(d), None);
+        assert_eq!(
+            Fixed::<u8, 3>::from_checked(a),
+            Some(Fixed::from_raw(0b00001110))
+        );
+    }
+
+    #[test]
+    fn from_checked_signed() {
+        // 1.75
+        let a = Fixed::<i8, 2>::from_raw(0b111);
+        // 1.5
+        let b = Fixed::<i8, 2>::from_raw(0b110);
+
+        // 16
+        let c = Fixed::<i8, 2>::from_raw(0b00100000);
+        // 32
+        let d = Fixed::<i8, 2>::from_raw(0b01000000);
+
+        assert_eq!(Fixed::<i8, 1>::from_checked(a), None);
+        assert_eq!(Fixed::<i8, 1>::from_checked(b), Some(Fixed::from_raw(0b11)));
+        assert_eq!(
+            Fixed::<i8, 3>::from_checked(c),
+            Some(Fixed::from_raw(0b01000000))
+        );
+        assert_eq!(Fixed::<i8, 3>::from_checked(d), None);
+        assert_eq!(
+            Fixed::<i8, 3>::from_checked(a),
+            Some(Fixed::from_raw(0b00001110))
         );
     }
 }
