@@ -130,6 +130,7 @@ where
 {
     // We multiply into out, wrapping around our overflow value for each iteration
     let zero = L::Bit::zero();
+    out.fill(zero);
 
     for (idx, l) in left.iter().enumerate() {
         let mut carry = out[idx];
@@ -225,14 +226,12 @@ impl DivRemAlgo for NewtonRaphson {
         // Newton estimates to refine reciprocal
         let mut bits = 4;
         while bit_len > bits {
-            new_est.fill(L::Bit::zero());
             newton_step(&est, &norm_r, &mut new_est, &mut scratch);
-            est.copy_from_slice(&new_est);
+            mem::swap(&mut est, &mut new_est);
             bits *= 2;
         }
 
         // Calculate quotient estimate and undo normalization
-        new_est.fill(L::Bit::zero());
         hi_mul(&est, left, &mut new_est);
         let mut quotient = new_est;
         <Element as AssignShrAlgo>::wrapping(&mut quotient, len * L::Bit::BIT_LEN - 1 - zeroes);
@@ -241,7 +240,6 @@ impl DivRemAlgo for NewtonRaphson {
             <Element as AssignSubAlgo>::wrapping(&mut quotient, &[L::Bit::one()]);
         }
 
-        norm_r.fill(L::Bit::zero());
         let mut remainder = norm_r;
         <Element as MulAlgo>::wrapping(&quotient, right, &mut remainder);
 
