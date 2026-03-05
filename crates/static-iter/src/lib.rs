@@ -328,14 +328,14 @@ mod tests {
     fn test_result_collect() {
         let res: [u32; 4] = ["1", "2", "3", "4"]
             .into_static_iter()
-            .map(|v| u32::from_str(v))
+            .map(u32::from_str)
             .collect::<Result<_, _>>()
             .unwrap();
         assert_eq!(res, [1, 2, 3, 4]);
 
         let res: Result<[u32; 4], _> = ["1", "2", "-3", "4"]
             .into_static_iter()
-            .map(|l| u32::from_str(l))
+            .map(u32::from_str)
             .collect();
         assert!(res.is_err());
     }

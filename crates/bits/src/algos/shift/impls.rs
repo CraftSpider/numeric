@@ -272,12 +272,3 @@ impl AssignShrAlgo for Element {
         right > left.bit_len()
     }
 }
-
-impl Element {
-    pub fn shr_element<L>(left: &mut L, right: usize)
-    where
-        L: ?Sized + BitSliceExt,
-    {
-        (right..left.len()).for_each(|idx| left.set_ignore(idx - right, left.get(idx).unwrap()))
-    }
-}

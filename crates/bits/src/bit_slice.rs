@@ -59,18 +59,24 @@ impl<
     const BIT_LEN: usize = size_of::<T>() * 8;
 }
 
+/// Format to display a [`BitSliceExt`] in
 #[derive(Default, PartialEq)]
 pub enum DisplayFmt {
+    /// Hex (base 16) format
     Hex,
+    /// Binary (base 2) format
     #[default]
     Binary,
 }
 
+/// Display options for a [`BitSliceExt`]
 #[derive(Default)]
 pub struct DisplayOpts {
+    /// Format or base to print in
     pub format: DisplayFmt,
 }
 
+/// Struct for writing a [`BitSliceExt`] to a buffer in a human-readable format
 pub struct BitSliceDisplay<'a, B: ?Sized>(&'a B, DisplayOpts);
 
 impl<B: ?Sized + BitSliceExt> fmt::Display for BitSliceDisplay<'_, B> {
@@ -213,6 +219,7 @@ pub trait BitSliceExt: fmt::Debug {
         BitIter::new(self.iter())
     }
 
+    /// Get a human-readable display value for this slice
     fn display(&self, opts: Option<DisplayOpts>) -> BitSliceDisplay<'_, Self> {
         BitSliceDisplay(self, opts.unwrap_or_default())
     }

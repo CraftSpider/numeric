@@ -1,9 +1,9 @@
 use super::NewtonRaphson;
 use crate::algos::{
-    AssignAddAlgo, AssignBitAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignShrAlgo,
-    AssignSubAlgo, Bitwise, CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo,
+    AssignAddAlgo, AssignBitAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
+    Bitwise, CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo,
 };
-use crate::bit_slice::{BitLike, BitSliceExt, BitVecExt};
+use crate::bit_slice::{BitLike, BitSliceExt};
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use core::mem;
@@ -12,6 +12,8 @@ use numeric_traits::class::BoundedBit;
 use numeric_traits::identity::One;
 #[cfg(feature = "alloc")]
 use numeric_traits::identity::Zero;
+use numeric_traits::ops::overflowing::OverflowingAdd;
+use numeric_traits::ops::widening::WideningMul;
 
 impl DivRemAlgo for Bitwise {
     #[cfg(feature = "alloc")]
@@ -104,39 +106,72 @@ impl AssignDivRemAlgo for Bitwise {
 /// Reciprocal initial estimates. We take the first 3 bits of the value to get this estimate
 const RECIP_TABLE: &[u8] = &[0xFF, 0xE3, 0xCC, 0xBA, 0xAA, 0x9D, 0x92, 0x88];
 
+fn add_item_loop<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize, mut val: B::Bit) {
+    let len = slice.len();
+
+    while let Some(loc) = slice.get_mut(idx % len) {
+        let (new, new_carry) = loc.overflowing_add(val);
+        *loc = new;
+        idx += 1;
+
+        if !new_carry {
+            break;
+        } else {
+            val = B::Bit::one();
+        }
+    }
+}
+
 /// Given two values, l and r, get the high bits of a widening mul between them
-fn hi_mul<L, R>(l: &mut L, r: &R)
+fn hi_mul<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
 where
-    L: ?Sized + BitVecExt,
+    L: ?Sized + BitSliceExt,
     R: ?Sized + BitSliceExt<Bit = L::Bit>,
 {
-    // TODO: More efficient implementation
-    let len = l.len();
-    l.extend(len * 2, L::Bit::zero());
-    <Element as AssignMulAlgo>::wrapping(l, r);
-    Element::shr_element(l, len);
-    l.truncate(len);
+    // We multiply into out, wrapping around our overflow value for each iteration
+    let zero = L::Bit::zero();
+
+    for (idx, l) in left.iter().enumerate() {
+        let mut carry = out[idx];
+
+        // We clear the current index - it will be overwritten by the new high value
+        out[idx] = zero;
+
+        for (offset, r) in right.iter().enumerate() {
+            let (low, high) = L::Bit::widening_mul(l, r, carry);
+            carry = high;
+
+            // We always discard first low value, since it won't be useful in future loops
+            if offset != 0 {
+                add_item_loop(out, idx + offset, low);
+            }
+        }
+
+        if carry != zero {
+            add_item_loop(out, idx + right.len(), carry);
+        }
+    }
+
+    out
 }
 
 /// l is treated as fixed 1.N - range [1, 2)
 /// r is treated as fixed 0.N - range [0.5, 1)
 /// output will be fixed 0.N
-fn newton_step<L, R>(est: &L, goal: &R, out: &mut Vec<L::Bit>)
+fn newton_step<L, R>(est: &L, goal: &R, out: &mut [L::Bit], scratch: &mut [L::Bit])
 where
-    L: ?Sized + BitVecExt,
+    L: ?Sized + BitSliceExt,
     R: ?Sized + BitSliceExt<Bit = L::Bit>,
 {
-    out.iter_mut().zip(est.iter()).for_each(|(l, r)| *l = r);
-
     // 1.N = 1.N * 0.N, 1 <= rl < 1.5
-    hi_mul(out, goal);
+    hi_mul(est, goal, scratch);
     // Calculate 2 - l, given that since we are using 1.N format that's equivalent to `0 - l` in
     // modulo arithmetic.
     // 1.N = 2.N - 1.N, 0.5 < 2-rl < 1
-    <Element as AssignBitAlgo>::not(out);
-    <Element as AssignAddAlgo>::wrapping(out, &[L::Bit::one()]);
+    <Element as AssignBitAlgo>::not(scratch);
+    <Element as AssignAddAlgo>::wrapping(scratch, &[L::Bit::one()]);
     // 1.N = 1.N * 0.N, 0.5 <= l(2-rl) < 1
-    hi_mul(out, est);
+    hi_mul(scratch, est, out);
     // 0.N = 1.N
     <Element as AssignShlAlgo>::wrapping(out, 1);
 }
@@ -155,7 +190,7 @@ where
                 Ok(acc + L::Bit::BIT_LEN)
             }
         })
-        .map_or_else(|a| a, |b| b)
+        .unwrap_or_else(|a| a)
 }
 
 impl DivRemAlgo for NewtonRaphson {
@@ -171,6 +206,7 @@ impl DivRemAlgo for NewtonRaphson {
         let mut norm_r = vec![L::Bit::zero(); len];
         let mut est = vec![L::Bit::zero(); len];
         let mut new_est = vec![L::Bit::zero(); len];
+        let mut scratch = vec![L::Bit::zero(); len];
 
         // Count leading zeroes
         let zeroes = leading_zeroes(right) + L::Bit::BIT_LEN * (len - right.len());
@@ -179,7 +215,7 @@ impl DivRemAlgo for NewtonRaphson {
 
         // Get estimate based on leading non-zero bits
         let t = norm_r.get(norm_r.len() - 1).unwrap();
-        let estimate = RECIP_TABLE[(t >> L::Bit::BIT_LEN - 4).saturate() as usize - 8];
+        let estimate = RECIP_TABLE[(t >> (L::Bit::BIT_LEN - 4)).saturate() as usize - 8];
         // Put estimate in high 8 bytes of a bit...
         let estimate = L::Bit::saturate_from(estimate) << (L::Bit::BIT_LEN - 8);
 
@@ -189,15 +225,17 @@ impl DivRemAlgo for NewtonRaphson {
         // Newton estimates to refine reciprocal
         let mut bits = 4;
         while bit_len > bits {
-            newton_step(&est, &norm_r, &mut new_est);
+            new_est.fill(L::Bit::zero());
+            newton_step(&est, &norm_r, &mut new_est, &mut scratch);
             est.copy_from_slice(&new_est);
             bits *= 2;
         }
 
         // Calculate quotient estimate and undo normalization
-        let mut quotient = est;
-        hi_mul(&mut quotient, left);
-        <Element as AssignShrAlgo>::wrapping(&mut quotient, len * 8 - 1 - zeroes);
+        new_est.fill(L::Bit::zero());
+        hi_mul(&est, left, &mut new_est);
+        let mut quotient = new_est;
+        <Element as AssignShrAlgo>::wrapping(&mut quotient, len * L::Bit::BIT_LEN - 1 - zeroes);
 
         if quotient.iter().any(|v| v != L::Bit::zero()) {
             <Element as AssignSubAlgo>::wrapping(&mut quotient, &[L::Bit::one()]);
@@ -247,9 +285,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_high() {
+        let slice1 = &[0b1000_0000u8];
+        let slice2 = &[0b0000_0010];
+        let out = &mut [0];
+        hi_mul(slice1, slice2, out);
+        assert_eq!(out, &[0b0000_0001]);
+
+        let slice3 = &[0b1111_1111u8];
+        let slice4 = &[2];
+        let out = &mut [0];
+        hi_mul(slice3, slice4, out);
+        assert_eq!(out, &[0b1]);
+
+        let slice5 = &[0b1111_1111u8];
+        let slice6 = &[0x10u8];
+        let out = &mut [0];
+        hi_mul(slice5, slice6, out);
+        assert_eq!(out, &[0b0000_1111]);
+
+        let slice7 = &[0b1000_0000u8, 0b0000_1000];
+        let slice8 = &[0b0000_0000, 0b1000_0000];
+        let out = &mut [0; 2];
+        hi_mul(slice7, slice8, out);
+        assert_eq!(out, &[0b0100_0000, 0b0000_0100]);
+
+        let l = &[0b1111_1111u8, 0b1111_1111];
+        let r = &[0b1111_1111, 0b1111_1111];
+        let out = &mut [0; 2];
+        hi_mul(l, r, out);
+        assert_eq!(out, &[0b11111110, 0b11111111]);
+    }
+
+    #[test]
     fn test_leading_zeros() {
-        assert_eq!(leading_zeroes(&[0b01000000u8]), 1);
-        assert_eq!(leading_zeroes(&[0b10000000u8]), 0);
+        assert_eq!(leading_zeroes(&[0b0100_0000u8]), 1);
+        assert_eq!(leading_zeroes(&[0b1000_0000u8]), 0);
         assert_eq!(leading_zeroes(&[0x80, 0x00u8]), 8);
         assert_eq!(leading_zeroes(&[0x00, 0x01u8]), 7);
     }

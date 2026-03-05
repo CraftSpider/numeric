@@ -1,9 +1,11 @@
+#![allow(missing_docs)]
+
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
 use numeric_bits::bit_slice::BitSliceExt;
 
 fn make_slice(len: usize) -> Vec<u16> {
-    let slice = &[0b1010101010101010u16, 0b0101010101010101u16];
+    let slice = &[0b1010_1010_1010_1010u16, 0b0101_0101_0101_0101u16];
     slice.repeat(len / 2)
 }
 

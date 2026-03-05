@@ -13,8 +13,8 @@ use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
-    ShrAlgo, SubAlgo,
+    AddAlgo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, ShrAlgo,
+    SubAlgo,
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSliceExt;
@@ -62,7 +62,7 @@ impl IBig {
         V: Borrow<[usize]> + Into<Box<[usize]>>,
     {
         let val = INT_STORE.add::<_, [usize]>(val);
-        IBig(TaggedOffset::new_ptr(ptr::from_ref(val), neg as usize))
+        IBig(TaggedOffset::new_ptr(ptr::from_ref(val), usize::from(neg)))
     }
 
     fn new_slice<V>(val: V, neg: bool) -> IBig
@@ -845,7 +845,7 @@ mod tests {
     #[test]
     fn test_zero() {
         assert!(IBig::zero().is_inline());
-        assert!(IBig::zero().with_slice(|s| s == &[0]));
+        assert!(IBig::zero().with_slice(|s| s == [0]));
         assert!(IBig::zero().is_zero());
         assert!(!IBig::one().is_zero());
     }
@@ -853,7 +853,7 @@ mod tests {
     #[test]
     fn test_one() {
         assert!(IBig::one().is_inline());
-        assert!(IBig::one().with_slice(|s| s == &[1]));
+        assert!(IBig::one().with_slice(|s| s == [1]));
         assert!(IBig::one().is_one());
         assert!(!IBig::one().is_zero());
     }
@@ -976,7 +976,7 @@ mod tests {
         let neg_one = -IBig::one();
         assert!(neg_one.is_inline());
         assert!(neg_one.is_negative());
-        assert!(neg_one.with_slice(|s| s == &[1]));
+        assert!(neg_one.with_slice(|s| s == [1]));
 
         let neg = IBig::from(-0x0102_0304);
         assert!(neg.is_negative());
@@ -1011,7 +1011,7 @@ mod tests {
 
         let big_a = IBig::from(usize::MAX);
         let big_b = IBig::from(usize::MAX - 1);
-        let big_c = IBig::from(&big_b + &big_a - &big_b);
+        let big_c = &big_b + &big_a - &big_b;
 
         assert_ne!(big_a, big_b);
         assert_eq!(big_a, big_c);
@@ -1047,16 +1047,16 @@ mod tests {
     fn test_approx_float() {
         let zero = IBig::zero();
         let one = IBig::one();
-        let max_int = IBig::from(9007199254740991u64);
+        let max_int = IBig::from(9_007_199_254_740_991u64);
         let max_u64 = IBig::from(u64::MAX);
         let pretty_big = max_u64.clone().pow(IBig::from(5));
         let very_big = max_u64.clone().pow(IBig::from(20));
 
         assert_eq!(zero.approx_float(), 0.0);
         assert_eq!(one.approx_float(), 1.0);
-        assert_eq!(max_int.approx_float(), 9007199254740991.0);
-        assert_eq!(max_u64.approx_float(), 18446744073709552000.0);
-        assert_ulps_eq!(pretty_big.approx_float(), 2.13598703592091e96);
+        assert_eq!(max_int.approx_float(), 9_007_199_254_740_991.0);
+        assert_eq!(max_u64.approx_float(), 18_446_744_073_709_552_000.0);
+        assert_ulps_eq!(pretty_big.approx_float(), 2.135_987_035_920_91e96);
         assert_eq!(very_big.approx_float(), f64::INFINITY);
     }
 }
