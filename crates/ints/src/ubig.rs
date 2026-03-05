@@ -9,8 +9,8 @@ use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    AddAlgo, AssignBitAlgo, BitAlgo, Bitwise, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
-    ShrAlgo, SubAlgo,
+    AddAlgo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, ShrAlgo,
+    SubAlgo,
 };
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
@@ -793,16 +793,16 @@ mod tests {
     fn test_approx_float() {
         let zero = UBig::zero();
         let one = UBig::one();
-        let max_int = UBig::from(9007199254740991u64);
+        let max_int = UBig::from(9_007_199_254_740_991u64);
         let max_u64 = UBig::from(u64::MAX);
         let pretty_big = max_u64.clone().pow(UBig::from(5u32));
         let very_big = max_u64.clone().pow(UBig::from(20u32));
 
         assert_eq!(zero.approx_float(), 0.0);
         assert_eq!(one.approx_float(), 1.0);
-        assert_eq!(max_int.approx_float(), 9007199254740991.0);
-        assert_eq!(max_u64.approx_float(), 18446744073709552000.0);
-        assert_ulps_eq!(pretty_big.approx_float(), 2.13598703592091e96);
+        assert_eq!(max_int.approx_float(), 9_007_199_254_740_991.0);
+        assert_eq!(max_u64.approx_float(), 18_446_744_073_709_552_000.0);
+        assert_ulps_eq!(pretty_big.approx_float(), 2.135_987_035_920_91e96);
         assert_eq!(very_big.approx_float(), f64::INFINITY);
     }
 }

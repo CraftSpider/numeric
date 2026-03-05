@@ -52,7 +52,7 @@ impl<T> Interned<T> {
     /// Increment the reference count of this interned value.
     #[inline]
     pub fn incr(&self) {
-        while let Err(_) = self
+        while self
             .refs
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |refs| {
                 debug_assert_ne!(
@@ -67,13 +67,14 @@ impl<T> Interned<T> {
                     Some(refs + 1)
                 }
             })
+            .is_err()
         {}
     }
 
     /// Decrement the reference count of this interned value.
     #[inline]
     pub fn decr(&self) {
-        while let Err(_) = self
+        while self
             .refs
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |refs| {
                 if refs == usize::MAX {
@@ -82,6 +83,7 @@ impl<T> Interned<T> {
                     refs.checked_sub(1)
                 }
             })
+            .is_err()
         {}
     }
 

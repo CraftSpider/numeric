@@ -96,7 +96,6 @@ pub trait AssignMulAlgo {
 mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
-    use alloc::vec;
 
     #[cfg(feature = "alloc")]
     fn test_long<B: MulAlgo>() {

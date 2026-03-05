@@ -1,3 +1,5 @@
+#![allow(missing_docs, clippy::missing_panics_doc)]
+
 use core::cmp::Ordering;
 use core::hint::black_box;
 use criterion::measurement::WallTime;
@@ -45,7 +47,7 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
     let elem_checked_name = format!("<Element as {}Algo>::checked", meth.tr);
     let bit_checked_name = format!("<Bitwise as {}Algo>::checked", meth.tr);
 
-    fn bench_long(group: &mut BenchmarkGroup<WallTime>, name: &str, f: LongFn) {
+    fn bench_long(group: &mut BenchmarkGroup<'_, WallTime>, name: &str, f: LongFn) {
         group
             .bench_function(BenchmarkId::new(name, "[1], [1]"), |b| {
                 b.iter(|| f(black_box(ONE), black_box(ONE)))
@@ -62,9 +64,9 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
     }
 
     fn bench_assign<T>(
-        group: &mut BenchmarkGroup<WallTime>,
+        group: &mut BenchmarkGroup<'_, WallTime>,
         name: &str,
-        f: for<'a> fn(&mut [usize], &[usize]) -> T,
+        f: fn(&mut [usize], &[usize]) -> T,
     ) {
         group
             .bench_function(BenchmarkId::new(name, "[1], [1]"), |b| {
@@ -119,7 +121,7 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
         bench_assign(&mut group, &bit_checked_name, f);
     }
 
-    fn bench_long_scale(group: &mut BenchmarkGroup<WallTime>, name: &str, f: LongFn) {
+    fn bench_long_scale(group: &mut BenchmarkGroup<'_, WallTime>, name: &str, f: LongFn) {
         group
             .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {
                 b.iter(|| f(black_box(MAX), black_box(MAX)))
@@ -147,9 +149,9 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
     }
 
     fn bench_assign_scale<T>(
-        group: &mut BenchmarkGroup<WallTime>,
+        group: &mut BenchmarkGroup<'_, WallTime>,
         name: &str,
-        f: for<'a> fn(&mut [usize], &[usize]) -> T,
+        f: fn(&mut [usize], &[usize]) -> T,
     ) {
         group
             .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {

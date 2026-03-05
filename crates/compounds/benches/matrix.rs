@@ -1,3 +1,5 @@
+#![allow(missing_docs, clippy::missing_panics_doc)]
+
 use criterion::measurement::Measurement;
 use criterion::{criterion_group, criterion_main, BenchmarkGroup, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
@@ -53,7 +55,7 @@ macro_rules! multi_bench {
 }
 
 fn inner_bench_add<M: Measurement, T: Add + Clone + Debug, const N: usize>(
-    g: &mut BenchmarkGroup<M>,
+    g: &mut BenchmarkGroup<'_, M>,
     l: Matrix<T, N, N>,
     r: Matrix<T, N, N>,
 ) {
@@ -75,7 +77,7 @@ fn inner_bench_mul<
     T: Add<Output = T> + Mul<Output = T> + Clone + Zero + Debug,
     const N: usize,
 >(
-    g: &mut BenchmarkGroup<M>,
+    g: &mut BenchmarkGroup<'_, M>,
     l: Matrix<T, N, N>,
     r: Matrix<T, N, N>,
 ) {

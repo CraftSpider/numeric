@@ -10,6 +10,7 @@ use numeric_traits::class::{Bounded, BoundedSigned, Integral, Numeric, Real, Sig
 use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::Pow;
 
+/// Get a mask for the fractional part of a fixed value
 fn mask<T: Integral, const N: usize>() -> T {
     (T::one() << N) - T::one()
 }
@@ -57,25 +58,27 @@ where
 
         let two = T::truncate_from(2);
         let ten = T::truncate_from(10);
-        // TODO: This can overflow. Find a non-overflowing method
-        //       Maybe shift, print upper, then do this to the fractional part
-        let mut whole =
-            self.0.clone() * ten.clone().pow(T::truncate_from(N)) / two.pow(T::truncate_from(N));
-        let mut idx = 0;
+
+        let upper = self.0.clone() >> N;
+        let lower = self.0.clone() & mask::<T, N>();
+
+        let mut whole_lower =
+            lower * ten.clone().pow(T::truncate_from(N)) / two.pow(T::truncate_from(N));
 
         let mut buf = String::new();
-        while whole > T::zero() {
-            let digit = whole.clone() % ten.clone();
-            if idx == N {
-                write!(buf, ".")?;
-            }
+        while whole_lower > T::zero() {
+            let digit = whole_lower.clone() % ten.clone();
             write!(buf, "{digit:?}")?;
-            whole = whole / ten.clone();
-            idx += 1;
+            whole_lower = whole_lower / ten.clone();
         }
-        if idx == N {
-            write!(buf, ".")?;
+        if buf.is_empty() {
+            write!(buf, "0")?;
         }
+        write!(buf, ".")?;
+        if upper > T::zero() {
+            write!(buf, "{:?}", upper)?;
+        }
+
         buf = buf.chars().rev().collect::<String>();
         f.write_str(&buf)?;
 
@@ -230,9 +233,6 @@ impl<T: Integral + Signed, const N: usize> Signed for Fixed<T, N> {
 }
 
 impl<T: Integral, const N: usize> Real for Fixed<T, N> {
-    /// Get the largest integer less than or equal to this number.
-    ///
-    /// This respects signedness, and as such, negative will floor towards negative infinity.
     fn floor(self) -> Self {
         Fixed((self.0 >> N) << N)
     }
