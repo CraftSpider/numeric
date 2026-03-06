@@ -2,7 +2,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use numeric_bench_util::make_criterion;
-use numeric_bits::bit_slice::BitSliceExt;
+use numeric_bits::bit_slice::BitSlice;
 
 fn make_slice(len: usize) -> Vec<u16> {
     let slice = &[0b1010_1010_1010_1010u16, 0b0101_0101_0101_0101u16];

@@ -1,7 +1,7 @@
-//! Slices for [`BitSliceExt`] which have different endianness, meaning they may iterate in
+//! Slices for [`BitSlice`] which have different endianness, meaning they may iterate in
 //! a different order from normal slices by default.
 
-use crate::bit_slice::{BitLike, BitSliceExt};
+use crate::bit_slice::{BitLike, BitSlice};
 use core::iter::{Copied, Rev};
 use core::{fmt, slice};
 
@@ -49,7 +49,7 @@ impl<T: fmt::Debug> fmt::Debug for LeSlice<T> {
     }
 }
 
-impl<T: BitLike> BitSliceExt for LeSlice<T> {
+impl<T: BitLike> BitSlice for LeSlice<T> {
     type Bit = T;
     type Iter<'a>
         = Copied<slice::Iter<'a, T>>
@@ -98,7 +98,7 @@ impl<T: fmt::Debug> fmt::Debug for BeSlice<T> {
     }
 }
 
-impl<T: BitLike> BitSliceExt for BeSlice<T> {
+impl<T: BitLike> BitSlice for BeSlice<T> {
     type Bit = T;
     type Iter<'a>
         = Rev<Copied<slice::Iter<'a, T>>>
@@ -152,30 +152,30 @@ impl<T: fmt::Debug> fmt::Debug for NeSlice<T> {
     }
 }
 
-impl<T: BitLike> BitSliceExt for NeSlice<T> {
+impl<T: BitLike> BitSlice for NeSlice<T> {
     type Bit = T;
 
     #[cfg(target_endian = "little")]
     type Iter<'a>
-        = <LeSlice<T> as BitSliceExt>::Iter<'a>
+        = <LeSlice<T> as BitSlice>::Iter<'a>
     where
         Self: 'a;
 
     #[cfg(target_endian = "big")]
     type Iter<'a>
-        = <BeSlice<T> as BitSliceExt>::Iter<'a>
+        = <BeSlice<T> as BitSlice>::Iter<'a>
     where
         Self: 'a;
 
     #[cfg(target_endian = "little")]
     type IterMut<'a>
-        = <LeSlice<T> as BitSliceExt>::IterMut<'a>
+        = <LeSlice<T> as BitSlice>::IterMut<'a>
     where
         Self: 'a;
 
     #[cfg(target_endian = "big")]
     type IterMut<'a>
-        = <BeSlice<T> as BitSliceExt>::IterMut<'a>
+        = <BeSlice<T> as BitSlice>::IterMut<'a>
     where
         Self: 'a;
 

@@ -17,7 +17,7 @@ use numeric_bits::algos::{
     ShrAlgo, SubAlgo,
 };
 use numeric_bits::array::*;
-use numeric_bits::bit_slice::BitSliceExt;
+use numeric_bits::bit_slice::BitSlice;
 use numeric_traits::cast::{FromChecked, FromSaturating, FromStrRadix, FromTruncating};
 use numeric_traits::class::{Integral, Numeric, Signed};
 use numeric_traits::identity::{One, Zero};

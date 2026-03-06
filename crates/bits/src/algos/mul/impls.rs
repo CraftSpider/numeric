@@ -3,7 +3,7 @@ use crate::algos::ShlAlgo;
 use crate::algos::{Add, Algo, AssignMulAlgo, Bitwise, Element, MulAlgo};
 #[cfg(feature = "alloc")]
 use crate::array::IntSlice;
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::identity::{One, Zero};
@@ -14,8 +14,8 @@ impl MulAlgo for Element {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let zero = L::Bit::zero();
         let mut out = vec![zero; left.len() + right.len()];
@@ -39,10 +39,10 @@ impl MulAlgo for Element {
 
     fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
-        fn inner<L: ?Sized + BitSliceExt, R: ?Sized + BitSliceExt<Bit = L::Bit>>(
+        fn inner<L: ?Sized + BitSlice, R: ?Sized + BitSlice<Bit = L::Bit>>(
             long: &L,
             short: &R,
             out: &mut [L::Bit],
@@ -88,8 +88,8 @@ impl MulAlgo for Element {
 impl AssignMulAlgo for Element {
     fn overflowing<L, R>(left: &mut L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let zero = L::Bit::zero();
 
@@ -126,8 +126,8 @@ impl MulAlgo for Bitwise {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let mut new_self = <Element as ShlAlgo>::long(left, 0);
@@ -146,8 +146,8 @@ impl MulAlgo for Bitwise {
 
     fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         out.fill(L::Bit::zero());
         let mut overflow = false;
@@ -171,8 +171,8 @@ impl MulAlgo for Bitwise {
 impl AssignMulAlgo for Bitwise {
     fn overflowing<L, R>(left: &mut L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let mut overflow = false;
         for idx in (0..left.bit_len()).rev() {
@@ -193,7 +193,7 @@ impl AssignMulAlgo for Bitwise {
     }
 }
 
-fn add_bit<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize) -> bool {
+fn add_bit<B: ?Sized + BitSlice>(slice: &mut B, mut idx: usize) -> bool {
     let mut carry = false;
     while let Some(val) = slice.get_bit(idx) {
         slice.set_bit(idx, true);
@@ -209,7 +209,7 @@ fn add_bit<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize) -> bool {
     carry
 }
 
-fn add_item<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize, mut val: B::Bit) -> bool {
+fn add_item<B: ?Sized + BitSlice>(slice: &mut B, mut idx: usize, mut val: B::Bit) -> bool {
     let mut carry = false;
 
     while let Some(loc) = slice.get_mut(idx) {

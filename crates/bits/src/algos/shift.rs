@@ -1,4 +1,4 @@
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use numeric_traits::identity::Zero;
@@ -9,22 +9,22 @@ pub trait ShlAlgo {
     #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt;
+        L: ?Sized + BitSlice;
 
     fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt;
+        L: ?Sized + BitSlice;
 
     fn wrapping<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         Self::overflowing(left, right, out).0
     }
 
     fn checked<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> Option<&'a [L::Bit]>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let (out, overflow) = Self::overflowing(left, right, out);
         if overflow {
@@ -36,7 +36,7 @@ pub trait ShlAlgo {
 
     fn saturating<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: BitSliceExt,
+        L: BitSlice,
     {
         let (val, overflow) = Self::overflowing(left, right, out);
         if overflow {
@@ -53,22 +53,22 @@ pub trait ShrAlgo {
     #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt;
+        L: ?Sized + BitSlice;
 
     fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt;
+        L: ?Sized + BitSlice;
 
     fn wrapping<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         Self::overflowing(left, right, out).0
     }
 
     fn checked<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> Option<&'a [L::Bit]>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let (out, overflow) = Self::overflowing(left, right, out);
         if overflow {
@@ -80,7 +80,7 @@ pub trait ShrAlgo {
 
     fn saturating<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: BitSliceExt,
+        L: BitSlice,
     {
         let (val, overflow) = Self::overflowing(left, right, out);
         if overflow {
@@ -96,25 +96,25 @@ pub trait ShrAlgo {
 pub trait AssignShlAlgo {
     fn overflowing<L>(left: &mut L, right: usize) -> bool
     where
-        L: ?Sized + BitSliceExt;
+        L: ?Sized + BitSlice;
 
     fn wrapping<L>(left: &mut L, right: usize)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         Self::overflowing(left, right);
     }
 
     fn checked<L>(left: &mut L, right: usize) -> Option<()>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         Self::overflowing(left, right).then_some(())
     }
 
     fn saturating<L>(left: &mut L, right: usize)
     where
-        L: BitSliceExt,
+        L: BitSlice,
     {
         let overflow = Self::overflowing(left, right);
         if overflow {
@@ -126,25 +126,25 @@ pub trait AssignShlAlgo {
 pub trait AssignShrAlgo {
     fn overflowing<L>(left: &mut L, right: usize) -> bool
     where
-        L: ?Sized + BitSliceExt;
+        L: ?Sized + BitSlice;
 
     fn wrapping<L>(left: &mut L, right: usize)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         Self::overflowing(left, right);
     }
 
     fn checked<L>(left: &mut L, right: usize) -> Option<()>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         Self::overflowing(left, right).then_some(())
     }
 
     fn saturating<L>(left: &mut L, right: usize)
     where
-        L: BitSliceExt,
+        L: BitSlice,
     {
         let overflow = Self::overflowing(left, right);
         if overflow {

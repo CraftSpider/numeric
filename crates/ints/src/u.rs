@@ -10,8 +10,9 @@ use core::ops::{
     Mul, MulAssign, Not, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
 use core::{array, fmt, iter};
+use numeric_bits::algos;
 use numeric_bits::algos::{
-    AssignAddAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
+    AssignAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
 };
 use numeric_bits::algos::{AssignMulAlgo, Element};
 use numeric_bits::array::const_reverse;
@@ -405,7 +406,7 @@ impl<const N: usize> Shr<usize> for U<N> {
 
 impl<const N: usize> AddAssign for U<N> {
     fn add_assign(&mut self, rhs: Self) {
-        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
     }
 }
 
@@ -561,7 +562,7 @@ impl<const N: usize> CheckedAdd for U<N> {
     type Output = Self;
 
     fn checked_add(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0)?;
+        <Element as AssignAlgo<algos::Add>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         Some(self)
     }
 }
@@ -597,7 +598,7 @@ impl<const N: usize> WrappingAdd for U<N> {
     type Output = Self;
 
     fn wrapping_add(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -615,7 +616,7 @@ impl<const N: usize> SaturatingAdd for U<N> {
     type Output = Self;
 
     fn saturating_add(mut self, rhs: Self) -> Self {
-        match <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0) {
+        match <Element as AssignAlgo<algos::Add>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::max_value(),
         }

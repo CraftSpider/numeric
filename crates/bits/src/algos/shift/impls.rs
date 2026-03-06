@@ -3,7 +3,7 @@ use crate::algos::{AssignShlAlgo, AssignShrAlgo, Bitwise, Element, ShlAlgo, ShrA
 use crate::array::IntSlice;
 #[cfg(feature = "alloc")]
 use crate::bit_slice::BitVecExt;
-use crate::bit_slice::{BitLike, BitSliceExt};
+use crate::bit_slice::{BitLike, BitSlice};
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use numeric_traits::class::Bounded;
@@ -13,7 +13,7 @@ impl ShlAlgo for Bitwise {
     #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let bit_len = left.bit_len();
         let mut out = vec![L::Bit::zero(); left.len()];
@@ -27,7 +27,7 @@ impl ShlAlgo for Bitwise {
 
     fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let bit_len = left.bit_len();
         left.iter_bits().enumerate().for_each(|(idx, new)| {
@@ -43,7 +43,7 @@ impl ShrAlgo for Bitwise {
     #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let mut out = vec![L::Bit::zero(); left.len()];
         for idx in (0..=left.bit_len()).rev() {
@@ -57,7 +57,7 @@ impl ShrAlgo for Bitwise {
 
     fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let bit_len = left.bit_len();
         for idx in (0..=bit_len).rev() {
@@ -74,7 +74,7 @@ impl ShlAlgo for Element {
     #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
         let elem_shift = right % L::Bit::BIT_LEN;
@@ -103,7 +103,7 @@ impl ShlAlgo for Element {
 
     fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
         let elem_shift = right % L::Bit::BIT_LEN;
@@ -135,7 +135,7 @@ impl ShlAlgo for Element {
 impl AssignShlAlgo for Element {
     fn overflowing<L>(left: &mut L, right: usize) -> bool
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
         let elem_shift = right % L::Bit::BIT_LEN;
@@ -168,7 +168,7 @@ impl ShrAlgo for Element {
     #[cfg(feature = "alloc")]
     fn long<L>(left: &L, right: usize) -> Vec<L::Bit>
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
         let elem_shift = right % L::Bit::BIT_LEN;
@@ -199,7 +199,7 @@ impl ShrAlgo for Element {
 
     fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         extern crate std;
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
@@ -238,7 +238,7 @@ impl ShrAlgo for Element {
 impl AssignShrAlgo for Element {
     fn overflowing<L>(left: &mut L, right: usize) -> bool
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
         let elem_shift = right % L::Bit::BIT_LEN;
