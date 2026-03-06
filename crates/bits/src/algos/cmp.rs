@@ -1,4 +1,4 @@
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 use core::cmp::Ordering;
 
 mod impls;
@@ -6,37 +6,37 @@ mod impls;
 pub trait CmpAlgo {
     fn cmp<L, R>(left: &L, right: &R) -> Ordering
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>;
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>;
 
     fn gt<L, R>(left: &L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::cmp(left, right).is_gt()
     }
 
     fn ge<L, R>(left: &L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::cmp(left, right).is_ge()
     }
 
     fn lt<L, R>(left: &L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::cmp(left, right).is_lt()
     }
 
     fn le<L, R>(left: &L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::cmp(left, right).is_le()
     }

@@ -17,7 +17,7 @@ pub use iter::*;
 use numeric_traits::cast::{FromAll, FromSaturating, IntoSaturating, IntoTruncating};
 
 #[inline]
-fn idx_bit<T: ?Sized + BitSliceExt>(idx: usize) -> (usize, usize) {
+fn idx_bit<T: ?Sized + BitSlice>(idx: usize) -> (usize, usize) {
     (idx / T::Bit::BIT_LEN, idx % T::Bit::BIT_LEN)
 }
 
@@ -59,7 +59,7 @@ impl<
     const BIT_LEN: usize = size_of::<T>() * 8;
 }
 
-/// Format to display a [`BitSliceExt`] in
+/// Format to display a [`BitSlice`] in
 #[derive(Default, PartialEq)]
 pub enum DisplayFmt {
     /// Hex (base 16) format
@@ -69,17 +69,17 @@ pub enum DisplayFmt {
     Binary,
 }
 
-/// Display options for a [`BitSliceExt`]
+/// Display options for a [`BitSlice`]
 #[derive(Default)]
 pub struct DisplayOpts {
     /// Format or base to print in
     pub format: DisplayFmt,
 }
 
-/// Struct for writing a [`BitSliceExt`] to a buffer in a human-readable format
+/// Struct for writing a [`BitSlice`] to a buffer in a human-readable format
 pub struct BitSliceDisplay<'a, B: ?Sized>(&'a B, DisplayOpts);
 
-impl<B: ?Sized + BitSliceExt> fmt::Display for BitSliceDisplay<'_, B> {
+impl<B: ?Sized + BitSlice> fmt::Display for BitSliceDisplay<'_, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         match self.1.format {
@@ -108,7 +108,7 @@ impl<B: ?Sized + BitSliceExt> fmt::Display for BitSliceDisplay<'_, B> {
 
 /// Things that can be considered slices of bits. This includes slices obviously, as well as vectors
 /// and other slice-like containers.
-pub trait BitSliceExt: fmt::Debug {
+pub trait BitSlice: fmt::Debug {
     /// The bit container type contained in this slice
     type Bit: BitLike;
 
@@ -225,7 +225,7 @@ pub trait BitSliceExt: fmt::Debug {
     }
 }
 
-impl<I: BitLike> BitSliceExt for [I] {
+impl<I: BitLike> BitSlice for [I] {
     type Bit = I;
 
     type Iter<'a>
@@ -269,7 +269,7 @@ impl<I: BitLike> BitSliceExt for [I] {
     }
 }
 
-impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
+impl<I: BitLike, const N: usize> BitSlice for [I; N] {
     type Bit = I;
 
     type Iter<'a>
@@ -315,7 +315,7 @@ impl<I: BitLike, const N: usize> BitSliceExt for [I; N] {
 }
 
 #[cfg(feature = "alloc")]
-impl<I: BitLike> BitSliceExt for Vec<I> {
+impl<I: BitLike> BitSlice for Vec<I> {
     type Bit = I;
 
     type Iter<'a>
@@ -361,7 +361,7 @@ impl<I: BitLike> BitSliceExt for Vec<I> {
 
 /// Things that can be considered growable vectors of bits. This includes [`Vec`] and similar
 /// list-like objects.
-pub trait BitVecExt: BitSliceExt {
+pub trait BitVecExt: BitSlice {
     /// Extend this type with `val` up to `len`
     fn extend(&mut self, len: usize, val: Self::Bit);
 
@@ -392,6 +392,38 @@ impl<I: BitLike> BitVecExt for Vec<I> {
 
     fn truncate(&mut self, len: usize) {
         self.truncate(len);
+    }
+}
+
+/// Owned bit-slice variants, such as arrays and vectors.
+pub trait BitOwned: BitSlice {
+    /// Get a new, zeroed instance of this item. The length value is only used for dynamic values,
+    /// users must always accept returned items being of lower length than requested.
+    fn zeroed(len: usize) -> Self;
+
+    /// For dynamic-length values, shrink the result down to have no trailing zeroes, or if all
+    /// values are zero, only one trailing zero. This has no effect on static-length types.
+    fn shrink(&mut self);
+}
+
+impl<T: BitLike, const N: usize> BitOwned for [T; N] {
+    fn zeroed(_: usize) -> Self {
+        [T::zero(); N]
+    }
+
+    #[inline]
+    fn shrink(&mut self) {}
+}
+
+#[cfg(feature = "alloc")]
+impl<T: BitLike> BitOwned for Vec<T> {
+    fn zeroed(len: usize) -> Self {
+        alloc::vec![T::zero(); len]
+    }
+
+    fn shrink(&mut self) {
+        let idx = self.iter().rposition(|val| val != T::zero()).unwrap_or(0);
+        self.drain(idx + 1..);
     }
 }
 

@@ -1,13 +1,13 @@
 use crate::algos::{CmpAlgo, Element};
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 use core::cmp::Ordering;
 use numeric_traits::identity::Zero;
 
 impl CmpAlgo for Element {
     fn cmp<L, R>(left: &L, right: &R) -> Ordering
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let zero = L::Bit::zero();
         let len = usize::max(left.len(), right.len());

@@ -1,12 +1,12 @@
 use crate::algos::{AssignBitAlgo, BitAlgo, Element};
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 use numeric_traits::identity::Zero;
 
 impl BitAlgo for Element {
     fn and<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -23,8 +23,8 @@ impl BitAlgo for Element {
 
     fn or<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -41,8 +41,8 @@ impl BitAlgo for Element {
 
     fn xor<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -59,7 +59,7 @@ impl BitAlgo for Element {
 
     fn not<'a, L>(left: &L, out: &'a mut [L::Bit]) -> &'a [L::Bit]
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let zero = L::Bit::zero();
         for idx in 0..left.len() {
@@ -74,8 +74,8 @@ impl BitAlgo for Element {
 impl AssignBitAlgo for Element {
     fn and<L, R>(left: &mut L, right: &R)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -90,8 +90,8 @@ impl AssignBitAlgo for Element {
 
     fn or<L, R>(left: &mut L, right: &R)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -106,8 +106,8 @@ impl AssignBitAlgo for Element {
 
     fn xor<L, R>(left: &mut L, right: &R)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -122,7 +122,7 @@ impl AssignBitAlgo for Element {
 
     fn not<L>(left: &mut L)
     where
-        L: ?Sized + BitSliceExt,
+        L: ?Sized + BitSlice,
     {
         let zero = L::Bit::zero();
         for idx in 0..left.len() {

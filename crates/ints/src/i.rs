@@ -9,8 +9,9 @@ use core::ops::{
     RemAssign, Shl, Shr, Sub, SubAssign,
 };
 use core::{array, fmt};
+use numeric_bits::algos;
 use numeric_bits::algos::{
-    AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
+    AssignAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
     Bitwise, Element,
 };
 use numeric_bits::array::const_reverse;
@@ -242,7 +243,7 @@ impl<const N: usize> Add for I<N> {
     type Output = Self;
 
     fn add(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -414,7 +415,7 @@ impl<const N: usize> Shr<usize> for I<N> {
 
 impl<const N: usize> AddAssign for I<N> {
     fn add_assign(&mut self, rhs: Self) {
-        <Element as AssignAddAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
     }
 }
 
@@ -509,7 +510,7 @@ impl<const N: usize> CheckedAdd for I<N> {
     type Output = Self;
 
     fn checked_add(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignAddAlgo>::checked(&mut self.0, &rhs.0)?;
+        <Element as AssignAlgo<algos::Add>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -545,7 +546,7 @@ impl<const N: usize> SaturatingAdd for I<N> {
     type Output = Self;
 
     fn saturating_add(mut self, rhs: Self) -> Self {
-        <Element as AssignAddAlgo>::saturating(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::saturating::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         self
     }
 }

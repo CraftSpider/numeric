@@ -1,4 +1,4 @@
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use numeric_traits::identity::Zero;
@@ -11,8 +11,8 @@ pub trait DivRemAlgo {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>;
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>;
 
     fn overflowing<'a, L, R>(
         left: &L,
@@ -21,8 +21,8 @@ pub trait DivRemAlgo {
         remainder: &'a mut [L::Bit],
     ) -> (&'a [L::Bit], &'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>;
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>;
 
     fn wrapping<'a, L, R>(
         left: &L,
@@ -31,8 +31,8 @@ pub trait DivRemAlgo {
         remainder: &'a mut [L::Bit],
     ) -> (&'a [L::Bit], &'a [L::Bit])
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let (q, r, _) = Self::overflowing(left, right, quotient, remainder);
         (q, r)
@@ -46,8 +46,8 @@ pub trait DivRemAlgo {
         remainder: &'a mut [L::Bit],
     ) -> Option<(&'a [L::Bit], &'a [L::Bit])>
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let (q, r, overflow) = Self::overflowing(left, right, quotient, remainder);
         if overflow {
@@ -64,8 +64,8 @@ pub trait DivRemAlgo {
         remainder: &'a mut [L::Bit],
     ) -> (&'a [L::Bit], &'a [L::Bit])
     where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
+        L: BitSlice,
+        R: BitSlice<Bit = L::Bit>,
     {
         let (q, r, overflow) = Self::overflowing(left, right, quotient, remainder);
         if overflow {
@@ -82,21 +82,21 @@ pub trait DivRemAlgo {
 pub trait AssignDivRemAlgo {
     fn div_overflowing<L, R>(left: &mut L, right: &R, remainder: &mut [L::Bit]) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>;
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>;
 
     fn div_wrapping<L, R>(left: &mut L, right: &R, remainder: &mut [L::Bit])
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::div_overflowing(left, right, remainder);
     }
 
     fn div_checked<L, R>(left: &mut L, right: &R, remainder: &mut [L::Bit]) -> Option<()>
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         if Self::div_overflowing(left, right, remainder) {
             None
@@ -107,8 +107,8 @@ pub trait AssignDivRemAlgo {
 
     fn div_saturating<L, R>(left: &mut L, right: &R, remainder: &mut [L::Bit])
     where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
+        L: BitSlice,
+        R: BitSlice<Bit = L::Bit>,
     {
         let overflow = Self::div_overflowing(left, right, remainder);
         if overflow {
@@ -119,21 +119,21 @@ pub trait AssignDivRemAlgo {
 
     fn rem_overflowing<L, R>(left: &mut L, right: &R, quotient: &mut [L::Bit]) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>;
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>;
 
     fn rem_wrapping<L, R>(left: &mut L, right: &R, quotient: &mut [L::Bit])
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::rem_overflowing(left, right, quotient);
     }
 
     fn rem_checked<L, R>(left: &mut L, right: &R, quotient: &mut [L::Bit]) -> Option<()>
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         if Self::rem_overflowing(left, right, quotient) {
             None
@@ -144,8 +144,8 @@ pub trait AssignDivRemAlgo {
 
     fn rem_saturating<L, R>(left: &mut L, right: &R, quotient: &mut [L::Bit])
     where
-        L: BitSliceExt,
-        R: BitSliceExt<Bit = L::Bit>,
+        L: BitSlice,
+        R: BitSlice<Bit = L::Bit>,
     {
         let overflow = Self::rem_overflowing(left, right, quotient);
         if overflow {

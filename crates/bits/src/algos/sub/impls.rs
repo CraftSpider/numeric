@@ -3,7 +3,7 @@ use crate::algos::AssignBitAlgo;
 use crate::algos::{AssignSubAlgo, Bitwise, Element, SubAlgo};
 #[cfg(feature = "alloc")]
 use crate::array::IntSlice;
-use crate::bit_slice::BitSliceExt;
+use crate::bit_slice::BitSlice;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use core::mem;
@@ -14,8 +14,8 @@ impl SubAlgo for Element {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -57,8 +57,8 @@ impl SubAlgo for Element {
 
     fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -97,8 +97,8 @@ impl SubAlgo for Element {
 impl AssignSubAlgo for Element {
     fn overflowing<L, R>(left: &mut L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let zero = L::Bit::zero();
@@ -138,8 +138,8 @@ impl SubAlgo for Bitwise {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let bit_len = usize::max(left.bit_len(), right.bit_len());
@@ -178,8 +178,8 @@ impl SubAlgo for Bitwise {
 
     fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
 
@@ -213,8 +213,8 @@ impl SubAlgo for Bitwise {
 impl AssignSubAlgo for Bitwise {
     fn overflowing<L, R>(left: &mut L, right: &R) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
 

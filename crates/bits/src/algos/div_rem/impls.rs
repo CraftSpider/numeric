@@ -1,9 +1,9 @@
 use super::NewtonRaphson;
 use crate::algos::{
-    AssignAddAlgo, AssignBitAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
+    Add, AssignAlgo, AssignBitAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
     Bitwise, CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo,
 };
-use crate::bit_slice::{BitLike, BitSliceExt};
+use crate::bit_slice::{BitLike, BitSlice};
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 use core::mem;
@@ -17,8 +17,8 @@ impl DivRemAlgo for Bitwise {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let len = usize::max(left.len(), right.len());
         let bit_len = usize::max(left.bit_len(), right.bit_len());
@@ -46,8 +46,8 @@ impl DivRemAlgo for Bitwise {
         remainder: &'a mut [L::Bit],
     ) -> (&'a [L::Bit], &'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
@@ -69,8 +69,8 @@ impl DivRemAlgo for Bitwise {
 impl AssignDivRemAlgo for Bitwise {
     fn div_overflowing<L, R>(left: &mut L, right: &R, remainder: &mut [L::Bit]) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
@@ -90,8 +90,8 @@ impl AssignDivRemAlgo for Bitwise {
 
     fn rem_overflowing<L, R>(left: &mut L, right: &R, quotient: &mut [L::Bit]) -> bool
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::div_overflowing(left, right, quotient);
         left.iter_mut()
@@ -104,7 +104,7 @@ impl AssignDivRemAlgo for Bitwise {
 /// Reciprocal initial estimates. We take the first 3 bits of the value to get this estimate
 const RECIP_TABLE: &[u8] = &[0xFF, 0xE3, 0xCC, 0xBA, 0xAA, 0x9D, 0x92, 0x88];
 
-fn add_item_loop<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize, mut val: B::Bit) {
+fn add_item_loop<B: ?Sized + BitSlice>(slice: &mut B, mut idx: usize, mut val: B::Bit) {
     let len = slice.len();
 
     while let Some(loc) = slice.get_mut(idx % len) {
@@ -123,8 +123,8 @@ fn add_item_loop<B: ?Sized + BitSliceExt>(slice: &mut B, mut idx: usize, mut val
 /// Given two values, l and r, get the high bits of a widening mul between them
 fn hi_mul<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
 where
-    L: ?Sized + BitSliceExt,
-    R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    L: ?Sized + BitSlice,
+    R: ?Sized + BitSlice<Bit = L::Bit>,
 {
     // We multiply into out, wrapping around our overflow value for each iteration
     let zero = L::Bit::zero();
@@ -159,8 +159,8 @@ where
 /// output will be fixed 0.N
 fn newton_step<L, R>(est: &L, goal: &R, out: &mut [L::Bit], scratch: &mut [L::Bit])
 where
-    L: ?Sized + BitSliceExt,
-    R: ?Sized + BitSliceExt<Bit = L::Bit>,
+    L: ?Sized + BitSlice,
+    R: ?Sized + BitSlice<Bit = L::Bit>,
 {
     // 1.N = 1.N * 0.N, 1 <= rl < 1.5
     hi_mul(est, goal, scratch);
@@ -168,7 +168,7 @@ where
     // modulo arithmetic.
     // 1.N = 2.N - 1.N, 0.5 < 2-rl < 1
     <Element as AssignBitAlgo>::not(scratch);
-    <Element as AssignAddAlgo>::wrapping(scratch, &[L::Bit::one()]);
+    <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(scratch, &[L::Bit::one()]);
     // 1.N = 1.N * 0.N, 0.5 <= l(2-rl) < 1
     hi_mul(scratch, est, out);
     // 0.N = 1.N
@@ -177,7 +177,7 @@ where
 
 fn leading_zeroes<L>(l: &L) -> usize
 where
-    L: ?Sized + BitSliceExt,
+    L: ?Sized + BitSlice,
 {
     l.iter()
         .rev()
@@ -196,8 +196,8 @@ impl DivRemAlgo for NewtonRaphson {
     #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let one = L::Bit::one();
         let bit_len = usize::max(left.bit_len(), right.bit_len());
@@ -245,17 +245,23 @@ impl DivRemAlgo for NewtonRaphson {
         // Calculate left - remainder
         <Element as AssignSubAlgo>::wrapping(&mut remainder, left);
         <Element as AssignBitAlgo>::not(&mut remainder);
-        <Element as AssignAddAlgo>::wrapping(&mut remainder, &[L::Bit::one()]);
+        <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(
+            &mut remainder,
+            &[L::Bit::one()],
+        );
 
         // Correct quotient to handle possible error
         if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
-            <Element as AssignAddAlgo>::wrapping(&mut quotient, &[one]);
+            <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(&mut quotient, &[one]);
             <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
             if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
-                <Element as AssignAddAlgo>::wrapping(&mut quotient, &[one]);
+                <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(&mut quotient, &[one]);
                 <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
                 if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
-                    <Element as AssignAddAlgo>::wrapping(&mut quotient, &[one]);
+                    <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(
+                        &mut quotient,
+                        &[one],
+                    );
                 }
             }
         }
@@ -270,8 +276,8 @@ impl DivRemAlgo for NewtonRaphson {
         remainder: &'a mut [L::Bit],
     ) -> (&'a [L::Bit], &'a [L::Bit], bool)
     where
-        L: ?Sized + BitSliceExt,
-        R: ?Sized + BitSliceExt<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
         todo!("{:?}, {:?}, {:?}, {:?}", left, right, quotient, remainder)
     }
