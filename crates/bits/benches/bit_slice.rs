@@ -9,27 +9,15 @@ use criterion::{
 };
 use numeric_bench_util::make_criterion;
 use numeric_bits::algos::{
-    Add, Algo, AssignAddAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo,
-    Bitwise, CmpAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo, SubAlgo,
+    Add, Algo, AlgoTy, AssignAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo,
+    Bitwise, CmpAlgo, DivRemAlgo, Element, Mul, MulAlgo, NewtonRaphson, ShlAlgo, Sub, SubAlgo,
 };
+use numeric_bits::bit_slice::BitOwned;
 use std::time::Duration;
 
 type LongFn = fn(&[usize], &[usize]) -> Vec<usize>;
 type CheckedFn = for<'a> fn(&'a mut [usize], &[usize]) -> Option<()>;
 type WrappingFn = for<'a> fn(&'a mut [usize], &[usize]);
-
-pub struct MathMeths {
-    tr: &'static str,
-
-    long_elem: Option<LongFn>,
-    long_bit: Option<LongFn>,
-
-    checked_elem: Option<CheckedFn>,
-    checked_bit: Option<CheckedFn>,
-
-    wrapping_elem: Option<WrappingFn>,
-    wrapping_bit: Option<WrappingFn>,
-}
 
 const ONE: &[usize] = &[1usize];
 const MAX: &[usize] = &[usize::MAX];
@@ -39,125 +27,124 @@ const MAX_8: &[usize] = &[usize::MAX; 8];
 const MAX_16: &[usize] = &[usize::MAX; 16];
 const MAX_32: &[usize] = &[usize::MAX; 32];
 
-pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
-    let long_elem_name = format!("<Element as {}Algo>::long", meth.tr);
-    let long_bit_name = format!("<Bitwise as {}Algo>::long", meth.tr);
-    let elem_wrapping_name = format!("<Element as {}Algo>::wrapping", meth.tr);
-    let bit_wrapping_name = format!("<Bitwise as {}Algo>::wrapping", meth.tr);
-    let elem_checked_name = format!("<Element as {}Algo>::checked", meth.tr);
-    let bit_checked_name = format!("<Bitwise as {}Algo>::checked", meth.tr);
+pub fn bench_common<A: AlgoTy, B: Algo<A>>(c: &mut Criterion, name: &str, algo: &str) {
+    let long_elem_name = format!("<{} as Algo<{}>>::wrapping::<Vec<usize>>", name, algo);
+    let array1_elem_name = format!("<{} as Algo<{}>>::wrapping::<[usize; 1]>", name, algo);
 
-    fn bench_long(group: &mut BenchmarkGroup<'_, WallTime>, name: &str, f: LongFn) {
-        group
-            .bench_function(BenchmarkId::new(name, "[1], [1]"), |b| {
-                b.iter(|| f(black_box(ONE), black_box(ONE)))
-            })
-            .bench_function(BenchmarkId::new(name, "[1], [usize::MAX]"), |b| {
-                b.iter(|| f(black_box(ONE), black_box(MAX)))
-            })
-            .bench_function(BenchmarkId::new(name, "[usize::MAX], [1]"), |b| {
-                b.iter(|| f(black_box(MAX), black_box(ONE)))
-            })
-            .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {
-                b.iter(|| f(black_box(MAX), black_box(MAX)))
-            });
-    }
-
-    fn bench_assign<T>(
+    fn bench_output<A: AlgoTy, B: Algo<A>, O: BitOwned<Bit = usize>>(
         group: &mut BenchmarkGroup<'_, WallTime>,
         name: &str,
-        f: fn(&mut [usize], &[usize]) -> T,
     ) {
         group
             .bench_function(BenchmarkId::new(name, "[1], [1]"), |b| {
-                b.iter(|| {
-                    let mut left = [1];
-                    f(black_box(&mut left), black_box(ONE));
-                })
+                b.iter(|| B::wrapping::<O, _, _>(black_box(ONE), black_box(ONE)))
             })
             .bench_function(BenchmarkId::new(name, "[1], [usize::MAX]"), |b| {
-                b.iter(|| {
-                    let mut left = [1];
-                    f(black_box(&mut left), black_box(MAX))
-                })
+                b.iter(|| B::wrapping::<O, _, _>(black_box(ONE), black_box(MAX)))
             })
             .bench_function(BenchmarkId::new(name, "[usize::MAX], [1]"), |b| {
-                b.iter(|| {
-                    let mut left = [usize::MAX];
-                    f(black_box(&mut left), black_box(ONE))
-                })
+                b.iter(|| B::wrapping::<O, _, _>(black_box(MAX), black_box(ONE)))
             })
             .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {
-                b.iter(|| {
-                    let mut left = [usize::MAX];
-                    f(black_box(&mut left), black_box(MAX));
-                })
+                b.iter(|| B::wrapping::<O, _, _>(black_box(MAX), black_box(MAX)))
             });
     }
 
-    let mut group = c.benchmark_group(format!("{}Algo", meth.tr));
+    let mut group = c.benchmark_group(format!("Algo<{}>", algo));
 
-    if let Some(f) = meth.long_elem {
-        bench_long(&mut group, &long_elem_name, f);
-    }
+    bench_output::<A, B, Vec<_>>(&mut group, &long_elem_name);
+    bench_output::<A, B, [usize; 1]>(&mut group, &array1_elem_name);
 
-    if let Some(f) = meth.long_bit {
-        bench_long(&mut group, &long_bit_name, f);
-    }
-
-    if let Some(f) = meth.wrapping_elem {
-        bench_assign(&mut group, &elem_wrapping_name, f);
-    }
-
-    if let Some(f) = meth.wrapping_bit {
-        bench_assign(&mut group, &bit_wrapping_name, f);
-    }
-
-    if let Some(f) = meth.checked_elem {
-        bench_assign(&mut group, &elem_checked_name, f);
-    }
-
-    if let Some(f) = meth.checked_bit {
-        bench_assign(&mut group, &bit_checked_name, f);
-    }
-
-    fn bench_long_scale(group: &mut BenchmarkGroup<'_, WallTime>, name: &str, f: LongFn) {
+    fn bench_output_scale<A: AlgoTy, B: Algo<A>>(
+        group: &mut BenchmarkGroup<'_, WallTime>,
+        name: &str,
+    ) {
         group
             .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {
-                b.iter(|| f(black_box(MAX), black_box(MAX)))
+                b.iter(|| B::wrapping::<[usize; 1], _, _>(black_box(MAX), black_box(MAX)))
             })
             .bench_function(
                 BenchmarkId::new(name, "[usize::MAX; 2], [usize::MAX; 2]"),
-                |b| b.iter(|| f(black_box(MAX_2), black_box(MAX_2))),
+                |b| b.iter(|| B::wrapping::<[usize; 2], _, _>(black_box(MAX_2), black_box(MAX_2))),
             )
             .bench_function(
                 BenchmarkId::new(name, "[usize::MAX; 4], [usize::MAX; 4]"),
-                |b| b.iter(|| f(black_box(MAX_4), black_box(MAX_4))),
+                |b| b.iter(|| B::wrapping::<[usize; 4], _, _>(black_box(MAX_4), black_box(MAX_4))),
             )
             .bench_function(
                 BenchmarkId::new(name, "[usize::MAX; 8], [usize::MAX; 8]"),
-                |b| b.iter(|| f(black_box(MAX_8), black_box(MAX_8))),
+                |b| b.iter(|| B::wrapping::<[usize; 8], _, _>(black_box(MAX_8), black_box(MAX_8))),
             )
             .bench_function(
                 BenchmarkId::new(name, "[usize::MAX; 16], [usize::MAX; 16]"),
-                |b| b.iter(|| f(black_box(MAX_16), black_box(MAX_16))),
+                |b| {
+                    b.iter(|| {
+                        B::wrapping::<[usize; 16], _, _>(black_box(MAX_16), black_box(MAX_16))
+                    })
+                },
             )
             .bench_function(
                 BenchmarkId::new(name, "[usize::MAX; 32], [usize::MAX; 32]"),
-                |b| b.iter(|| f(black_box(MAX_32), black_box(MAX_32))),
+                |b| {
+                    b.iter(|| {
+                        B::wrapping::<[usize; 32], _, _>(black_box(MAX_32), black_box(MAX_32))
+                    })
+                },
             );
     }
 
-    fn bench_assign_scale<T>(
+    drop(group);
+    let mut group = c.benchmark_group(format!("Algo<{}> scaled", algo));
+    group.plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic));
+
+    bench_output_scale::<A, B>(&mut group, &long_elem_name);
+    bench_output_scale::<A, B>(&mut group, &array1_elem_name);
+}
+
+pub fn bench_common_assign<A: AlgoTy, B: AssignAlgo<A>>(c: &mut Criterion, name: &str, algo: &str) {
+    let elem_wrapping_name = format!("<{} as AssignAlgo<{}>>::wrapping", name, algo);
+    let elem_checked_name = format!("<{} as AssignAlgo<{}>>::checked", name, algo);
+
+    fn bench_assign<A: AlgoTy, B: AssignAlgo<A>, O: BitOwned<Bit = usize>>(
         group: &mut BenchmarkGroup<'_, WallTime>,
         name: &str,
-        f: fn(&mut [usize], &[usize]) -> T,
+    ) {
+        group
+            .bench_function(BenchmarkId::new(name, "[1], [1]"), |b| {
+                b.iter(|| {
+                    let mut left = [1];
+                    B::wrapping::<O, _, _>(black_box(&mut left), black_box(ONE));
+                })
+            })
+            .bench_function(BenchmarkId::new(name, "[1], [usize::MAX]"), |b| {
+                b.iter(|| {
+                    let mut left = [1];
+                    B::wrapping::<O, _, _>(black_box(&mut left), black_box(MAX))
+                })
+            })
+            .bench_function(BenchmarkId::new(name, "[usize::MAX], [1]"), |b| {
+                b.iter(|| {
+                    let mut left = [usize::MAX];
+                    B::wrapping::<O, _, _>(black_box(&mut left), black_box(ONE))
+                })
+            })
+            .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {
+                b.iter(|| {
+                    let mut left = [usize::MAX];
+                    B::wrapping::<O, _, _>(black_box(&mut left), black_box(MAX));
+                })
+            });
+    }
+
+    fn bench_assign_scale<A: AlgoTy, B: AssignAlgo<A>>(
+        group: &mut BenchmarkGroup<'_, WallTime>,
+        name: &str,
     ) {
         group
             .bench_function(BenchmarkId::new(name, "[usize::MAX], [usize::MAX]"), |b| {
                 b.iter(|| {
                     let mut left = [usize::MAX];
-                    f(black_box(&mut left), black_box(MAX));
+                    B::wrapping::<[usize; 1], _, _>(black_box(&mut left), black_box(MAX));
                 })
             })
             .bench_function(
@@ -165,7 +152,7 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
                 |b| {
                     b.iter(|| {
                         let mut left = [usize::MAX; 2];
-                        f(black_box(&mut left), black_box(MAX_2));
+                        B::wrapping::<[usize; 2], _, _>(black_box(&mut left), black_box(MAX_2));
                     })
                 },
             )
@@ -174,7 +161,7 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
                 |b| {
                     b.iter(|| {
                         let mut left = [usize::MAX; 4];
-                        f(black_box(&mut left), black_box(MAX_4));
+                        B::wrapping::<[usize; 4], _, _>(black_box(&mut left), black_box(MAX_4));
                     })
                 },
             )
@@ -183,7 +170,7 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
                 |b| {
                     b.iter(|| {
                         let mut left = [usize::MAX; 8];
-                        f(black_box(&mut left), black_box(MAX_8));
+                        B::wrapping::<[usize; 8], _, _>(black_box(&mut left), black_box(MAX_8));
                     })
                 },
             )
@@ -192,7 +179,7 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
                 |b| {
                     b.iter(|| {
                         let mut left = [usize::MAX; 16];
-                        f(black_box(&mut left), black_box(MAX_16));
+                        B::wrapping::<[usize; 16], _, _>(black_box(&mut left), black_box(MAX_16));
                     })
                 },
             )
@@ -201,39 +188,23 @@ pub fn bench_common(c: &mut Criterion, meth: MathMeths) {
                 |b| {
                     b.iter(|| {
                         let mut left = [usize::MAX; 32];
-                        f(black_box(&mut left), black_box(MAX_32));
+                        B::wrapping::<[usize; 32], _, _>(black_box(&mut left), black_box(MAX_32));
                     })
                 },
             );
     }
 
+    let mut group = c.benchmark_group(format!("AssignAlgo<{}>", algo));
+
+    bench_assign::<A, B, Vec<_>>(&mut group, &elem_wrapping_name);
+    bench_assign::<A, B, [usize; 1]>(&mut group, &elem_checked_name);
+
     drop(group);
-    let mut group = c.benchmark_group(format!("{}Algo scaled", meth.tr));
+    let mut group = c.benchmark_group(format!("AssignAlgo<{}> scaled", algo));
     group.plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic));
 
-    if let Some(f) = meth.long_elem {
-        bench_long_scale(&mut group, &long_elem_name, f);
-    }
-
-    if let Some(f) = meth.long_bit {
-        bench_long_scale(&mut group, &long_bit_name, f);
-    }
-
-    if let Some(f) = meth.wrapping_elem {
-        bench_assign_scale(&mut group, &elem_wrapping_name, f);
-    }
-
-    if let Some(f) = meth.wrapping_bit {
-        bench_assign_scale(&mut group, &bit_wrapping_name, f);
-    }
-
-    if let Some(f) = meth.checked_elem {
-        bench_assign_scale(&mut group, &elem_checked_name, f);
-    }
-
-    if let Some(f) = meth.checked_bit {
-        bench_assign_scale(&mut group, &bit_checked_name, f);
-    }
+    bench_assign_scale::<A, B>(&mut group, &elem_wrapping_name);
+    bench_assign_scale::<A, B>(&mut group, &elem_checked_name);
 }
 
 pub fn bench_cmp(c: &mut Criterion) {
@@ -313,65 +284,31 @@ pub fn bench_cmp(c: &mut Criterion) {
 }
 
 pub fn bench_add(c: &mut Criterion) {
-    bench_common(
-        c,
-        MathMeths {
-            tr: "Add",
-            long_elem: Some(<Element as Algo<Add>>::wrapping::<_, _, Vec<_>>),
-            long_bit: Some(<Bitwise as Algo<Add>>::wrapping::<_, _, Vec<_>>),
-            checked_elem: Some(<Element as AssignAddAlgo>::checked),
-            checked_bit: Some(<Bitwise as AssignAddAlgo>::checked),
-            wrapping_elem: Some(<Element as AssignAddAlgo>::wrapping),
-            wrapping_bit: Some(<Bitwise as AssignAddAlgo>::wrapping),
-        },
-    );
+    bench_common::<Add, Element>(c, "Element", "Add");
+    bench_common_assign::<Add, Element>(c, "Element", "Add");
+    bench_common::<Add, Bitwise>(c, "Bitwise", "Add");
+    bench_common_assign::<Add, Bitwise>(c, "Bitwise", "Add");
 }
 
 pub fn bench_sub(c: &mut Criterion) {
-    bench_common(
-        c,
-        MathMeths {
-            tr: "Sub",
-            long_elem: Some(|l, r| <Element as SubAlgo>::long(l, r).0),
-            long_bit: Some(|l, r| <Bitwise as SubAlgo>::long(l, r).0),
-            checked_elem: Some(<Element as AssignSubAlgo>::checked),
-            checked_bit: Some(<Bitwise as AssignSubAlgo>::checked),
-            wrapping_elem: Some(<Element as AssignSubAlgo>::wrapping),
-            wrapping_bit: Some(<Bitwise as AssignSubAlgo>::wrapping),
-        },
-    );
+    bench_common::<Sub, Element>(c, "Element", "Sub");
+    bench_common_assign::<Sub, Element>(c, "Element", "Sub");
+    bench_common::<Sub, Bitwise>(c, "Bitwise", "Sub");
+    bench_common_assign::<Sub, Bitwise>(c, "Bitwise", "Sub");
 }
 
 pub fn bench_mul(c: &mut Criterion) {
-    bench_common(
-        c,
-        MathMeths {
-            tr: "Mul",
-            long_elem: Some(<Element as MulAlgo>::long),
-            long_bit: Some(<Bitwise as MulAlgo>::long),
-            checked_elem: Some(<Element as AssignMulAlgo>::checked),
-            checked_bit: Some(<Bitwise as AssignMulAlgo>::checked),
-            wrapping_elem: Some(<Element as AssignMulAlgo>::wrapping),
-            wrapping_bit: Some(<Bitwise as AssignMulAlgo>::wrapping),
-        },
-    );
+    bench_common::<Mul, Element>(c, "Element", "Mul");
+    bench_common_assign::<Mul, Element>(c, "Element", "Mul");
+    bench_common::<Mul, Bitwise>(c, "Bitwise", "Mul");
+    bench_common_assign::<Mul, Bitwise>(c, "Bitwise", "Mul");
 }
 
 pub fn bench_div(c: &mut Criterion) {
-    bench_common(
-        c,
-        MathMeths {
-            tr: "Div",
-            long_elem: Some(|l, r| <NewtonRaphson as DivRemAlgo>::long(l, r).0),
-            long_bit: Some(|l, r| <Bitwise as DivRemAlgo>::long(l, r).0),
-            checked_elem: None,
-            checked_bit: Some(|l, r| <Bitwise as AssignDivRemAlgo>::div_checked(l, r, &mut [0; 8])),
-            wrapping_elem: None,
-            wrapping_bit: Some(|l, r| {
-                <Bitwise as AssignDivRemAlgo>::div_wrapping(l, r, &mut [0; 8])
-            }),
-        },
-    );
+    bench_common::<DivRem, Element>(c, "Element", "DivRem");
+    bench_common_assign::<DivRem, Element>(c, "Element", "DivRem");
+    bench_common::<DivRem, Bitwise>(c, "Bitwise", "DivRem");
+    bench_common_assign::<DivRem, Bitwise>(c, "Bitwise", "DivRem");
 }
 
 pub fn bench_shl(c: &mut Criterion) {

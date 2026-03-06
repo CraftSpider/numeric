@@ -1,96 +1,186 @@
-use crate::bit_slice::BitSlice;
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-use numeric_traits::class::Bounded;
+use crate::algos::{Algo, AssignAlgo, Bitwise, Element, Sub};
+use crate::bit_slice::{BitLike, BitOwned, BitSlice};
+use core::mem;
+use numeric_traits::identity::{One, Zero};
+use numeric_traits::ops::overflowing::OverflowingSub;
 
-mod impls;
-
-pub trait SubAlgo {
-    #[cfg(feature = "alloc")]
-    fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, bool)
+impl Algo<Sub> for Element {
+    fn overflowing<O, L, R>(left: &L, right: &R) -> (O, bool)
     where
-        L: ?Sized + BitSlice,
-        R: ?Sized + BitSlice<Bit = L::Bit>;
-
-    fn overflowing<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
-    where
-        L: ?Sized + BitSlice,
-        R: ?Sized + BitSlice<Bit = L::Bit>;
-
-    fn wrapping<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
-    where
+        O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
     {
-        Self::overflowing(left, right, out).0
+        let len = usize::max(left.len(), right.len());
+        let mut out = O::zeroed(len);
+        let overflow = <Self as Algo<Sub>>::overflowing_into::<L, R, O>(left, right, &mut out);
+        (out, overflow)
     }
 
-    fn checked<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> Option<&'a [L::Bit]>
+    fn overflowing_into<L, R, O>(left: &L, right: &R, out: &mut O) -> bool
     where
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
+        O: BitOwned<Bit = L::Bit>,
     {
-        let (out, overflow) = Self::overflowing(left, right, out);
-        if overflow {
-            None
-        } else {
-            Some(out)
-        }
-    }
+        let len = usize::max(left.len(), right.len());
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
 
-    fn saturating<'a, L, R>(left: &L, right: &R, out: &'a mut [L::Bit]) -> &'a [L::Bit]
-    where
-        L: BitSlice,
-        R: BitSlice<Bit = L::Bit>,
-    {
-        {
-            let (val, overflow) = Self::overflowing(left, right, out);
-            if overflow {
-                out.fill(L::Bit::min_value());
-                out
+        let mut carry = false;
+
+        for idx in 0..len {
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
+
+            let extra = if carry {
+                carry = false;
+                one
             } else {
-                // SAFETY: Polonius case
-                unsafe { core::mem::transmute::<&[_], &[_]>(val) }
+                zero
+            };
+
+            let (res, new_carry) = l.overflowing_sub(r);
+            if new_carry {
+                carry = true;
             }
+
+            let (res, new_carry) = res.overflowing_sub(extra);
+            if new_carry {
+                carry = true;
+            }
+
+            out.set_ignore(idx, res);
         }
+
+        out.shrink();
+        carry
     }
 }
 
-pub trait AssignSubAlgo {
-    fn overflowing<L, R>(left: &mut L, right: &R) -> bool
+impl AssignAlgo<Sub> for Element {
+    fn overflowing<O, L, R>(left: &mut L, right: &R) -> bool
     where
-        L: ?Sized + BitSlice,
-        R: ?Sized + BitSlice<Bit = L::Bit>;
-
-    fn wrapping<L, R>(left: &mut L, right: &R)
-    where
+        O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
     {
-        Self::overflowing(left, right);
-    }
+        let len = usize::max(left.len(), right.len());
+        let zero = L::Bit::zero();
+        let one = L::Bit::one();
 
-    fn checked<L, R>(left: &mut L, right: &R) -> Option<()>
+        let mut carry = false;
+
+        for idx in 0..len {
+            let l = left.get(idx).unwrap_or(zero);
+            let r = right.get(idx).unwrap_or(zero);
+
+            let extra = if carry {
+                carry = false;
+                one
+            } else {
+                zero
+            };
+
+            let (res, new_carry) = l.overflowing_sub(r);
+            if new_carry {
+                carry = true;
+            }
+
+            let (res, new_carry) = res.overflowing_sub(extra);
+            if new_carry {
+                carry = true;
+            }
+
+            left.set_ignore(idx, res);
+        }
+
+        carry
+    }
+}
+
+impl Algo<Sub> for Bitwise {
+    fn overflowing<O, L, R>(left: &L, right: &R) -> (O, bool)
     where
+        O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
     {
-        if Self::overflowing(left, right) {
-            None
-        } else {
-            Some(())
-        }
+        let bit_len = usize::max(left.bit_len(), right.bit_len());
+        let mut out = O::zeroed(bit_len / L::Bit::BIT_LEN);
+        let overflow = <Self as Algo<Sub>>::overflowing_into::<L, R, O>(left, right, &mut out);
+        (out, overflow)
     }
 
-    fn saturating<L, R>(left: &mut L, right: &R)
+    fn overflowing_into<L, R, O>(left: &L, right: &R, out: &mut O) -> bool
     where
-        L: BitSlice,
-        R: BitSlice<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
+        O: BitOwned<Bit = L::Bit>,
     {
-        let overflow = Self::overflowing(left, right);
-        if overflow {
-            left.iter_mut().for_each(|l| *l = L::Bit::min_value());
+        let bit_len = usize::max(left.bit_len(), right.bit_len());
+
+        let mut carry = false;
+        for idx in 0..bit_len {
+            let l = left.get_bit(idx).unwrap_or(false);
+            let r = right.get_bit(idx).unwrap_or(false);
+
+            let c = mem::take(&mut carry);
+
+            let new = match (l, r, c) {
+                (true, false, false) => true,
+                (true, true, false) | (true, false, true) | (false, false, false) => false,
+                (false, true, false) | (false, false, true) | (true, true, true) => {
+                    carry = true;
+                    true
+                }
+                (false, true, true) => {
+                    carry = true;
+                    false
+                }
+            };
+
+            out.set_bit_ignore(idx, new);
         }
+
+        out.shrink();
+        carry
+    }
+}
+
+impl AssignAlgo<Sub> for Bitwise {
+    fn overflowing<O, L, R>(left: &mut L, right: &R) -> bool
+    where
+        O: BitOwned<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
+    {
+        let bit_len = usize::max(left.bit_len(), right.bit_len());
+
+        let mut carry = false;
+        for idx in 0..bit_len {
+            let l = left.get_bit(idx).unwrap_or(false);
+            let r = right.get_bit(idx).unwrap_or(false);
+
+            let c = mem::take(&mut carry);
+
+            let new = match (l, r, c) {
+                (true, false, false) => true,
+                (true, true, false) | (true, false, true) | (false, false, false) => false,
+                (false, true, false) | (false, false, true) | (true, true, true) => {
+                    carry = true;
+                    true
+                }
+                (false, true, true) => {
+                    carry = true;
+                    false
+                }
+            };
+
+            left.set_bit_ignore(idx, new);
+        }
+
+        carry
     }
 }
 
@@ -99,56 +189,73 @@ mod tests {
     use super::*;
     use crate::algos::{Bitwise, Element};
     #[cfg(feature = "alloc")]
-    use alloc::vec;
+    use alloc::{vec, vec::Vec};
 
     #[cfg(feature = "alloc")]
-    fn test_long<B: SubAlgo>() {
+    fn test_long<B: Algo<Sub>>() {
         // Simple subtraction
-        assert_eq!(B::long(&[0u32], &[0]), (vec![0], false));
-        assert_eq!(B::long(&[1u32], &[0]), (vec![1], false));
-        assert_eq!(B::long(&[0u32], &[1]), (vec![1], true));
-        assert_eq!(B::long(&[1u32], &[1]), (vec![0], false));
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[0u32], &[0]),
+            (vec![0], false)
+        );
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[1u32], &[0]),
+            (vec![1], false)
+        );
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[0u32], &[1]),
+            (vec![4294967295], true)
+        );
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[1u32], &[1]),
+            (vec![0], false)
+        );
 
         // Long subtraction handled correctly
-        assert_eq!(B::long(&[0u32, 1], &[0, 1]), (vec![0], false));
-        assert_eq!(B::long(&[1u32, 1], &[1]), (vec![0, 1], false));
-        assert_eq!(B::long(&[1u32, 1], &[0, 1]), (vec![1], false));
-        assert_eq!(B::long(&[0u32, 1], &[1]), (vec![u32::MAX], false));
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[0u32, 1], &[0, 1]),
+            (vec![0], false)
+        );
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[1u32, 1], &[1]),
+            (vec![0, 1], false)
+        );
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[1u32, 1], &[0, 1]),
+            (vec![1], false)
+        );
+        assert_eq!(
+            B::overflowing::<Vec<_>, _, _>(&[0u32, 1], &[1]),
+            (vec![u32::MAX], false)
+        );
     }
 
-    fn test_wrapping<B: SubAlgo>() {
+    fn test_wrapping<B: Algo<Sub>>() {
         // Simple subtraction
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[0u32], &[0], &mut out), &[0]);
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[1u32], &[0], &mut out), &[1]);
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[0u32], &[1], &mut out), &[u32::MAX]);
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[1u32], &[1], &mut out), &[0]);
+        assert_eq!(B::wrapping::<[u32; 1], _, _>(&[0u32], &[0]), [0]);
+        assert_eq!(B::wrapping::<[u32; 1], _, _>(&[1u32], &[0]), [1]);
+        assert_eq!(B::wrapping::<[u32; 1], _, _>(&[0u32], &[1]), [u32::MAX]);
+        assert_eq!(B::wrapping::<[u32; 1], _, _>(&[1u32], &[1]), [0]);
 
         // Long subtraction handled correctly
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[0u32, 1], &[0, 1], &mut out), &[0]);
-        let mut out = [0; 2];
-        assert_eq!(B::wrapping(&[1u32, 1], &[1], &mut out), &[0, 1]);
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[1u32, 1], &[0, 1], &mut out), &[1]);
-        let mut out = [0];
-        assert_eq!(B::wrapping(&[0u32, 1], &[1], &mut out), &[u32::MAX]);
+        assert_eq!(B::wrapping::<[u32; 2], _, _>(&[0u32, 1], &[0, 1]), [0, 0]);
+        assert_eq!(B::wrapping::<[u32; 2], _, _>(&[1u32, 1], &[1]), [0, 1]);
+        assert_eq!(B::wrapping::<[u32; 2], _, _>(&[1u32, 1], &[0, 1]), [1, 0]);
+        assert_eq!(
+            B::wrapping::<[u32; 2], _, _>(&[0u32, 1], &[1]),
+            [u32::MAX, 0]
+        );
     }
 
-    fn test_saturating<B: SubAlgo>() {
-        let mut out = [0u32];
-        assert_eq!(B::saturating(&[0], &[0], &mut out), &[0]);
-        let mut out = [0u32];
-        assert_eq!(B::saturating(&[1], &[1], &mut out), &[0]);
-        let mut out = [0u32];
-        assert_eq!(B::saturating(&[1], &[u32::MAX], &mut out), &[0]);
-        let mut out = [0u32];
-        assert_eq!(B::saturating(&[0], &[1], &mut out), &[0]);
-        let mut out = [0u32];
-        assert_eq!(B::saturating(&[u32::MAX], &[1], &mut out), &[u32::MAX - 1]);
+    fn test_saturating<B: Algo<Sub>>() {
+        assert_eq!(B::saturating::<[u32; 1], _, _>(&[0], &[0]), [0]);
+        assert_eq!(B::saturating::<[u32; 1], _, _>(&[1], &[1]), [0]);
+        assert_eq!(B::saturating::<[u32; 1], _, _>(&[1], &[u32::MAX]), [0]);
+        assert_eq!(B::saturating::<[u32; 1], _, _>(&[0], &[1]), [0]);
+        assert_eq!(
+            B::saturating::<[u32; 1], _, _>(&[u32::MAX], &[1]),
+            [u32::MAX - 1]
+        );
     }
 
     #[test]

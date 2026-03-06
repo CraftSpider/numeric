@@ -13,7 +13,7 @@ impl Algo<Add> for Element {
     {
         let len = usize::max(left.len(), right.len());
         let mut out = O::zeroed(len + 1);
-        let overflow = Self::overflowing_into(left, right, &mut out);
+        let overflow = <Self as Algo<Add>>::overflowing_into(left, right, &mut out);
         (out, overflow)
     }
 
@@ -100,7 +100,7 @@ impl Algo<Add> for Bitwise {
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         let mut out = O::zeroed(bit_len / L::Bit::BIT_LEN + 1);
-        let overflow = Self::overflowing_into(left, right, &mut out);
+        let overflow = <Self as Algo<Add>>::overflowing_into(left, right, &mut out);
         (out, overflow)
     }
 

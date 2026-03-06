@@ -1,7 +1,7 @@
 use super::NewtonRaphson;
 use crate::algos::{
-    Add, AssignAlgo, AssignBitAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo,
-    Bitwise, CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo,
+    Add, AssignAlgo, AssignBitAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, Bitwise,
+    CmpAlgo, DivRemAlgo, Element, MulAlgo, ShlAlgo, Sub,
 };
 use crate::bit_slice::{BitLike, BitSlice};
 #[cfg(feature = "alloc")]
@@ -31,7 +31,7 @@ impl DivRemAlgo for Bitwise {
             remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(&remainder, right) {
                 // Subtract will never overflow
-                <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
+                <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(&mut remainder, right);
                 quotient.set_bit(idx, true);
             }
         }
@@ -55,7 +55,7 @@ impl DivRemAlgo for Bitwise {
             remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
-                <Element as AssignSubAlgo>::wrapping(remainder, right);
+                <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, right);
                 quotient.set_bit(idx, true);
             } else {
                 quotient.set_bit(idx, false);
@@ -78,7 +78,7 @@ impl AssignDivRemAlgo for Bitwise {
             remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
-                <Element as AssignSubAlgo>::wrapping(remainder, right);
+                <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, right);
                 left.set_bit(idx, true);
             } else {
                 left.set_bit(idx, false);
@@ -236,14 +236,17 @@ impl DivRemAlgo for NewtonRaphson {
         <Element as AssignShrAlgo>::wrapping(&mut quotient, len * L::Bit::BIT_LEN - 1 - zeroes);
 
         if quotient.iter().any(|v| v != L::Bit::zero()) {
-            <Element as AssignSubAlgo>::wrapping(&mut quotient, &[L::Bit::one()]);
+            <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(
+                &mut quotient,
+                &[L::Bit::one()],
+            );
         }
 
         let mut remainder = norm_r;
         <Element as MulAlgo>::wrapping(&quotient, right, &mut remainder);
 
         // Calculate left - remainder
-        <Element as AssignSubAlgo>::wrapping(&mut remainder, left);
+        <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(&mut remainder, left);
         <Element as AssignBitAlgo>::not(&mut remainder);
         <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(
             &mut remainder,
@@ -253,10 +256,10 @@ impl DivRemAlgo for NewtonRaphson {
         // Correct quotient to handle possible error
         if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
             <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(&mut quotient, &[one]);
-            <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
+            <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(&mut remainder, right);
             if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
                 <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(&mut quotient, &[one]);
-                <Element as AssignSubAlgo>::wrapping(&mut remainder, right);
+                <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(&mut remainder, right);
                 if <Element as CmpAlgo>::cmp(&remainder, right).is_ge() {
                     <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(
                         &mut quotient,

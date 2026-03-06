@@ -12,7 +12,7 @@ use core::ops::{
 use core::{array, fmt, iter};
 use numeric_bits::algos;
 use numeric_bits::algos::{
-    AssignAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, AssignSubAlgo, Bitwise, CmpAlgo,
+    AssignAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, Bitwise, CmpAlgo,
 };
 use numeric_bits::algos::{AssignMulAlgo, Element};
 use numeric_bits::array::const_reverse;
@@ -412,7 +412,7 @@ impl<const N: usize> AddAssign for U<N> {
 
 impl<const N: usize> SubAssign for U<N> {
     fn sub_assign(&mut self, rhs: Self) {
-        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Sub>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
     }
 }
 
@@ -571,7 +571,7 @@ impl<const N: usize> CheckedSub for U<N> {
     type Output = Self;
 
     fn checked_sub(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0)?;
+        <Element as AssignAlgo<algos::Sub>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -607,7 +607,7 @@ impl<const N: usize> WrappingSub for U<N> {
     type Output = Self;
 
     fn wrapping_sub(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignSubAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Sub>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -627,7 +627,7 @@ impl<const N: usize> SaturatingSub for U<N> {
     type Output = Self;
 
     fn saturating_sub(mut self, rhs: Self) -> Self {
-        match <Element as AssignSubAlgo>::checked(&mut self.0, &rhs.0) {
+        match <Element as AssignAlgo<algos::Sub>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::min_value(),
         }
