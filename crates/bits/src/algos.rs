@@ -19,9 +19,32 @@ mod shift;
 #[allow(missing_docs)]
 mod sub;
 
-use crate::bit_slice::{BitOwned, BitSlice};
+use crate::bit_slice::{BitLike, BitOwned, BitSlice};
 use numeric_traits::class::Bounded;
 use numeric_traits::identity::Zero;
+
+pub trait MultiBitOwned {
+    type Bit: BitLike;
+
+    fn fill(&mut self, val: Self::Bit);
+}
+
+impl<O: BitOwned> MultiBitOwned for O {
+    type Bit = O::Bit;
+
+    fn fill(&mut self, val: Self::Bit) {
+        self.iter_mut().for_each(|v| *v = val);
+    }
+}
+
+impl<O: BitOwned> MultiBitOwned for (O, O) {
+    type Bit = O::Bit;
+
+    fn fill(&mut self, val: Self::Bit) {
+        self.0.iter_mut().for_each(|v| *v = val);
+        self.1.iter_mut().for_each(|v| *v = val);
+    }
+}
 
 /// Algorithm types. Add, Sub, Div, DivRem, etc.
 pub trait AlgoTy {
@@ -29,7 +52,7 @@ pub trait AlgoTy {
     const SATURATE_HIGH: bool;
 
     /// Outputs for this algorithm. As an example, `O` or `(O, O)`.
-    type Out<O: BitOwned>: BitOwned<Bit = O::Bit>;
+    type Out<O: BitOwned>: MultiBitOwned<Bit = O::Bit>;
 }
 
 /// Algorithms implementing an 'add' operation
@@ -40,6 +63,9 @@ pub struct Sub;
 
 /// Algorithm implementing a 'mul' operation
 pub struct Mul;
+
+/// Algorithm implemented a 'div-rem' operation
+pub struct DivRem;
 
 impl AlgoTy for Add {
     const SATURATE_HIGH: bool = true;
@@ -54,6 +80,11 @@ impl AlgoTy for Sub {
 impl AlgoTy for Mul {
     const SATURATE_HIGH: bool = true;
     type Out<O: BitOwned> = O;
+}
+
+impl AlgoTy for DivRem {
+    const SATURATE_HIGH: bool = false;
+    type Out<O: BitOwned> = (O, O);
 }
 
 /// Trait for algorithm implementations.
@@ -123,9 +154,9 @@ pub trait Algo<A: AlgoTy> {
         let (mut val, overflow) = Self::overflowing(left, right);
         if overflow {
             if A::SATURATE_HIGH {
-                val.iter_mut().for_each(|v| *v = O::Bit::max_value());
+                val.fill(O::Bit::max_value());
             } else {
-                val.iter_mut().for_each(|v| *v = O::Bit::zero());
+                val.fill(O::Bit::zero());
             }
             val
         } else {
@@ -211,7 +242,6 @@ pub use cmp::*;
 pub use div_rem::*;
 pub use mul::*;
 pub use shift::*;
-pub use sub::*;
 
 /// Simple bitwise implementations of algorithms. These implementations are generally inefficient,
 /// but straightforward compared to alternative approaches.

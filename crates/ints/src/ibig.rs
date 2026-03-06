@@ -14,7 +14,7 @@ use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
     Add, Algo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
-    ShrAlgo, SubAlgo,
+    ShrAlgo, Sub,
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSlice;
@@ -554,11 +554,19 @@ impl_op!(add(self: IBig, rhs) => {
                 (<Element as Algo<Add>>::wrapping(this, other), self.is_negative())
             }
             (true, _) => {
-                let (out, neg) = <Element as SubAlgo>::long(this, other);
+                let (mut out, neg): (Vec<_>, _) = <Element as Algo<Sub>>::overflowing(this, other);
+                if neg {
+                    out.set_bit(0, !out.get_bit(0).unwrap_or(false));
+                    <Element as AssignBitAlgo>::not(&mut out);
+                }
                 (out, neg)
             }
             (_, true) => {
-                let (out, neg) = <Element as SubAlgo>::long(this, other);
+                let (mut out, neg): (Vec<_>, _) = <Element as Algo<Sub>>::overflowing(this, other);
+                if neg {
+                    out.set_bit(0, !out.get_bit(0).unwrap_or(false));
+                    <Element as AssignBitAlgo>::not(&mut out);
+                }
                 (out, !neg)
             }
         }
@@ -579,15 +587,15 @@ impl_op!(sub(self: IBig, rhs) => {
     let (out, neg) = IBig::with_slices(self, rhs, |this, other| {
         match (self.is_positive(), rhs.is_positive()) {
             (true, false) | (false, true) => {
-                let out = <Element as Algo<Add>>::wrapping(this, other);
+                let out: Vec<_> = <Element as Algo<Add>>::wrapping(this, other);
                 (out, self.is_negative())
             }
             (true, true) => {
-                let (out, neg) = <Element as SubAlgo>::long(this, other);
+                let (out, neg) = <Element as Algo<Sub>>::overflowing(this, other);
                 (out, neg)
             }
             (false, false) => {
-                let (out, neg) = <Element as SubAlgo>::long(this, other);
+                let (out, neg) = <Element as Algo<Sub>>::overflowing(this, other);
                 (out, !neg)
             }
         }

@@ -10,7 +10,7 @@ use core::fmt::{Debug, Display, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
     Add, Algo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
-    ShrAlgo, SubAlgo,
+    ShrAlgo, Sub,
 };
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
@@ -512,8 +512,8 @@ impl_op!(mul(self: UBig, rhs) => {
 });
 
 impl_op!(sub(self: UBig, rhs) => {
-    let (out, nonzero) = UBig::with_slices(self, rhs, |this, other| {
-        <Element as SubAlgo>::long(this, other)
+    let (out, nonzero): (Vec<_>, _) = UBig::with_slices(self, rhs, |this, other| {
+        <Element as Algo<Sub>>::overflowing(this, other)
     });
     if nonzero {
         panic!("Subtraction resulted in negative value for UBig");
