@@ -9,8 +9,7 @@ use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    Add, Algo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
-    ShrAlgo, Sub,
+    Add, Algo, AssignBitAlgo, BitAlgo, DivRem, Element, Mul, NewtonRaphson, ShlAlgo, ShrAlgo, Sub,
 };
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
@@ -504,8 +503,8 @@ impl_op!(add(self: UBig, rhs) => {
 });
 
 impl_op!(mul(self: UBig, rhs) => {
-    let out = UBig::with_slices(self, rhs, |this, other| {
-        <Element as MulAlgo>::long(this, other)
+    let out: Vec<_> = UBig::with_slices(self, rhs, |this, other| {
+        <Element as Algo<Mul>>::wrapping(this, other)
     });
 
     UBig::new_slice(out)
@@ -523,15 +522,15 @@ impl_op!(sub(self: UBig, rhs) => {
 });
 
 impl_op!(div(self: UBig, rhs) => {
-    let out = UBig::with_slices(self, rhs, |this, other| {
-        <NewtonRaphson as DivRemAlgo>::long(this, other).0
+    let out: Vec<_> = UBig::with_slices(self, rhs, |this, other| {
+        <NewtonRaphson as Algo<DivRem>>::wrapping(this, other).0
     });
     UBig::new_slice(out)
 });
 
 impl_op!(rem(self: UBig, rhs) => {
-    let out = UBig::with_slices(self, rhs, |this, other| {
-        <NewtonRaphson as DivRemAlgo>::long(this, other).1
+    let out: Vec<_> = UBig::with_slices(self, rhs, |this, other| {
+        <NewtonRaphson as Algo<DivRem>>::wrapping(this, other).1
     });
     UBig::new_slice(out)
 });

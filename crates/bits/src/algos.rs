@@ -23,9 +23,12 @@ use crate::bit_slice::{BitLike, BitOwned, BitSlice};
 use numeric_traits::class::Bounded;
 use numeric_traits::identity::Zero;
 
+/// Collections of BitOwned values, like tuples or arrays
 pub trait MultiBitOwned {
+    /// Bit type of owned values
     type Bit: BitLike;
 
+    /// Fill all values with the requested bit value
     fn fill(&mut self, val: Self::Bit);
 }
 
@@ -64,7 +67,13 @@ pub struct Sub;
 /// Algorithm implementing a 'mul' operation
 pub struct Mul;
 
-/// Algorithm implemented a 'div-rem' operation
+/// Algorithm implementing a 'div' operation
+pub struct Div;
+
+/// Algorithm implemented a 'rem' operation
+pub struct Rem;
+
+/// Algorithm implementing a 'div-rem' operation
 pub struct DivRem;
 
 impl AlgoTy for Add {
@@ -79,6 +88,16 @@ impl AlgoTy for Sub {
 
 impl AlgoTy for Mul {
     const SATURATE_HIGH: bool = true;
+    type Out<O: BitOwned> = O;
+}
+
+impl AlgoTy for Div {
+    const SATURATE_HIGH: bool = false;
+    type Out<O: BitOwned> = O;
+}
+
+impl AlgoTy for Rem {
+    const SATURATE_HIGH: bool = false;
     type Out<O: BitOwned> = O;
 }
 
@@ -154,9 +173,9 @@ pub trait Algo<A: AlgoTy> {
         let (mut val, overflow) = Self::overflowing(left, right);
         if overflow {
             if A::SATURATE_HIGH {
-                val.fill(O::Bit::max_value());
+                val.fill(L::Bit::max_value());
             } else {
-                val.fill(O::Bit::zero());
+                val.fill(L::Bit::zero());
             }
             val
         } else {
@@ -170,6 +189,16 @@ pub trait Algo<A: AlgoTy> {
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
         O: BitOwned<Bit = L::Bit>;
+
+    /// Calculate the result using overflowing logic, putting the result into an existing output
+    fn wrapping_into<L, R, O>(left: &L, right: &R, out: &mut A::Out<O>)
+    where
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
+        O: BitOwned<Bit = L::Bit>,
+    {
+        Self::overflowing_into(left, right, out);
+    }
 }
 
 /// Trait for assignment algorithm implementations. These algorithms can be implemented to
@@ -240,7 +269,6 @@ pub trait AssignAlgo<A: AlgoTy> {
 pub use bits::*;
 pub use cmp::*;
 pub use div_rem::*;
-pub use mul::*;
 pub use shift::*;
 
 /// Simple bitwise implementations of algorithms. These implementations are generally inefficient,

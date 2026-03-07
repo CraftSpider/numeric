@@ -13,8 +13,7 @@ use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    Add, Algo, AssignBitAlgo, BitAlgo, DivRemAlgo, Element, MulAlgo, NewtonRaphson, ShlAlgo,
-    ShrAlgo, Sub,
+    Add, Algo, AssignBitAlgo, BitAlgo, DivRem, Element, Mul, NewtonRaphson, ShlAlgo, ShrAlgo, Sub,
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSlice;
@@ -576,8 +575,8 @@ impl_op!(add(self: IBig, rhs) => {
 });
 
 impl_op!(mul(self: IBig, rhs) => {
-    let out = IBig::with_slices(self, rhs, |this, other| {
-        <Element as MulAlgo>::long(this, other)
+    let out: Vec<_> = IBig::with_slices(self, rhs, |this, other| {
+        <Element as Algo<Mul>>::wrapping(this, other)
     });
 
     IBig::new_slice(out, self.is_negative() != rhs.is_negative())
@@ -605,15 +604,15 @@ impl_op!(sub(self: IBig, rhs) => {
 });
 
 impl_op!(div(self: IBig, rhs) => {
-    let out = IBig::with_slices(self, rhs, |this, other| {
-        <NewtonRaphson as DivRemAlgo>::long(this, other).0
+    let out: Vec<_> = IBig::with_slices(self, rhs, |this, other| {
+        <NewtonRaphson as Algo<DivRem>>::wrapping(this, other).0
     });
     IBig::new_slice(out, self.is_negative() != rhs.is_negative())
 });
 
 impl_op!(rem(self: IBig, rhs) => {
-    let out = IBig::with_slices(self, rhs, |this, other| {
-        <NewtonRaphson as DivRemAlgo>::long(this, other).1
+    let out: Vec<_> = IBig::with_slices(self, rhs, |this, other| {
+        <NewtonRaphson as Algo<DivRem>>::wrapping(this, other).1
     });
     IBig::new_slice(out, self.is_negative() != rhs.is_negative())
 });

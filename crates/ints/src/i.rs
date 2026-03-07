@@ -10,9 +10,7 @@ use core::ops::{
 };
 use core::{array, fmt};
 use numeric_bits::algos;
-use numeric_bits::algos::{
-    AssignAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignShrAlgo, Bitwise, Element,
-};
+use numeric_bits::algos::{AssignAlgo, AssignShlAlgo, AssignShrAlgo, Element, NewtonRaphson};
 use numeric_bits::array::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
@@ -260,7 +258,7 @@ impl<const N: usize> Mul for I<N> {
     type Output = Self;
 
     fn mul(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Mul>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -279,7 +277,7 @@ impl<const N: usize> Div for I<N> {
         let neg = self.is_negative() != rhs.is_negative();
         self = self.abs();
         rhs = rhs.abs();
-        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Div>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         if neg {
             self = -self;
         }
@@ -294,7 +292,7 @@ impl<const N: usize> Rem for I<N> {
         let neg = self.is_negative() != rhs.is_negative();
         self = self.abs();
         rhs = rhs.abs();
-        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Rem>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         if neg {
             self = -self;
         }
@@ -426,7 +424,7 @@ impl<const N: usize> SubAssign for I<N> {
 
 impl<const N: usize> MulAssign for I<N> {
     fn mul_assign(&mut self, rhs: Self) {
-        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Mul>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
     }
 }
 
@@ -442,7 +440,7 @@ impl<const N: usize> DivAssign for I<N> {
         let neg = self.is_negative() != rhs.is_negative();
         *self = self.abs();
         rhs = rhs.abs();
-        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Div>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         if neg {
             *self = -*self;
         }
@@ -454,7 +452,7 @@ impl<const N: usize> RemAssign for I<N> {
         let neg = self.is_negative() != rhs.is_negative();
         *self = self.abs();
         rhs = rhs.abs();
-        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Rem>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         if neg {
             *self = -*self;
         }
@@ -527,7 +525,7 @@ impl<const N: usize> CheckedMul for I<N> {
     type Output = Self;
 
     fn checked_mul(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0)?;
+        <Element as AssignAlgo<algos::Mul>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -536,7 +534,7 @@ impl<const N: usize> CheckedDiv for I<N> {
     type Output = Self;
 
     fn checked_div(mut self, rhs: Self) -> Option<Self> {
-        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N])?;
+        <NewtonRaphson as AssignAlgo<algos::Div>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -563,7 +561,7 @@ impl<const N: usize> SaturatingMul for I<N> {
     type Output = Self;
 
     fn saturating_mul(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignMulAlgo>::saturating(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Mul>>::saturating::<[u8; 0], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
