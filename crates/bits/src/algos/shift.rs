@@ -11,20 +11,23 @@ pub trait ShlAlgo {
     where
         L: ?Sized + BitSlice;
 
-    fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
-    where
-        L: ?Sized + BitSlice;
-
-    fn wrapping<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> &'a [L::Bit]
+    fn overflowing<'a, L, O>(left: &L, right: usize, out: &'a mut O) -> (&'a O, bool)
     where
         L: ?Sized + BitSlice,
+        O: ?Sized + BitSlice<Bit = L::Bit>;
+
+    fn wrapping<'a, L, O>(left: &L, right: usize, out: &'a mut O) -> &'a O
+    where
+        L: ?Sized + BitSlice,
+        O: ?Sized + BitSlice<Bit = L::Bit>,
     {
         Self::overflowing(left, right, out).0
     }
 
-    fn checked<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> Option<&'a [L::Bit]>
+    fn checked<'a, L, O>(left: &L, right: usize, out: &'a mut O) -> Option<&'a O>
     where
         L: ?Sized + BitSlice,
+        O: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let (out, overflow) = Self::overflowing(left, right, out);
         if overflow {

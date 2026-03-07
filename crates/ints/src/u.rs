@@ -12,9 +12,8 @@ use core::ops::{
 use core::{array, fmt, iter};
 use numeric_bits::algos;
 use numeric_bits::algos::{
-    AssignAlgo, AssignDivRemAlgo, AssignShlAlgo, AssignShrAlgo, Bitwise, CmpAlgo,
+    AssignAlgo, AssignShlAlgo, AssignShrAlgo, CmpAlgo, Element, NewtonRaphson,
 };
-use numeric_bits::algos::{AssignMulAlgo, Element};
 use numeric_bits::array::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
@@ -271,9 +270,9 @@ impl<const N: usize> Mul for U<N> {
 
     fn mul(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0).unwrap();
+        <Element as AssignAlgo<algos::Mul>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0).unwrap();
         #[cfg(not(debug_assertions))]
-        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Mul>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -285,9 +284,10 @@ impl<const N: usize> Div for U<N> {
         assert!(!rhs.is_zero(), "attempt to divide by zero");
 
         #[cfg(debug_assertions)]
-        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <NewtonRaphson as AssignAlgo<algos::Div>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0)
+            .unwrap();
         #[cfg(not(debug_assertions))]
-        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Div>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -297,9 +297,10 @@ impl<const N: usize> Rem for U<N> {
 
     fn rem(mut self, rhs: Self) -> Self::Output {
         #[cfg(debug_assertions)]
-        <Bitwise as AssignDivRemAlgo>::rem_checked(&mut self.0, &rhs.0, &mut [0; N]).unwrap();
+        <NewtonRaphson as AssignAlgo<algos::Rem>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0)
+            .unwrap();
         #[cfg(not(debug_assertions))]
-        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Rem>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -418,19 +419,19 @@ impl<const N: usize> SubAssign for U<N> {
 
 impl<const N: usize> MulAssign for U<N> {
     fn mul_assign(&mut self, rhs: Self) {
-        <Element as AssignMulAlgo>::wrapping(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Mul>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
     }
 }
 
 impl<const N: usize> DivAssign for U<N> {
     fn div_assign(&mut self, rhs: Self) {
-        <Bitwise as AssignDivRemAlgo>::div_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Div>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
     }
 }
 
 impl<const N: usize> RemAssign for U<N> {
     fn rem_assign(&mut self, rhs: Self) {
-        <Bitwise as AssignDivRemAlgo>::rem_wrapping(&mut self.0, &rhs.0, &mut [0; N]);
+        <NewtonRaphson as AssignAlgo<algos::Rem>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
     }
 }
 
@@ -580,7 +581,7 @@ impl<const N: usize> CheckedMul for U<N> {
     type Output = Self;
 
     fn checked_mul(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0)?;
+        <Element as AssignAlgo<algos::Mul>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -589,7 +590,7 @@ impl<const N: usize> CheckedDiv for U<N> {
     type Output = Self;
 
     fn checked_div(mut self, rhs: Self) -> Option<Self> {
-        <Bitwise as AssignDivRemAlgo>::div_checked(&mut self.0, &rhs.0, &mut [0; N])?;
+        <NewtonRaphson as AssignAlgo<algos::Div>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -638,7 +639,7 @@ impl<const N: usize> SaturatingMul for U<N> {
     type Output = Self;
 
     fn saturating_mul(mut self, rhs: Self) -> Self {
-        match <Element as AssignMulAlgo>::checked(&mut self.0, &rhs.0) {
+        match <Element as AssignAlgo<algos::Mul>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::max_value(),
         }

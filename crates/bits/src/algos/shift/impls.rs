@@ -25,9 +25,10 @@ impl ShlAlgo for Bitwise {
         out
     }
 
-    fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
+    fn overflowing<'a, L, O>(left: &L, right: usize, out: &'a mut O) -> (&'a O, bool)
     where
         L: ?Sized + BitSlice,
+        O: ?Sized + BitSlice,
     {
         let bit_len = left.bit_len();
         left.iter_bits().enumerate().for_each(|(idx, new)| {
@@ -101,9 +102,10 @@ impl ShlAlgo for Element {
         IntSlice::shrink(out)
     }
 
-    fn overflowing<'a, L>(left: &L, right: usize, out: &'a mut [L::Bit]) -> (&'a [L::Bit], bool)
+    fn overflowing<'a, L, O>(left: &L, right: usize, out: &'a mut O) -> (&'a O, bool)
     where
         L: ?Sized + BitSlice,
+        O: ?Sized + BitSlice<Bit = L::Bit>,
     {
         let arr_shift = (right / L::Bit::BIT_LEN) + 1;
         let elem_shift = right % L::Bit::BIT_LEN;
@@ -117,8 +119,7 @@ impl ShlAlgo for Element {
             let high = val >> inverse_elem_shift;
             let low = val << elem_shift;
 
-            let high = (out.get(idx + arr_shift).copied().unwrap_or(zero) & !elem_mask)
-                | (high & elem_mask);
+            let high = (out.get(idx + arr_shift).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
 
             out.set_ignore(idx + arr_shift, high);
 

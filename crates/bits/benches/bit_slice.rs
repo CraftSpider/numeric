@@ -9,15 +9,11 @@ use criterion::{
 };
 use numeric_bench_util::make_criterion;
 use numeric_bits::algos::{
-    Add, Algo, AlgoTy, AssignAlgo, AssignDivRemAlgo, AssignMulAlgo, AssignShlAlgo, AssignSubAlgo,
-    Bitwise, CmpAlgo, DivRemAlgo, Element, Mul, MulAlgo, NewtonRaphson, ShlAlgo, Sub, SubAlgo,
+    Add, Algo, AlgoTy, AssignAlgo, AssignShlAlgo, Bitwise, CmpAlgo, DivRem, Element, Mul,
+    NewtonRaphson, ShlAlgo, Sub,
 };
 use numeric_bits::bit_slice::BitOwned;
 use std::time::Duration;
-
-type LongFn = fn(&[usize], &[usize]) -> Vec<usize>;
-type CheckedFn = for<'a> fn(&'a mut [usize], &[usize]) -> Option<()>;
-type WrappingFn = for<'a> fn(&'a mut [usize], &[usize]);
 
 const ONE: &[usize] = &[1usize];
 const MAX: &[usize] = &[usize::MAX];
@@ -28,9 +24,6 @@ const MAX_16: &[usize] = &[usize::MAX; 16];
 const MAX_32: &[usize] = &[usize::MAX; 32];
 
 pub fn bench_common<A: AlgoTy, B: Algo<A>>(c: &mut Criterion, name: &str, algo: &str) {
-    let long_elem_name = format!("<{} as Algo<{}>>::wrapping::<Vec<usize>>", name, algo);
-    let array1_elem_name = format!("<{} as Algo<{}>>::wrapping::<[usize; 1]>", name, algo);
-
     fn bench_output<A: AlgoTy, B: Algo<A>, O: BitOwned<Bit = usize>>(
         group: &mut BenchmarkGroup<'_, WallTime>,
         name: &str,
@@ -52,8 +45,10 @@ pub fn bench_common<A: AlgoTy, B: Algo<A>>(c: &mut Criterion, name: &str, algo: 
 
     let mut group = c.benchmark_group(format!("Algo<{}>", algo));
 
-    bench_output::<A, B, Vec<_>>(&mut group, &long_elem_name);
-    bench_output::<A, B, [usize; 1]>(&mut group, &array1_elem_name);
+    let long_name = format!("<{} as Algo<{}>>::wrapping::<Vec<usize>>", name, algo);
+    bench_output::<A, B, Vec<_>>(&mut group, &long_name);
+    let array1_name = format!("<{} as Algo<{}>>::wrapping::<[usize; 1]>", name, algo);
+    bench_output::<A, B, [usize; 1]>(&mut group, &array1_name);
 
     fn bench_output_scale<A: AlgoTy, B: Algo<A>>(
         group: &mut BenchmarkGroup<'_, WallTime>,
@@ -97,14 +92,11 @@ pub fn bench_common<A: AlgoTy, B: Algo<A>>(c: &mut Criterion, name: &str, algo: 
     let mut group = c.benchmark_group(format!("Algo<{}> scaled", algo));
     group.plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic));
 
-    bench_output_scale::<A, B>(&mut group, &long_elem_name);
-    bench_output_scale::<A, B>(&mut group, &array1_elem_name);
+    let array_name = format!("<{} as Algo<{}>>::wrapping::<[usize; N]>", name, algo);
+    bench_output_scale::<A, B>(&mut group, &array_name);
 }
 
 pub fn bench_common_assign<A: AlgoTy, B: AssignAlgo<A>>(c: &mut Criterion, name: &str, algo: &str) {
-    let elem_wrapping_name = format!("<{} as AssignAlgo<{}>>::wrapping", name, algo);
-    let elem_checked_name = format!("<{} as AssignAlgo<{}>>::checked", name, algo);
-
     fn bench_assign<A: AlgoTy, B: AssignAlgo<A>, O: BitOwned<Bit = usize>>(
         group: &mut BenchmarkGroup<'_, WallTime>,
         name: &str,
@@ -196,15 +188,17 @@ pub fn bench_common_assign<A: AlgoTy, B: AssignAlgo<A>>(c: &mut Criterion, name:
 
     let mut group = c.benchmark_group(format!("AssignAlgo<{}>", algo));
 
-    bench_assign::<A, B, Vec<_>>(&mut group, &elem_wrapping_name);
-    bench_assign::<A, B, [usize; 1]>(&mut group, &elem_checked_name);
+    let long_name = format!("<{} as AssignAlgo<{}>>::wrapping::<Vec<usize>>", name, algo);
+    bench_assign::<A, B, Vec<_>>(&mut group, &long_name);
+    let array1_name = format!("<{} as AssignAlgo<{}>>::wrapping::<[usize; 1]>", name, algo);
+    bench_assign::<A, B, [usize; 1]>(&mut group, &array1_name);
 
     drop(group);
     let mut group = c.benchmark_group(format!("AssignAlgo<{}> scaled", algo));
     group.plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic));
 
-    bench_assign_scale::<A, B>(&mut group, &elem_wrapping_name);
-    bench_assign_scale::<A, B>(&mut group, &elem_checked_name);
+    let array_name = format!("<{} as AssignAlgo<{}>>::wrapping::<[usize; N]>", name, algo);
+    bench_assign_scale::<A, B>(&mut group, &array_name);
 }
 
 pub fn bench_cmp(c: &mut Criterion) {
@@ -305,10 +299,10 @@ pub fn bench_mul(c: &mut Criterion) {
 }
 
 pub fn bench_div(c: &mut Criterion) {
-    bench_common::<DivRem, Element>(c, "Element", "DivRem");
-    bench_common_assign::<DivRem, Element>(c, "Element", "DivRem");
     bench_common::<DivRem, Bitwise>(c, "Bitwise", "DivRem");
-    bench_common_assign::<DivRem, Bitwise>(c, "Bitwise", "DivRem");
+    // bench_common_assign::<DivRem, Bitwise>(c, "Bitwise", "DivRem");
+    bench_common::<DivRem, NewtonRaphson>(c, "NewtonRaphson", "DivRem");
+    // bench_common_assign::<DivRem, NewtonRaphson>(c, "NewtonRaphson", "DivRem");
 }
 
 pub fn bench_shl(c: &mut Criterion) {
