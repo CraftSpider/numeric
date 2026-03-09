@@ -13,7 +13,7 @@ use core::cmp::Ordering;
 use core::fmt::{Binary, Debug, Display, LowerHex, UpperHex, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    Add, Algo, AssignBitAlgo, BitAlgo, DivRem, Element, Mul, NewtonRaphson, ShlAlgo, ShrAlgo, Sub,
+    Add, Algo, AssignBitAlgo, BitAlgo, DivRem, Element, Mul, NewtonRaphson, Shl, Shr, Sub,
 };
 use numeric_bits::array::*;
 use numeric_bits::bit_slice::BitSlice;
@@ -618,15 +618,15 @@ impl_op!(rem(self: IBig, rhs) => {
 });
 
 impl_op!(shl(self: IBig, rhs) => {
-    let out = IBig::with_slices(self, rhs, |this, _| {
-        <Element as ShlAlgo>::long(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+    let out: Vec<_> = IBig::with_slices(self, rhs, |this, _| {
+        <Element as Algo<Shl>>::wrapping::<_, _, [_]>(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     IBig::new_slice(out, self.is_negative())
 });
 
 impl_op!(shr(self: IBig, rhs) => {
-    let out = IBig::with_slices(self, rhs, |this, _| {
-        <Element as ShrAlgo>::long(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+    let out: Vec<_> = IBig::with_slices(self, rhs, |this, _| {
+        <Element as Algo<Shr>>::wrapping::<_, _, [_]>(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     IBig::new_slice(out, self.is_negative())
 });

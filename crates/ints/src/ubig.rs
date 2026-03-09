@@ -9,7 +9,7 @@ use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Write};
 use core::{fmt, num, ops, ptr};
 use numeric_bits::algos::{
-    Add, Algo, AssignBitAlgo, BitAlgo, DivRem, Element, Mul, NewtonRaphson, ShlAlgo, ShrAlgo, Sub,
+    Add, Algo, AssignBitAlgo, BitAlgo, DivRem, Element, Mul, NewtonRaphson, Shl, Shr, Sub,
 };
 use numeric_bits::array::{arr_to_int, int_to_arr, IntSlice};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating};
@@ -536,15 +536,15 @@ impl_op!(rem(self: UBig, rhs) => {
 });
 
 impl_op!(shl(self: UBig, rhs) => {
-    let out = UBig::with_slices(self, rhs, |this, _| {
-        <Element as ShlAlgo>::long(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+    let out: Vec<_> = UBig::with_slices(self, rhs, |this, _| {
+        <Element as Algo<Shl>>::wrapping::<_, _, [_]>(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     UBig::new_slice(out)
 });
 
 impl_op!(shr(self: UBig, rhs) => {
-    let out = UBig::with_slices(self, rhs, |this, _| {
-        <Element as ShrAlgo>::long(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
+    let out: Vec<_> = UBig::with_slices(self, rhs, |this, _| {
+        <Element as Algo<Shr>>::wrapping::<_, _, [_]>(this, usize::try_from(rhs).expect("Shifts larger than a usize are not yet supported"))
     });
     UBig::new_slice(out)
 });
