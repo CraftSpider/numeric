@@ -100,6 +100,9 @@ impl<const N: usize> I<N> {
         }
 
         while scratch != I::zero() {
+            extern crate std;
+            std::dbg!(scratch.0, base.0);
+            std::dbg!((scratch % base).0);
             let digit = u8::from_checked((scratch % base).abs())
                 .expect("Mod base should always be less than 255");
             digits.push(digit);

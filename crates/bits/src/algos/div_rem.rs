@@ -1,6 +1,6 @@
 use crate::algos::{
     Add, Algo, AssignAlgo, AssignBitAlgo, AssignShlAlgo, AssignShrAlgo, Bitwise, CmpAlgo, Div,
-    DivRem, Element, Mul, Rem, ShlAlgo, Sub,
+    DivRem, Element, Mul, MultiBitOwned, Rem, Shl, Sub,
 };
 use crate::bit_slice::{BitLike, BitOwned, BitSlice};
 use core::mem;
@@ -229,7 +229,7 @@ impl Algo<DivRem> for NewtonRaphson {
         // Count leading zeroes
         let zeroes = leading_zeroes(right) + L::Bit::BIT_LEN * (len - right.len());
         // Normalize value to have leading 1
-        <Element as ShlAlgo>::wrapping(right, zeroes, norm_r);
+        <Element as Algo<Shl>>::wrapping_into::<_, R, _>(right, zeroes, norm_r);
 
         // Get estimate based on leading non-zero bits
         let t = norm_r.get(norm_r.len() - 1).unwrap();
@@ -256,12 +256,16 @@ impl Algo<DivRem> for NewtonRaphson {
             <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(quotient, &[L::Bit::one()]);
         }
 
+        std::eprintln!("{}", remainder.display(None));
         <Element as Algo<Mul>>::wrapping_into(quotient, right, remainder);
 
         // Calculate left - remainder
         <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, left);
         <Element as AssignBitAlgo>::not(remainder);
         <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(remainder, &[L::Bit::one()]);
+
+        extern crate std;
+        std::eprintln!("{}", remainder.display(None));
 
         // Correct quotient to handle possible error
         if <Element as CmpAlgo>::cmp(remainder, right).is_ge() {

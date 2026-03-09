@@ -54,6 +54,9 @@ pub trait AlgoTy {
     /// Whether saturation fills the value with MAX or 0.
     const SATURATE_HIGH: bool;
 
+    /// Input for this algorithm. Generally derived from a slice input type.
+    type In<'a, T: ?Sized + BitSlice + 'a>;
+
     /// Outputs for this algorithm. As an example, `O` or `(O, O)`.
     type Out<O: BitOwned>: MultiBitOwned<Bit = O::Bit>;
 }
@@ -76,34 +79,58 @@ pub struct Rem;
 /// Algorithm implementing a 'div-rem' operation
 pub struct DivRem;
 
+/// Algorithm implementing a 'shl' operation
+pub struct Shl;
+
+/// Algorithm implementing a 'shr' operation
+pub struct Shr;
+
 impl AlgoTy for Add {
     const SATURATE_HIGH: bool = true;
+    type In<'a, T: ?Sized + BitSlice + 'a> = &'a T;
     type Out<O: BitOwned> = O;
 }
 
 impl AlgoTy for Sub {
     const SATURATE_HIGH: bool = false;
+    type In<'a, T: ?Sized + BitSlice + 'a> = &'a T;
     type Out<O: BitOwned> = O;
 }
 
 impl AlgoTy for Mul {
     const SATURATE_HIGH: bool = true;
+    type In<'a, T: ?Sized + BitSlice + 'a> = &'a T;
     type Out<O: BitOwned> = O;
 }
 
 impl AlgoTy for Div {
     const SATURATE_HIGH: bool = false;
+    type In<'a, T: ?Sized + BitSlice + 'a> = &'a T;
     type Out<O: BitOwned> = O;
 }
 
 impl AlgoTy for Rem {
     const SATURATE_HIGH: bool = false;
+    type In<'a, T: ?Sized + BitSlice + 'a> = &'a T;
     type Out<O: BitOwned> = O;
 }
 
 impl AlgoTy for DivRem {
     const SATURATE_HIGH: bool = false;
+    type In<'a, T: ?Sized + BitSlice + 'a> = &'a T;
     type Out<O: BitOwned> = (O, O);
+}
+
+impl AlgoTy for Shl {
+    const SATURATE_HIGH: bool = false;
+    type In<'a, T: ?Sized + BitSlice + 'a> = usize;
+    type Out<O: BitOwned> = O;
+}
+
+impl AlgoTy for Shr {
+    const SATURATE_HIGH: bool = false;
+    type In<'a, T: ?Sized + BitSlice + 'a> = usize;
+    type Out<O: BitOwned> = O;
 }
 
 /// Trait for algorithm implementations.
@@ -129,7 +156,7 @@ impl AlgoTy for DivRem {
 pub trait Algo<A: AlgoTy> {
     /// Calculate the result using overflowing logic. That means wrapping, with an extra boolean to
     /// indicate wraparound.
-    fn overflowing<O, L, R>(left: &L, right: &R) -> (A::Out<O>, bool)
+    fn overflowing<O, L, R>(left: &L, right: A::In<'_, R>) -> (A::Out<O>, bool)
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -137,7 +164,7 @@ pub trait Algo<A: AlgoTy> {
 
     /// Calculate the result using checked logic. That means a value is only returned if no wrapping
     /// would occur.
-    fn checked<O, L, R>(left: &L, right: &R) -> Option<A::Out<O>>
+    fn checked<O, L, R>(left: &L, right: A::In<'_, R>) -> Option<A::Out<O>>
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -153,7 +180,7 @@ pub trait Algo<A: AlgoTy> {
 
     /// Calculate the value using wrapping logic. On overflow or underflow, the value jumps to the
     /// opposite end.
-    fn wrapping<O, L, R>(left: &L, right: &R) -> A::Out<O>
+    fn wrapping<O, L, R>(left: &L, right: A::In<'_, R>) -> A::Out<O>
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -164,7 +191,7 @@ pub trait Algo<A: AlgoTy> {
 
     /// Calculate the value using saturating logic. On overflow or underflow, the value is set to
     /// the maximum or minimum value respectively.
-    fn saturating<O, L, R>(left: &L, right: &R) -> A::Out<O>
+    fn saturating<O, L, R>(left: &L, right: A::In<'_, R>) -> A::Out<O>
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -184,14 +211,14 @@ pub trait Algo<A: AlgoTy> {
     }
 
     /// Calculate the result using overflowing logic, putting the result into an exising output.
-    fn overflowing_into<L, R, O>(left: &L, right: &R, out: &mut A::Out<O>) -> bool
+    fn overflowing_into<L, R, O>(left: &L, right: A::In<'_, R>, out: &mut A::Out<O>) -> bool
     where
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
         O: BitOwned<Bit = L::Bit>;
 
     /// Calculate the result using overflowing logic, putting the result into an existing output
-    fn wrapping_into<L, R, O>(left: &L, right: &R, out: &mut A::Out<O>)
+    fn wrapping_into<L, R, O>(left: &L, right: A::In<'_, R>, out: &mut A::Out<O>)
     where
         L: ?Sized + BitSlice,
         R: ?Sized + BitSlice<Bit = L::Bit>,
