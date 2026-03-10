@@ -9,9 +9,7 @@ use alloc::{vec, vec::Vec};
 use core::mem;
 use numeric_traits::cast::{FromSaturating, IntoSaturating};
 use numeric_traits::class::BoundedBit;
-use numeric_traits::identity::One;
-#[cfg(feature = "alloc")]
-use numeric_traits::identity::Zero;
+use numeric_traits::identity::{One, Zero};
 use numeric_traits::ops::overflowing::OverflowingAdd;
 use numeric_traits::ops::widening::WideningMul;
 
@@ -195,6 +193,7 @@ where
 }
 
 impl DivRemAlgo for NewtonRaphson {
+    #[cfg(feature = "alloc")]
     fn long<L, R>(left: &L, right: &R) -> (Vec<L::Bit>, Vec<L::Bit>)
     where
         L: ?Sized + BitSliceExt,
