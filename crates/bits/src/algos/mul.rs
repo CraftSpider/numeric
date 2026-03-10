@@ -235,6 +235,22 @@ mod tests {
         let slice8 = &[0b0000_0010];
 
         assert_eq!(B::wrapping::<Vec<_>, _, _>(slice7, slice8), &[0b100]);
+
+        let l: &[u8] = &[0b1000_0000];
+        let r = &[0b0000_0010];
+
+        assert_eq!(
+            B::wrapping::<Vec<_>, _, _>(l, r),
+            &[0b0000_0000, 0b0000_0001]
+        );
+
+        let l: &[u8] = &[0b1000_0000];
+        let r = &[0b0000_0011];
+
+        assert_eq!(
+            B::wrapping::<Vec<_>, _, _>(l, r),
+            &[0b1000_0000, 0b0000_0001]
+        );
     }
 
     fn test_wrapping<B: Algo<Mul>>() {
@@ -253,6 +269,40 @@ mod tests {
         let slice7: &[u8] = &[0b0000_0010];
         let slice8 = &[0b0000_0010];
         assert_eq!(B::wrapping::<[u8; 1], _, _>(slice7, slice8), [0b100]);
+
+        let l = &[0b1000_0000, 0];
+        let r = &[0b0000_0010, 0];
+
+        assert_eq!(
+            B::wrapping::<[u8; 2], _, _>(l, r),
+            [0b0000_0000, 0b0000_0001]
+        );
+
+        let l = &[0b1000_0000, 0];
+        let r = &[0b0000_0011, 0];
+
+        assert_eq!(
+            B::wrapping::<[u8; 2], _, _>(l, r),
+            [0b1000_0000, 0b0000_0001]
+        );
+
+        let l = &[0b11001011, 0b11001100, 0b11001100, 0b00001100, 0b00000000];
+        let r = &[0b00001010, 0b00000000, 0b00000000, 0b00000000, 0b00000000];
+        assert_eq!(
+            B::wrapping::<[u8; 5], _, _>(l, r),
+            [0b11101110, 0b11111111, 0b11111111, 0b01111111, 0b00000000],
+        )
+    }
+
+    fn test_wrapping_into<B: Algo<Mul>>() {
+        let l = &[0b11001011, 0b11001100, 0b11001100, 0b00001100, 0b00000000];
+        let r = &[0b00001010, 0b00000000, 0b00000000, 0b00000000, 0b00000000];
+        let out = &mut [0; 5];
+        B::wrapping_into::<[u8; 5], _, _>(l, r, out);
+        assert_eq!(
+            out,
+            &[0b11101110, 0b11111111, 0b11111111, 0b01111111, 0b00000000],
+        )
     }
 
     fn test_wrapping_assign<B: AssignAlgo<Mul>>() {
@@ -326,6 +376,7 @@ mod tests {
         #[cfg(feature = "alloc")]
         test_long::<Element>();
         test_wrapping::<Element>();
+        test_wrapping_into::<Element>();
         test_wrapping_assign::<Element>();
         test_edges::<Element>();
     }
@@ -335,6 +386,7 @@ mod tests {
         #[cfg(feature = "alloc")]
         test_long::<Bitwise>();
         test_wrapping::<Bitwise>();
+        test_wrapping_into::<Element>();
         test_wrapping_assign::<Bitwise>();
         test_edges::<Bitwise>();
     }
