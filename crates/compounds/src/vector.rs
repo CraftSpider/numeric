@@ -587,6 +587,7 @@ mod tests {
         assert_relative_eq!(*v.z(), 3.6);
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn test_cross() {
         let a = Vec3::from_xyz(-9., -1., 3.);
