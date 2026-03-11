@@ -386,20 +386,20 @@ mod tests {
         let b = Fixed::<u8, 2>::from_raw(0b110);
 
         // 32
-        let c = Fixed::<u8, 2>::from_raw(0b01000000);
+        let c = Fixed::<u8, 2>::from_raw(0b0100_0000);
         // 64
-        let d = Fixed::<u8, 2>::from_raw(0b10000000);
+        let d = Fixed::<u8, 2>::from_raw(0b1000_0000);
 
         assert_eq!(Fixed::<u8, 1>::from_checked(a), None);
         assert_eq!(Fixed::<u8, 1>::from_checked(b), Some(Fixed::from_raw(0b11)));
         assert_eq!(
             Fixed::<u8, 3>::from_checked(c),
-            Some(Fixed::from_raw(0b10000000))
+            Some(Fixed::from_raw(0b1000_0000))
         );
         assert_eq!(Fixed::<u8, 3>::from_checked(d), None);
         assert_eq!(
             Fixed::<u8, 3>::from_checked(a),
-            Some(Fixed::from_raw(0b00001110))
+            Some(Fixed::from_raw(0b0000_1110))
         );
     }
 
@@ -411,20 +411,20 @@ mod tests {
         let b = Fixed::<i8, 2>::from_raw(0b110);
 
         // 16
-        let c = Fixed::<i8, 2>::from_raw(0b00100000);
+        let c = Fixed::<i8, 2>::from_raw(0b0010_0000);
         // 32
-        let d = Fixed::<i8, 2>::from_raw(0b01000000);
+        let d = Fixed::<i8, 2>::from_raw(0b0100_0000);
 
         assert_eq!(Fixed::<i8, 1>::from_checked(a), None);
         assert_eq!(Fixed::<i8, 1>::from_checked(b), Some(Fixed::from_raw(0b11)));
         assert_eq!(
             Fixed::<i8, 3>::from_checked(c),
-            Some(Fixed::from_raw(0b01000000))
+            Some(Fixed::from_raw(0b0100_0000))
         );
         assert_eq!(Fixed::<i8, 3>::from_checked(d), None);
         assert_eq!(
             Fixed::<i8, 3>::from_checked(a),
-            Some(Fixed::from_raw(0b00001110))
+            Some(Fixed::from_raw(0b0000_1110))
         );
     }
 }

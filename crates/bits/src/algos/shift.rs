@@ -1,9 +1,7 @@
-use crate::algos::{Algo, Bitwise, Element, Shl, Shr};
+use crate::algos::{Algo, AssignAlgo, Bitwise, Element, Shl, Shr};
 use crate::bit_slice::{BitLike, BitOwned, BitSlice};
 use numeric_traits::class::Bounded;
 use numeric_traits::identity::Zero;
-
-mod impls;
 
 impl Algo<Shl> for Bitwise {
     fn overflowing<O, L, R>(left: &L, right: usize) -> (O, bool)
@@ -110,6 +108,40 @@ impl Algo<Shl> for Element {
     }
 }
 
+impl AssignAlgo<Shl> for Element {
+    fn overflowing<O, L, R>(left: &mut L, right: usize) -> bool
+    where
+        O: BitOwned<Bit = L::Bit>,
+        L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
+    {
+        let arr_shift = (right / L::Bit::BIT_LEN) + 1;
+        let elem_shift = right % L::Bit::BIT_LEN;
+        let inverse_elem_shift = (L::Bit::BIT_LEN - elem_shift) % L::Bit::BIT_LEN;
+        let elem_mask: L::Bit = !(L::Bit::max_value() << elem_shift);
+        let zero = L::Bit::zero();
+
+        (0..left.len()).rev().for_each(|idx| {
+            // SAFETY: Iterating up to len - will never overrun
+            let val = unsafe { left.get(idx).unwrap_unchecked() };
+            let high = val >> inverse_elem_shift;
+            let low = val << elem_shift;
+
+            let high =
+                (left.get(idx + arr_shift).unwrap_or(zero) & !elem_mask) | (high & elem_mask);
+
+            left.set_ignore(idx + arr_shift, high);
+
+            let low = low & !elem_mask;
+
+            left.set_ignore(idx + arr_shift - 1, low);
+        });
+        left.iter_mut().take(arr_shift - 1).for_each(|l| *l = zero);
+
+        right > left.bit_len()
+    }
+}
+
 impl Algo<Shr> for Element {
     fn overflowing<O, L, R>(left: &L, right: usize) -> (O, bool)
     where
@@ -156,63 +188,43 @@ impl Algo<Shr> for Element {
     }
 }
 
-pub trait AssignShlAlgo {
-    fn overflowing<L>(left: &mut L, right: usize) -> bool
+impl AssignAlgo<Shr> for Element {
+    fn overflowing<O, L, R>(left: &mut L, right: usize) -> bool
     where
-        L: ?Sized + BitSlice;
-
-    fn wrapping<L>(left: &mut L, right: usize)
-    where
+        O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
+        R: ?Sized + BitSlice<Bit = L::Bit>,
     {
-        Self::overflowing(left, right);
-    }
+        let arr_shift = (right / L::Bit::BIT_LEN) + 1;
+        let elem_shift = right % L::Bit::BIT_LEN;
+        let inverse_elem_shift = (L::Bit::BIT_LEN - elem_shift) % L::Bit::BIT_LEN;
+        let elem_mask: L::Bit = !(L::Bit::max_value() >> elem_shift);
+        let zero = L::Bit::zero();
 
-    fn checked<L>(left: &mut L, right: usize) -> Option<()>
-    where
-        L: ?Sized + BitSlice,
-    {
-        Self::overflowing(left, right).then_some(())
-    }
+        // dbg!(arr_shift, elem_shift);
 
-    fn saturating<L>(left: &mut L, right: usize)
-    where
-        L: BitSlice,
-    {
-        let overflow = Self::overflowing(left, right);
-        if overflow {
-            left.iter_mut().for_each(|l| *l = L::Bit::zero());
-        }
-    }
-}
+        (0..left.len()).for_each(|idx| {
+            // SAFETY: Iterating up to len - will never overrun
+            let val = unsafe { left.get(idx).unwrap_unchecked() };
+            let high = val >> elem_shift;
+            let low = val << inverse_elem_shift;
 
-pub trait AssignShrAlgo {
-    fn overflowing<L>(left: &mut L, right: usize) -> bool
-    where
-        L: ?Sized + BitSlice;
+            if let Some(idx) = usize::checked_sub(idx, arr_shift) {
+                let low = (left.get(idx).unwrap_or(zero) & !elem_mask) | (low & elem_mask);
 
-    fn wrapping<L>(left: &mut L, right: usize)
-    where
-        L: ?Sized + BitSlice,
-    {
-        Self::overflowing(left, right);
-    }
+                left.set_ignore(idx, low);
+            }
 
-    fn checked<L>(left: &mut L, right: usize) -> Option<()>
-    where
-        L: ?Sized + BitSlice,
-    {
-        Self::overflowing(left, right).then_some(())
-    }
+            if let Some(idx) = usize::checked_sub(idx + 1, arr_shift) {
+                let high = high & !elem_mask;
 
-    fn saturating<L>(left: &mut L, right: usize)
-    where
-        L: BitSlice,
-    {
-        let overflow = Self::overflowing(left, right);
-        if overflow {
-            left.iter_mut().for_each(|l| *l = L::Bit::zero());
-        }
+                left.set_ignore(idx, high);
+            }
+        });
+        let empty = left.len() - arr_shift + 1;
+        left.iter_mut().skip(empty).for_each(|l| *l = zero);
+
+        right > left.bit_len()
     }
 }
 

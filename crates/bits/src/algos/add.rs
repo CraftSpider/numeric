@@ -241,7 +241,7 @@ mod tests {
         );
     }
 
-    /// Test some edge cases of the desired AddAlgo API
+    /// Test some edge cases of the desired [`Algo<Add>`] API
     /// - Outputs can be non-zero
     /// - Inputs can be of different lengths
     fn test_edges<B: Algo<Add>>() {

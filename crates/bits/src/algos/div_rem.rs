@@ -1,6 +1,6 @@
 use crate::algos::{
-    Add, Algo, AssignAlgo, AssignBitAlgo, AssignShlAlgo, AssignShrAlgo, Bitwise, CmpAlgo, Div,
-    DivRem, Element, Mul, MultiBitOwned, Rem, Shl, Sub,
+    Add, Algo, AssignAlgo, AssignBitAlgo, Bitwise, CmpAlgo, Div, DivRem, Element, Mul,
+    MultiBitOwned, Rem, Shl, Shr, Sub,
 };
 use crate::bit_slice::{BitLike, BitOwned, BitSlice};
 use core::mem;
@@ -33,7 +33,7 @@ impl Algo<DivRem> for Bitwise {
     {
         let bit_len = usize::max(left.bit_len(), right.bit_len());
         for idx in (0..bit_len).rev() {
-            <Element as AssignShlAlgo>::wrapping(remainder, 1);
+            <Element as AssignAlgo<Shl>>::wrapping::<O, _, [_]>(remainder, 1);
             remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(remainder, right) {
                 // Subtract will never overflow
@@ -60,7 +60,7 @@ impl AssignAlgo<Div> for Bitwise {
         let mut remainder = O::zeroed(len);
 
         for idx in (0..bit_len).rev() {
-            <Element as AssignShlAlgo>::wrapping(&mut remainder, 1);
+            <Element as AssignAlgo<Shl>>::wrapping::<O, _, [_]>(&mut remainder, 1);
             remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(&remainder, right) {
                 // Subtract will never overflow
@@ -88,7 +88,7 @@ impl AssignAlgo<Rem> for Bitwise {
         let mut remainder = O::zeroed(len);
 
         for idx in (0..bit_len).rev() {
-            <Element as AssignShlAlgo>::wrapping(&mut remainder, 1);
+            <Element as AssignAlgo<Shl>>::wrapping::<O, _, [_]>(&mut remainder, 1);
             remainder.set_bit(0, left.get_bit(idx).unwrap_or(false));
             if <Element as CmpAlgo>::ge(&remainder, right) {
                 // Subtract will never overflow
@@ -178,7 +178,7 @@ where
     // 1.N = 1.N * 0.N, 0.5 <= l(2-rl) < 1
     hi_mul(scratch, est, out);
     // 0.N = 1.N
-    <Element as AssignShlAlgo>::wrapping(out, 1);
+    <Element as AssignAlgo<Shl>>::wrapping::<[L::Bit; 0], _, [_]>(out, 1);
 }
 
 fn leading_zeroes<L>(l: &L) -> usize
@@ -250,29 +250,32 @@ impl Algo<DivRem> for NewtonRaphson {
 
         // Calculate quotient estimate and undo normalization
         hi_mul(est, left, scratch);
-        <Element as AssignShrAlgo>::wrapping(quotient, len * L::Bit::BIT_LEN - 1 - zeroes);
+        <Element as AssignAlgo<Shr>>::wrapping::<O, _, [_]>(
+            quotient,
+            len * L::Bit::BIT_LEN - 1 - zeroes,
+        );
 
         if quotient.iter().any(|v| v != L::Bit::zero()) {
-            <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(quotient, &[one]);
+            <Element as AssignAlgo<Sub>>::wrapping::<O, _, _>(quotient, &[one]);
         }
 
         remainder.fill(L::Bit::zero());
         <Element as Algo<Mul>>::wrapping_into(quotient, right, remainder);
 
         // Calculate left - remainder
-        <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, left);
+        <Element as AssignAlgo<Sub>>::wrapping::<O, _, _>(remainder, left);
         <Element as AssignBitAlgo>::not(remainder);
-        <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(remainder, &[one]);
+        <Element as AssignAlgo<Add>>::wrapping::<O, _, _>(remainder, &[one]);
 
         // Correct quotient to handle possible error
         if <Element as CmpAlgo>::cmp(remainder, right).is_ge() {
-            <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(quotient, &[one]);
-            <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, right);
+            <Element as AssignAlgo<Add>>::wrapping::<O, _, _>(quotient, &[one]);
+            <Element as AssignAlgo<Sub>>::wrapping::<O, _, _>(remainder, right);
             if <Element as CmpAlgo>::cmp(remainder, right).is_ge() {
-                <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(quotient, &[one]);
-                <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, right);
+                <Element as AssignAlgo<Add>>::wrapping::<O, _, _>(quotient, &[one]);
+                <Element as AssignAlgo<Sub>>::wrapping::<O, _, _>(remainder, right);
                 if <Element as CmpAlgo>::cmp(remainder, right).is_ge() {
-                    <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(quotient, &[one]);
+                    <Element as AssignAlgo<Add>>::wrapping::<O, _, _>(quotient, &[one]);
                 }
             }
         }
@@ -443,7 +446,7 @@ mod tests {
         let r = &[0b1111_1111, 0b1111_1111];
         let out = &mut [0; 2];
         hi_mul(l, r, out);
-        assert_eq!(out, &[0b11111110, 0b11111111]);
+        assert_eq!(out, &[0b1111_1110, 0b1111_1111]);
     }
 
     #[test]
