@@ -256,21 +256,13 @@ impl Algo<DivRem> for NewtonRaphson {
             <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(quotient, &[one]);
         }
 
-        std::eprintln!("   q0: {}", quotient.display(None));
-        std::eprintln!("    r: {}", right.display(None));
-
         remainder.fill(L::Bit::zero());
         <Element as Algo<Mul>>::wrapping_into(quotient, right, remainder);
-
-        std::eprintln!("-rem0: {}", remainder.display(None));
 
         // Calculate left - remainder
         <Element as AssignAlgo<Sub>>::wrapping::<[L::Bit; 0], _, _>(remainder, left);
         <Element as AssignBitAlgo>::not(remainder);
         <Element as AssignAlgo<Add>>::wrapping::<[L::Bit; 0], _, _>(remainder, &[one]);
-
-        extern crate std;
-        std::eprintln!(" rem0: {}", remainder.display(None));
 
         // Correct quotient to handle possible error
         if <Element as CmpAlgo>::cmp(remainder, right).is_ge() {
