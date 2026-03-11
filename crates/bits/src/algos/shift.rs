@@ -122,7 +122,6 @@ impl Algo<Shr> for Element {
         (out, overflow)
     }
 
-    #[cfg(feature = "alloc")]
     fn overflowing_into<L, R, O>(left: &L, right: usize, out: &mut O) -> bool
     where
         L: ?Sized + BitSlice,
