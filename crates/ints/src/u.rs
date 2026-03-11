@@ -11,9 +11,7 @@ use core::ops::{
 };
 use core::{array, fmt, iter};
 use numeric_bits::algos;
-use numeric_bits::algos::{
-    AssignAlgo, AssignShlAlgo, AssignShrAlgo, CmpAlgo, Element, NewtonRaphson,
-};
+use numeric_bits::algos::{AssignAlgo, CmpAlgo, Element, NewtonRaphson};
 use numeric_bits::array::const_reverse;
 use numeric_static_iter::{IntoStaticIter, StaticIter};
 use numeric_traits::cast::{FromChecked, FromSaturating, FromTruncating, IntoChecked};
@@ -361,9 +359,9 @@ impl<const N: usize> Shl for U<N> {
     fn shl(mut self, rhs: Self) -> Self::Output {
         let val: usize = usize::from_checked(rhs).unwrap();
         #[cfg(debug_assertions)]
-        <Element as AssignShlAlgo>::checked(&mut self.0, val).unwrap();
+        <Element as AssignAlgo<algos::Shl>>::checked::<[u8; N], _, [_]>(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        <Element as AssignShlAlgo>::wrapping(&mut self.0, val);
+        <Element as AssignAlgo<algos::Shl>>::wrapping::<[u8; N], _, [_]>(&mut self.0, val);
         self
     }
 }
@@ -374,9 +372,9 @@ impl<const N: usize> Shr for U<N> {
     fn shr(mut self, rhs: Self) -> Self::Output {
         let val: usize = usize::from_checked(rhs).unwrap();
         #[cfg(debug_assertions)]
-        <Element as AssignShrAlgo>::checked(&mut self.0, val).unwrap();
+        <Element as AssignAlgo<algos::Shr>>::checked::<[u8; N], _, [_]>(&mut self.0, val).unwrap();
         #[cfg(not(debug_assertions))]
-        <Element as AssignShrAlgo>::wrapping(&mut self.0, val);
+        <Element as AssignAlgo<algos::Shr>>::wrapping::<[u8; N], _, [_]>(&mut self.0, val);
         self
     }
 }
@@ -386,9 +384,9 @@ impl<const N: usize> Shl<usize> for U<N> {
 
     fn shl(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        <Element as AssignShlAlgo>::checked(&mut self.0, rhs).unwrap();
+        <Element as AssignAlgo<algos::Shl>>::checked::<[u8; N], _, [_]>(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        <Element as AssignShlAlgo>::wrapping(&mut self.0, rhs);
+        <Element as AssignAlgo<algos::Shl>>::wrapping::<[u8; N], _, [_]>(&mut self.0, rhs);
         self
     }
 }
@@ -398,22 +396,22 @@ impl<const N: usize> Shr<usize> for U<N> {
 
     fn shr(mut self, rhs: usize) -> Self::Output {
         #[cfg(debug_assertions)]
-        <Element as AssignShrAlgo>::checked(&mut self.0, rhs).unwrap();
+        <Element as AssignAlgo<algos::Shr>>::checked::<[u8; N], _, [_]>(&mut self.0, rhs).unwrap();
         #[cfg(not(debug_assertions))]
-        <Element as AssignShrAlgo>::wrapping(&mut self.0, rhs);
+        <Element as AssignAlgo<algos::Shr>>::wrapping::<[u8; N], _, [_]>(&mut self.0, rhs);
         self
     }
 }
 
 impl<const N: usize> AddAssign for U<N> {
     fn add_assign(&mut self, rhs: Self) {
-        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
     }
 }
 
 impl<const N: usize> SubAssign for U<N> {
     fn sub_assign(&mut self, rhs: Self) {
-        <Element as AssignAlgo<algos::Sub>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Sub>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
     }
 }
 
@@ -437,13 +435,19 @@ impl<const N: usize> RemAssign for U<N> {
 
 impl<const N: usize> ShlAssign for U<N> {
     fn shl_assign(&mut self, rhs: Self) {
-        <Element as AssignShlAlgo>::wrapping(&mut self.0, usize::from_checked(rhs).unwrap())
+        <Element as AssignAlgo<algos::Shl>>::wrapping::<[u8; N], _, [_]>(
+            &mut self.0,
+            usize::from_checked(rhs).unwrap(),
+        )
     }
 }
 
 impl<const N: usize> ShrAssign for U<N> {
     fn shr_assign(&mut self, rhs: Self) {
-        <Element as AssignShrAlgo>::wrapping(&mut self.0, usize::from_checked(rhs).unwrap())
+        <Element as AssignAlgo<algos::Shr>>::wrapping::<[u8; N], _, [_]>(
+            &mut self.0,
+            usize::from_checked(rhs).unwrap(),
+        )
     }
 }
 
@@ -563,7 +567,7 @@ impl<const N: usize> CheckedAdd for U<N> {
     type Output = Self;
 
     fn checked_add(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignAlgo<algos::Add>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0);
         Some(self)
     }
 }
@@ -572,7 +576,7 @@ impl<const N: usize> CheckedSub for U<N> {
     type Output = Self;
 
     fn checked_sub(mut self, rhs: Self) -> Option<Self> {
-        <Element as AssignAlgo<algos::Sub>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0)?;
+        <Element as AssignAlgo<algos::Sub>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0)?;
         Some(self)
     }
 }
@@ -599,7 +603,7 @@ impl<const N: usize> WrappingAdd for U<N> {
     type Output = Self;
 
     fn wrapping_add(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Add>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -608,7 +612,7 @@ impl<const N: usize> WrappingSub for U<N> {
     type Output = Self;
 
     fn wrapping_sub(mut self, rhs: Self) -> Self::Output {
-        <Element as AssignAlgo<algos::Sub>>::wrapping::<[u8; 0], _, _>(&mut self.0, &rhs.0);
+        <Element as AssignAlgo<algos::Sub>>::wrapping::<[u8; N], _, _>(&mut self.0, &rhs.0);
         self
     }
 }
@@ -617,7 +621,7 @@ impl<const N: usize> SaturatingAdd for U<N> {
     type Output = Self;
 
     fn saturating_add(mut self, rhs: Self) -> Self {
-        match <Element as AssignAlgo<algos::Add>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0) {
+        match <Element as AssignAlgo<algos::Add>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::max_value(),
         }
@@ -628,7 +632,7 @@ impl<const N: usize> SaturatingSub for U<N> {
     type Output = Self;
 
     fn saturating_sub(mut self, rhs: Self) -> Self {
-        match <Element as AssignAlgo<algos::Sub>>::checked::<[u8; 0], _, _>(&mut self.0, &rhs.0) {
+        match <Element as AssignAlgo<algos::Sub>>::checked::<[u8; N], _, _>(&mut self.0, &rhs.0) {
             Some(_) => self,
             None => Self::min_value(),
         }

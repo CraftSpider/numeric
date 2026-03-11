@@ -204,7 +204,7 @@ mod tests {
         );
         assert_eq!(
             B::overflowing::<Vec<_>, _, _>(&[0u32], &[1]),
-            (vec![4294967295], true)
+            (vec![4_294_967_295], true)
         );
         assert_eq!(
             B::overflowing::<Vec<_>, _, _>(&[1u32], &[1]),

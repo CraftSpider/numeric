@@ -23,7 +23,7 @@ use crate::bit_slice::{BitLike, BitOwned, BitSlice};
 use numeric_traits::class::Bounded;
 use numeric_traits::identity::Zero;
 
-/// Collections of BitOwned values, like tuples or arrays
+/// Collections of [`BitOwned`] values, like tuples or arrays
 pub trait MultiBitOwned {
     /// Bit type of owned values
     type Bit: BitLike;
@@ -49,7 +49,7 @@ impl<O: BitOwned> MultiBitOwned for (O, O) {
     }
 }
 
-/// Algorithm types. Add, Sub, Div, DivRem, etc.
+/// Algorithm types. [`Add`], [`Sub`], [`Div`], [`DivRem`], etc.
 pub trait AlgoTy {
     /// Whether saturation fills the value with MAX or 0.
     const SATURATE_HIGH: bool;
@@ -241,7 +241,7 @@ pub trait Algo<A: AlgoTy> {
 pub trait AssignAlgo<A: AlgoTy> {
     /// Calculate the result using overflowing logic. That means wrapping, with an extra boolean to
     /// indicate wraparound. The result will be written into the left-side slice.
-    fn overflowing<O, L, R>(left: &mut L, right: &R) -> bool
+    fn overflowing<O, L, R>(left: &mut L, right: A::In<'_, R>) -> bool
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -249,7 +249,7 @@ pub trait AssignAlgo<A: AlgoTy> {
 
     /// Calculate the result using checked logic. That means a value is only returned if no wrapping
     /// would occur.
-    fn checked<O, L, R>(left: &mut L, right: &R) -> Option<()>
+    fn checked<O, L, R>(left: &mut L, right: A::In<'_, R>) -> Option<()>
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -265,7 +265,7 @@ pub trait AssignAlgo<A: AlgoTy> {
 
     /// Calculate the value using wrapping logic. On overflow or underflow, the value jumps to the
     /// opposite end.
-    fn wrapping<O, L, R>(left: &mut L, right: &R)
+    fn wrapping<O, L, R>(left: &mut L, right: A::In<'_, R>)
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -276,7 +276,7 @@ pub trait AssignAlgo<A: AlgoTy> {
 
     /// Calculate the value using saturating logic. On overflow or underflow, the value is set to
     /// the maximum or minimum value respectively.
-    fn saturating<O, L, R>(left: &mut L, right: &R)
+    fn saturating<O, L, R>(left: &mut L, right: A::In<'_, R>)
     where
         O: BitOwned<Bit = L::Bit>,
         L: ?Sized + BitSlice,
@@ -296,7 +296,6 @@ pub trait AssignAlgo<A: AlgoTy> {
 pub use bits::*;
 pub use cmp::*;
 pub use div_rem::*;
-pub use shift::*;
 
 /// Simple bitwise implementations of algorithms. These implementations are generally inefficient,
 /// but straightforward compared to alternative approaches.
