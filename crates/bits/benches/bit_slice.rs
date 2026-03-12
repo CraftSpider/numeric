@@ -334,6 +334,7 @@ where
     let mut group = c.benchmark_group(format!("Algo<{algo}>"));
 
     let long_name = format!("<{name} as Algo<{algo}>>::wrapping::<Vec<usize>>");
+    let wrapping_name = format!("<{name} as Algo<{algo}>>::wrapping::<[usize; 1]>");
 
     group
         .bench_function(BenchmarkId::new(&long_name, "[1], 1"), |b| {
@@ -342,11 +343,11 @@ where
         .bench_function(BenchmarkId::new(&long_name, "[usize::MAX], 1"), |b| {
             b.iter(|| B::wrapping::<Vec<_>, _, [_]>(black_box(MAX), black_box(1)))
         })
-        .bench_function(BenchmarkId::new(&long_name, "[1], 1"), |b| {
-            b.iter(|| B::wrapping::<Vec<_>, _, [_]>(black_box(ONE), black_box(1)))
+        .bench_function(BenchmarkId::new(&wrapping_name, "[1], 1"), |b| {
+            b.iter(|| B::wrapping::<[usize; 1], _, [_]>(black_box(ONE), black_box(1)))
         })
-        .bench_function(BenchmarkId::new(&long_name, "[usize::MAX], 1"), |b| {
-            b.iter(|| B::wrapping::<Vec<_>, _, [_]>(black_box(MAX), black_box(1)))
+        .bench_function(BenchmarkId::new(&wrapping_name, "[usize::MAX], 1"), |b| {
+            b.iter(|| B::wrapping::<[usize; 1], _, [_]>(black_box(MAX), black_box(1)))
         });
 }
 
@@ -389,12 +390,14 @@ where
 
 pub fn bench_shl(c: &mut Criterion) {
     bench_shift::<Shl, Bitwise>(c, "Bitwise", "Shl");
-    bench_shift::<Shl, Element>(c, "Bitwise", "Shl");
+    bench_shift::<Shl, Element>(c, "Element", "Shl");
+    bench_shift_assign::<Shl, Element>(c, "Element", "Shl");
 }
 
 pub fn bench_shr(c: &mut Criterion) {
-    bench_shift::<Shr, Bitwise>(c, "Bitwise", "Shl");
-    bench_shift::<Shr, Element>(c, "Bitwise", "Shl");
+    bench_shift::<Shr, Bitwise>(c, "Bitwise", "Shr");
+    bench_shift::<Shr, Element>(c, "Element", "Shr");
+    bench_shift_assign::<Shr, Element>(c, "Element", "Shr");
 }
 
 criterion_group!(
