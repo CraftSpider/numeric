@@ -4,6 +4,10 @@ use criterion::Criterion;
 #[cfg(unix)]
 use pprof::criterion::{Output, PProfProfiler};
 
+#[cfg(feature = "alloc-measures")]
+pub mod alloc_measure;
+pub mod trace_alloc;
+
 /// Create the [`Criterion`] profiler instance. This automatically includes a `PProf` profiler if
 /// compiling on unix targets.
 pub fn make_criterion() -> Criterion {
