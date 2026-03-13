@@ -10,7 +10,9 @@ publish = false
 alloc-measures = []
 
 [dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion.workspace = true
+thread_local = "1.0"
+atomic_cell = "0.2"
 
 [target.'cfg(unix)'.dependencies]
-pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
+#pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
