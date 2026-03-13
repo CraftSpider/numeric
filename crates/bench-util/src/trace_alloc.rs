@@ -2,8 +2,9 @@
 
 use atomic_cell::AtomicCell;
 use std::alloc::{GlobalAlloc, Layout};
+use std::cell::Cell;
 use std::collections::BTreeMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::sync::{LazyLock, Mutex};
 use std::thread;
 use std::thread::ThreadId;
@@ -141,7 +142,7 @@ impl TracingStats {
 pub struct TracingAlloc<A> {
     alloc: A,
     stats: Mutex<TracingStats>,
-    trace: ThreadLocal<AtomicBool>,
+    trace: ThreadLocal<Cell<bool>>,
     allocating: LazyLock<AtomicCell<Option<ThreadId>, AtomicU64>>,
 }
 
@@ -157,26 +158,32 @@ impl<A> TracingAlloc<A> {
     }
 
     /// Get the statistics collected so far.
+    ///
+    /// Note that any allocations that occur inside the closure won't be tracked as part of the
+    /// statistics.
+    ///
+    /// # Panics
+    ///
+    /// If called while inside the closure passed to `with_stats`.
     pub fn with_stats<T, F: FnOnce(&TracingStats) -> T>(&self, f: F) -> T {
         self.maybe_trace(|stats| f(stats.expect("with_stats should not be called reentrantly")))
     }
 
     fn maybe_trace<T, F: FnOnce(Option<&mut TracingStats>) -> T>(&self, f: F) -> T {
-        let mut a = self.allocating.load();
-        // If another thread is allocating, wait for it to finish
-        while let Some(id) = a {
-            if id == thread::current().id() {
+        // Mark this thread as potentially recursively allocating
+        //  This is for before we have a thread-local, so we globally lock until we're done
+        let cur_id = thread::current().id();
+        while let Err(id) = self.allocating.compare_exchange::<true>(None, Some(cur_id)) {
+            if id == Some(cur_id) {
                 return f(None);
             }
-            a = self.allocating.load();
         }
-
-        let id = thread::current().id();
-        self.allocating.store(Some(id));
-        let trace = self.trace.get_or(|| AtomicBool::new(true));
+        let trace = self.trace.get_or(|| Cell::new(true));
         self.allocating.store(None);
 
-        let tl_trace = trace.swap(false, Ordering::AcqRel);
+        // Mark this thread as potentially recursively allocating
+        //  Now that we have a thread-local, we only care about re-entrance in just this thread
+        let tl_trace = trace.replace(false);
         let out = {
             let mut guard;
             let stats = if tl_trace {
@@ -187,11 +194,13 @@ impl<A> TracingAlloc<A> {
             };
             f(stats)
         };
-        trace.store(tl_trace, Ordering::Release);
+        trace.replace(tl_trace);
         out
     }
 }
 
+// SAFETY: `TracingAlloc` carefully fulfills the safety guidelines, and uses `Mutex` carefully to
+// avoid re-entrance issues.
 unsafe impl<A: GlobalAlloc> GlobalAlloc for TracingAlloc<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.maybe_trace(|stats| {
