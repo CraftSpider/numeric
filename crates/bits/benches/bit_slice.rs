@@ -2,7 +2,7 @@
 
 use core::cmp::Ordering;
 use core::hint::black_box;
-use criterion::measurement::{Measurement, WallTime};
+use criterion::measurement::Measurement;
 use criterion::{
     criterion_group, criterion_main, AxisScale, BenchmarkGroup, BenchmarkId, Criterion,
     PlotConfiguration,
@@ -302,10 +302,11 @@ pub fn bench_div(c: &mut Criterion) {
     bench_common_assign::<Rem, NewtonRaphson, _>(c, "NewtonRaphson", "Rem");
 }
 
-pub fn bench_shift<A, B>(c: &mut Criterion, name: &str, algo: &str)
+pub fn bench_shift<A, B, M>(c: &mut Criterion<M>, name: &str, algo: &str)
 where
     A: for<'a> AlgoTy<In<'a, [usize]> = usize>,
     B: Algo<A>,
+    M: Measurement,
 {
     let mut group = c.benchmark_group(format!("Algo<{algo}>"));
 
@@ -327,10 +328,11 @@ where
         });
 }
 
-pub fn bench_shift_assign<A, B>(c: &mut Criterion, name: &str, algo: &str)
+pub fn bench_shift_assign<A, B, M>(c: &mut Criterion<M>, name: &str, algo: &str)
 where
     A: for<'a> AlgoTy<In<'a, [usize]> = usize>,
     B: AssignAlgo<A>,
+    M: Measurement,
 {
     let mut group = c.benchmark_group(format!("AssignAlgo<{algo}>"));
 
@@ -365,15 +367,15 @@ where
 }
 
 pub fn bench_shl(c: &mut Criterion) {
-    bench_shift::<Shl, Bitwise>(c, "Bitwise", "Shl");
-    bench_shift::<Shl, Element>(c, "Element", "Shl");
-    bench_shift_assign::<Shl, Element>(c, "Element", "Shl");
+    bench_shift::<Shl, Bitwise, _>(c, "Bitwise", "Shl");
+    bench_shift::<Shl, Element, _>(c, "Element", "Shl");
+    bench_shift_assign::<Shl, Element, _>(c, "Element", "Shl");
 }
 
 pub fn bench_shr(c: &mut Criterion) {
-    bench_shift::<Shr, Bitwise>(c, "Bitwise", "Shr");
-    bench_shift::<Shr, Element>(c, "Element", "Shr");
-    bench_shift_assign::<Shr, Element>(c, "Element", "Shr");
+    bench_shift::<Shr, Bitwise, _>(c, "Bitwise", "Shr");
+    bench_shift::<Shr, Element, _>(c, "Element", "Shr");
+    bench_shift_assign::<Shr, Element, _>(c, "Element", "Shr");
 }
 
 criterion_group!(
