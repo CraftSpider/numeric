@@ -14,6 +14,12 @@ static GLOBAL_ALLOC: TracingAlloc<System> = TracingAlloc::new(System);
 struct AllocFormatter;
 
 impl ValueFormatter for AllocFormatter {
+    fn format_value(&self, value: f64) -> String {
+        let mut values = [value];
+        let unit = self.scale_values(value, &mut values);
+        format!("{:>6.0} {}", values[0], unit)
+    }
+
     fn scale_values(&self, _: f64, _: &mut [f64]) -> &'static str {
         "allocations"
     }
@@ -45,6 +51,12 @@ fn scale_base(typical_value: f64) -> (&'static str, f64) {
 }
 
 impl ValueFormatter for BytesFormatter {
+    fn format_value(&self, value: f64) -> String {
+        let mut values = [value];
+        let unit = self.scale_values(value, &mut values);
+        format!("{:>6.0} {}", values[0], unit)
+    }
+
     fn scale_values(&self, typical_value: f64, values: &mut [f64]) -> &'static str {
         let (out, scale) = scale_base(typical_value);
         values.iter_mut().for_each(|b| *b /= scale);

@@ -1,10 +1,13 @@
 //! Implementation of a global allocator that support tracing of allocation statistics
 
+use atomic_cell::AtomicCell;
 use std::alloc::{GlobalAlloc, Layout};
 use std::collections::BTreeMap;
-use std::ops::Deref;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{LazyLock, Mutex};
+use std::thread;
+use std::thread::ThreadId;
+use thread_local::ThreadLocal;
 
 /// Allocation tracing checkpoint, allows referencing allocation data as of a given point
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -28,18 +31,22 @@ impl TracePoint {
         }
     }
 
+    /// Get the total number of allocations at this point
     pub fn total(&self) -> usize {
         self.total
     }
 
+    /// Get the total number of allocated bytes at this point
     pub fn total_bytes(&self) -> usize {
         self.total_bytes
     }
 
+    /// Get the number of live allocations at this point
     pub fn live(&self) -> usize {
         self.live
     }
 
+    /// Get the number of live allocated bytes at this point
     pub fn live_bytes(&self) -> usize {
         self.live_bytes
     }
@@ -134,7 +141,8 @@ impl TracingStats {
 pub struct TracingAlloc<A> {
     alloc: A,
     stats: Mutex<TracingStats>,
-    trace: AtomicBool,
+    trace: ThreadLocal<AtomicBool>,
+    allocating: LazyLock<AtomicCell<Option<ThreadId>, AtomicU64>>,
 }
 
 impl<A> TracingAlloc<A> {
@@ -143,7 +151,8 @@ impl<A> TracingAlloc<A> {
         TracingAlloc {
             alloc,
             stats: Mutex::new(TracingStats::new()),
-            trace: AtomicBool::new(true),
+            trace: ThreadLocal::new(),
+            allocating: LazyLock::new(|| AtomicCell::new(None)),
         }
     }
 
@@ -153,10 +162,24 @@ impl<A> TracingAlloc<A> {
     }
 
     fn maybe_trace<T, F: FnOnce(Option<&mut TracingStats>) -> T>(&self, f: F) -> T {
-        let trace = self.trace.swap(false, Ordering::AcqRel);
+        let mut a = self.allocating.load();
+        // If another thread is allocating, wait for it to finish
+        while let Some(id) = a {
+            if id == thread::current().id() {
+                return f(None);
+            }
+            a = self.allocating.load();
+        }
+
+        let id = thread::current().id();
+        self.allocating.store(Some(id));
+        let trace = self.trace.get_or(|| AtomicBool::new(true));
+        self.allocating.store(None);
+
+        let tl_trace = trace.swap(false, Ordering::AcqRel);
         let out = {
             let mut guard;
-            let stats = if trace {
+            let stats = if tl_trace {
                 guard = self.stats.lock().unwrap();
                 Some(&mut *guard)
             } else {
@@ -164,7 +187,7 @@ impl<A> TracingAlloc<A> {
             };
             f(stats)
         };
-        self.trace.store(trace, Ordering::Release);
+        trace.store(tl_trace, Ordering::Release);
         out
     }
 }

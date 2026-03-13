@@ -15,6 +15,9 @@ members = [
 [profile.bench]
 debug = true
 
+[workspace.dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
+
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"
 explicit_outlives_requirements = "warn"
