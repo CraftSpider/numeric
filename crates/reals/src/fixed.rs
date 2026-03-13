@@ -88,7 +88,7 @@ impl<T: Integral, const N: usize, const M: usize> FromChecked<Fixed<T, M>> for F
 impl<T: Integral, const N: usize, const M: usize> FromTruncating<Fixed<T, M>> for Fixed<T, N> {
     fn truncate_from(val: Fixed<T, M>) -> Self {
         let diff = const { N.abs_diff(M) };
-        match const_cmp::<N, M>() {
+        match const { const_cmp::<N, M>() } {
             Ordering::Less => Fixed::from_raw(val.0 >> diff),
             Ordering::Equal => Fixed::from_raw(val.0),
             Ordering::Greater => Fixed::from_raw(val.0 << diff),
@@ -194,7 +194,7 @@ impl<T: Integral, const N: usize> Mul for Fixed<T, N> {
     type Output = Fixed<T, N>;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Fixed(self.0 * rhs.0)
+        Fixed(self.0 * rhs.0 >> N)
     }
 }
 
@@ -426,5 +426,12 @@ mod tests {
             Fixed::<i8, 3>::from_checked(a),
             Some(Fixed::from_raw(0b0000_1110))
         );
+    }
+
+    #[test]
+    fn mul() {
+        let half = Fixed::<u8, 2>::from_raw(0b10);
+        let quarter = Fixed::from_raw(0b01);
+        assert_eq!(half * half, quarter);
     }
 }
