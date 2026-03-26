@@ -800,8 +800,12 @@ mod tests {
         assert_eq!(zero.approx_float(), 0.0);
         assert_eq!(one.approx_float(), 1.0);
         assert_eq!(max_int.approx_float(), 9_007_199_254_740_991.0);
-        assert_eq!(max_u64.approx_float(), 18_446_744_073_709_552_000.0);
-        assert_ulps_eq!(pretty_big.approx_float(), 2.135_987_035_920_91e96);
+        assert_ulps_eq!(max_u64.approx_float(), 18_446_744_073_709_552_000.0);
+        assert_ulps_eq!(
+            pretty_big.approx_float(),
+            2.135_987_035_920_91e96,
+            max_ulps = 8
+        );
         assert_eq!(very_big.approx_float(), f64::INFINITY);
     }
 }

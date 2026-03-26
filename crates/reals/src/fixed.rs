@@ -199,7 +199,7 @@ impl<T: Integral, const N: usize> Mul for Fixed<T, N> {
         //       Problem is unbounded integers don't need widening, but bounded ones do
         //       We want to use only standard traits
         // Result is N+N shifted left, we assume it's already N, so just have to shift back by N
-        Fixed::from_raw(self.0 * rhs.0 >> N)
+        Fixed::from_raw((self.0 * rhs.0) >> N)
     }
 }
 
