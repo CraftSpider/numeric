@@ -56,3 +56,70 @@ where
         (idx, self.inner.idx(idx))
     }
 }
+
+/// See [`StaticIter::cloned`]
+pub struct Cloned<I> {
+    pub(crate) inner: I,
+}
+
+impl<'a, I, T, const N: usize> StaticIter<N> for Cloned<I>
+where
+    I: StaticIter<N, Item = &'a T>,
+    T: Clone + 'a,
+{
+    type Item = T;
+
+    unsafe fn idx(&mut self, idx: usize) -> Self::Item {
+        self.inner.idx(idx).clone()
+    }
+}
+
+/// See [`StaticIter::copied`]
+pub struct Copied<I> {
+    pub(crate) inner: I,
+}
+
+impl<'a, I, T, const N: usize> StaticIter<N> for Copied<I>
+where
+    I: StaticIter<N, Item = &'a T>,
+    T: Copy + 'a,
+{
+    type Item = T;
+
+    unsafe fn idx(&mut self, idx: usize) -> Self::Item {
+        *self.inner.idx(idx)
+    }
+}
+
+/// See [`StaticIter::rev`]
+pub struct Rev<I> {
+    pub(crate) inner: I,
+}
+
+impl<I, const N: usize> StaticIter<N> for Rev<I>
+where
+    I: StaticIter<N>,
+{
+    type Item = I::Item;
+
+    unsafe fn idx(&mut self, idx: usize) -> Self::Item {
+        self.inner.idx(N - 1 - idx)
+    }
+}
+
+/// See [`StaticIter::rev`]
+pub struct Take<I, const N: usize, const M: usize> {
+    pub(crate) inner: I,
+}
+
+impl<I, const N: usize, const M: usize> StaticIter<M> for Take<I, N, M>
+where
+    I: StaticIter<N>,
+{
+    type Item = I::Item;
+
+    unsafe fn idx(&mut self, idx: usize) -> Self::Item {
+        const { assert!(M <= N) };
+        self.inner.idx(idx)
+    }
+}

@@ -15,6 +15,7 @@ pub mod codegen;
 pub mod tuple;
 pub mod zip_all;
 
+use crate::adapter::{Cloned, Copied, Rev, Take};
 pub use zip_all::zip_all;
 
 /// Types that can be collected from a static length iterator.
@@ -153,6 +154,41 @@ pub trait StaticIter<const N: usize>: Sized {
     #[inline]
     fn enumerate(self) -> Enumerate<Self> {
         Enumerate { inner: self }
+    }
+
+    /// Clone each value in the iterator, converting an iterator of references to an iterator of
+    /// owned values
+    #[inline]
+    fn cloned<'a, T>(self) -> Cloned<Self>
+    where
+        T: Copy + 'a,
+        Self: StaticIter<N, Item = &'a T>,
+    {
+        Cloned { inner: self }
+    }
+
+    /// Copy each value in the iterator, converting an iterator of references to an iterator of
+    /// owned values
+    #[inline]
+    fn copied<'a, T>(self) -> Copied<Self>
+    where
+        T: Copy + 'a,
+        Self: StaticIter<N, Item = &'a T>,
+    {
+        Copied { inner: self }
+    }
+
+    /// Reverse the iterator's direction
+    #[inline]
+    fn rev(self) -> Rev<Self> {
+        Rev { inner: self }
+    }
+
+    /// Take the first M elements of this iterator
+    #[inline]
+    fn take<const M: usize>(self) -> Take<Self, N, M> {
+        const { assert!(M <= N) };
+        Take { inner: self }
     }
 
     /// Given a starting value and a closure, call the closure with either the starting value or
