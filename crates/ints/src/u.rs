@@ -189,6 +189,21 @@ impl U<16> {
     }
 }
 
+#[cfg(target_pointer_width = "16")]
+impl U<2> {
+    /// Lossless infallible conversion for `U<PtrWidth> -> usize`
+    #[must_use]
+    pub const fn as_usize(self) -> usize {
+        usize::from_le_bytes(self.0)
+    }
+
+    /// Lossless infallible conversion for `usize -> U<PtrWidth>`
+    #[must_use]
+    pub const fn from_usize(val: usize) -> Self {
+        Self(val.to_le_bytes())
+    }
+}
+
 #[cfg(target_pointer_width = "32")]
 impl U<4> {
     /// Lossless infallible conversion for `U<PtrWidth> -> usize`

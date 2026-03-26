@@ -232,6 +232,30 @@ macro_rules! impl_int {
             }
         }
 
+        impl crate::ops::saturating::SaturatingAdd for $ty {
+            type Output = $ty;
+
+            fn saturating_add(self, rhs: Self) -> Self::Output {
+                <$ty>::saturating_add(self, rhs)
+            }
+        }
+
+        impl crate::ops::saturating::SaturatingSub for $ty {
+            type Output = $ty;
+
+            fn saturating_sub(self, rhs: Self) -> Self::Output {
+                <$ty>::saturating_sub(self, rhs)
+            }
+        }
+
+        impl crate::ops::saturating::SaturatingMul for $ty {
+            type Output = $ty;
+
+            fn saturating_mul(self, rhs: Self) -> Self::Output {
+                <$ty>::saturating_mul(self, rhs)
+            }
+        }
+
         impl crate::ops::checked::CheckedAdd for $ty {
             type Output = $ty;
 

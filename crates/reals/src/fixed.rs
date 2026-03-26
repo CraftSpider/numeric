@@ -62,8 +62,7 @@ impl<T: Integral, const N: usize> Fixed<T, N> {
 impl<T: Integral, const N: usize, const M: usize> FromChecked<Fixed<T, M>> for Fixed<T, N> {
     fn from_checked(val: Fixed<T, M>) -> Option<Self> {
         let diff = const { N.abs_diff(M) };
-        match const_cmp::<N, M>() {
-            // Lower precision, fractional bits will be lost
+        match const { const_cmp::<N, M>() } {
             Ordering::Less => {
                 let mask = mask_dyn(diff);
                 if !(val.0.clone() & mask).is_zero() {
@@ -89,8 +88,10 @@ impl<T: Integral, const N: usize, const M: usize> FromTruncating<Fixed<T, M>> fo
     fn truncate_from(val: Fixed<T, M>) -> Self {
         let diff = const { N.abs_diff(M) };
         match const { const_cmp::<N, M>() } {
+            // Lower precision, fractional bits will be lost
             Ordering::Less => Fixed::from_raw(val.0 >> diff),
             Ordering::Equal => Fixed::from_raw(val.0),
+            // Greater precision, high bits will be lost
             Ordering::Greater => Fixed::from_raw(val.0 << diff),
         }
     }
@@ -194,7 +195,11 @@ impl<T: Integral, const N: usize> Mul for Fixed<T, N> {
     type Output = Fixed<T, N>;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Fixed(self.0 * rhs.0 >> N)
+        // TODO: Widening mul, we don't want to lose bits off the end
+        //       Problem is unbounded integers don't need widening, but bounded ones do
+        //       We want to use only standard traits
+        // Result is N+N shifted left, we assume it's already N, so just have to shift back by N
+        Fixed::from_raw(self.0 * rhs.0 >> N)
     }
 }
 
@@ -432,6 +437,16 @@ mod tests {
     fn mul() {
         let half = Fixed::<u8, 2>::from_raw(0b10);
         let quarter = Fixed::from_raw(0b01);
+        assert_eq!(half * half, quarter);
+
+        let one_half = Fixed::<u8, 2>::from_raw(0b0110);
+        let two_half = Fixed::<u8, 2>::from_raw(0b1010);
+        let three_75 = Fixed::<u8, 2>::from_raw(0b1111);
+
+        assert_eq!(one_half * two_half, three_75);
+
+        let half = Fixed::<u8, 4>::from_raw(0b1000);
+        let quarter = Fixed::from_raw(0b0100);
         assert_eq!(half * half, quarter);
     }
 }
