@@ -12,7 +12,7 @@ mod r#static;
 #[cfg(feature = "alloc")]
 pub use dynamic::DynMatrix;
 pub use r#static::{Matrix, SquareMatrix};
-pub use refs::{MatrixMut, MatrixRef};
+pub use refs::{MatrixMut, MatrixRef, MatrixSlice};
 
 // TODO:
 //   - Matrix refs? MatRef/MatMut would be just (*T, usize, usize), allow passing any size without

@@ -129,6 +129,14 @@ impl<const T: usize> TaggedOffset<T> {
     pub const fn tags(self) -> usize {
         (self.val() & Self::MASK) >> 1
     }
+
+    #[inline]
+    fn to_enum(&self) -> MaybeInline<'_> {
+        match self.offset() {
+            TaggedVal::Inline(val) => MaybeInline::Inline(val),
+            TaggedVal::Slice(val) => MaybeInline::Slice(val.get()),
+        }
+    }
 }
 
 impl<const T: usize> PartialEq for TaggedOffset<T> {

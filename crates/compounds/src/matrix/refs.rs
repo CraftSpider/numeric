@@ -19,7 +19,7 @@ macro_rules! ref_common {
                 }
 
                 // SAFETY: Internal pointer guaranteed valid for reads up to rows * cols
-                unsafe { &*self.data.as_ptr().add(index.0 * self.cols + index.1) }
+                unsafe { self.data.add(index.0 * self.cols + index.1).as_ref() }
             }
         }
     };
@@ -99,7 +99,7 @@ impl<T> IndexMut<(usize, usize)> for MatrixMut<'_, T> {
             index.1
         );
         // SAFETY: Internal pointer guaranteed valid for reads and writes up to rows * cols
-        unsafe { &mut *self.data.as_ptr().add(index.0 * self.cols + index.1) }
+        unsafe { self.data.add(index.0 * self.cols + index.1).as_mut() }
     }
 }
 
@@ -117,3 +117,63 @@ impl<'a, T> From<&'a mut DynMatrix<T>> for MatrixMut<'a, T> {
         MatrixMut::new(value.as_mut_ptr(), value.rows(), value.cols())
     }
 }
+
+// Pointer is to first accessible column
+// stride is total columns, distance to jump to move one row
+// cols is accessible columns, how far forward we can move from ptr
+// rows is accessible rows, how many times we can add stride
+pub struct MatrixSlice<'a, T> {
+    data: NonNull<T>,
+    // >= cols <= isize::MAX
+    stride: usize,
+    // <= isize::MAX
+    cols: usize,
+    // <= isize::MAX
+    rows: usize,
+    _phantom: PhantomData<&'a [T]>,
+}
+
+impl<'a, T> MatrixSlice<'a, T> {
+    fn new(data: NonNull<T>, stride: usize, cols: usize, rows: usize) -> MatrixSlice<'a, T> {
+        MatrixSlice {
+            data,
+            stride,
+            cols,
+            rows,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<'a, T> Index<(usize, usize)> for MatrixSlice<'a, T> {
+    type Output = T;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        if index.0 > self.rows || index.1 > self.cols {
+            panic!(
+                "Index out of range for matrix of size {}x{}: ({},{})",
+                self.rows, self.cols, index.0, index.1
+            );
+        }
+
+        // SAFETY: Internal pointer guaranteed valid for reads in checked range
+        unsafe { self.data.add(index.0 * self.stride + index.1).as_ref() }
+    }
+}
+
+impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>>
+    for MatrixSlice<'a, T>
+{
+    fn from(value: &'a mut Matrix<T, ROW, COL>) -> Self {
+        MatrixSlice::new(value.as_mut_ptr(), COL, ROW, COL)
+    }
+}
+
+impl<'a, T> From<&'a DynMatrix<T>> for MatrixSlice<'a, T> {
+    fn from(value: &'a DynMatrix<T>) -> Self {
+        MatrixSlice::new(value.as_ptr(), value.cols(), value.rows(), value.cols())
+    }
+}
+
+#[cfg(test)]
+mod tests {}
