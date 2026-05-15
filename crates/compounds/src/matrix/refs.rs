@@ -169,6 +169,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<'a, T> From<&'a DynMatrix<T>> for MatrixSlice<'a, T> {
     fn from(value: &'a DynMatrix<T>) -> Self {
         MatrixSlice::new(value.as_ptr(), value.cols(), value.rows(), value.cols())
