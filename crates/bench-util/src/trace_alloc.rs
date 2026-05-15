@@ -178,6 +178,9 @@ impl<A> TracingAlloc<A> {
                 return f(None);
             }
         }
+        // DEADLOCK HERE during thread-local destruction
+        //   since threads are being destructed, attempting to get the thread ID falls afoul of an
+        //   already locked mutex.
         let trace = self.trace.get_or(|| Cell::new(true));
         self.allocating.store(None);
 
@@ -239,5 +242,25 @@ unsafe impl<A: GlobalAlloc> GlobalAlloc for TracingAlloc<A> {
             }
             out
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::alloc::System;
+    use std::hint::black_box;
+
+    #[test]
+    fn alloc() {
+        let layout = Layout::new::<u64>();
+
+        let a = TracingAlloc::new(System);
+        let ptr = unsafe { a.alloc(layout) }.cast::<u64>();
+        assert!(ptr.is_aligned());
+        // Best-effort attempt to ensure pointer is valid
+        unsafe { *black_box(ptr) = 1 };
+        assert_eq!(unsafe { *black_box(ptr) }, 1);
+        unsafe { a.dealloc(ptr.cast(), layout) };
     }
 }
