@@ -8,7 +8,8 @@ use criterion::measurement::{Measurement, ValueFormatter};
 use criterion::Throughput;
 use std::alloc::System;
 
-#[global_allocator]
+// TODO: Fix `TracingAlloc`
+// #[global_allocator]
 static GLOBAL_ALLOC: TracingAlloc<System> = TracingAlloc::new(System);
 
 struct AllocFormatter;
