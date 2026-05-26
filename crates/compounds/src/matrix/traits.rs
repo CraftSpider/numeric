@@ -83,21 +83,21 @@ pub trait MatrixLike:
 
     // Iterators
 
-    fn row_iter(&self) -> slice::RowIter<'_, Self::Element> {
-        todo!()
-    }
-
-    fn column_iter(&self) -> slice::ColumnIter<'_, Self::Element> {
-        todo!()
-    }
-
-    fn iter_row_major(&self) -> slice::RowMajorIter<'_, Self::Element> {
-        todo!()
-    }
-
-    fn iter_column_major(&self) -> slice::ColumnMajorIter<'_, Self::Element> {
-        todo!()
-    }
+    // fn row_iter(&self) -> slice::RowIter<'_, Self::Element> {
+    //     todo!()
+    // }
+    //
+    // fn column_iter(&self) -> slice::ColumnIter<'_, Self::Element> {
+    //     todo!()
+    // }
+    //
+    // fn iter_row_major(&self) -> slice::RowMajorIter<'_, Self::Element> {
+    //     todo!()
+    // }
+    //
+    // fn iter_column_major(&self) -> slice::ColumnMajorIter<'_, Self::Element> {
+    //     todo!()
+    // }
 
     // In-place mutations
 
