@@ -1,23 +1,7 @@
-use crate::matrix::{MatMut, MatSlice};
+use crate::matrix::{bound_end, bound_start, slice, MatMut, MatSlice};
 use crate::vector::Vec2;
-use core::ops::{Bound, IndexMut, RangeBounds};
+use core::ops::{IndexMut, RangeBounds};
 use numeric_traits::class::RealSigned;
-
-fn bound_start(bound: Bound<&usize>) -> usize {
-    match bound {
-        Bound::Included(start) => *start,
-        Bound::Excluded(start) => start + 1,
-        Bound::Unbounded => 0,
-    }
-}
-
-fn bound_end(bound: Bound<&usize>) -> Option<usize> {
-    match bound {
-        Bound::Included(end) => Some(end + 1),
-        Bound::Excluded(end) => Some(*end),
-        Bound::Unbounded => None,
-    }
-}
 
 mod sealed {
     pub trait Sealed {}
@@ -36,6 +20,8 @@ pub trait MatrixLike:
     /// Element type of this matrix
     type Element;
 
+    // Basic properties
+
     /// Get the number of rows in the matrix.
     fn rows(&self) -> usize;
     /// Get the number of columns in the matrix.
@@ -48,6 +34,8 @@ pub trait MatrixLike:
     /// Get a mutable pointer to the first element of this array. All other elements will be
     /// contiguous from this pointer, in row-major order.
     fn as_ptr_mut(&mut self) -> *mut Self::Element;
+
+    // Slices
 
     /// Slice this array by rows and columns.
     ///
@@ -66,8 +54,8 @@ pub trait MatrixLike:
 
         let cols = self.cols();
 
-        let ptr = unsafe { self.as_ptr().add(row_start).add(col_start * cols) };
-        unsafe { MatSlice::from_raw_parts(ptr, cols, col_end - col_start, row_end - row_start) }
+        let ptr = unsafe { self.as_ptr().add(col_start).add(row_start * cols) };
+        unsafe { MatSlice::from_raw_parts(ptr, row_end - row_start, col_end - col_start, cols) }
     }
 
     /// Mutably slice this array by rows and columns.
@@ -87,11 +75,31 @@ pub trait MatrixLike:
 
         let cols = self.cols();
 
-        let ptr = unsafe { self.as_ptr_mut().add(row_start).add(col_start * cols) };
-        unsafe { MatMut::from_raw_parts(ptr, cols, col_end - col_start, row_end - row_start) }
+        let ptr = unsafe { self.as_ptr_mut().add(col_start).add(row_start * cols) };
+        unsafe { MatMut::from_raw_parts(ptr, row_end - row_start, col_end - col_start, cols) }
     }
 
     // TODO: Split at row or column. get_many equivalent. Iterators.
+
+    // Iterators
+
+    fn row_iter(&self) -> slice::RowIter<'_, Self::Element> {
+        todo!()
+    }
+
+    fn column_iter(&self) -> slice::ColumnIter<'_, Self::Element> {
+        todo!()
+    }
+
+    fn iter_row_major(&self) -> slice::RowMajorIter<'_, Self::Element> {
+        todo!()
+    }
+
+    fn iter_column_major(&self) -> slice::ColumnMajorIter<'_, Self::Element> {
+        todo!()
+    }
+
+    // In-place mutations
 
     /// Swap two rows of the matrix
     fn swap_rows(&mut self, a: usize, b: usize) {

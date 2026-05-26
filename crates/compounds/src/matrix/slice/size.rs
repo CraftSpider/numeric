@@ -53,7 +53,6 @@ impl PackedSize {
         self.0 >> self.n()
     }
 
-    #[cfg_attr(not(test), expect(unused))]
     pub fn stride(&self) -> usize {
         self.1 >> Self::N_BITS
     }

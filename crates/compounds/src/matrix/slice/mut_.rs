@@ -1,10 +1,10 @@
 use crate::matrix::slice::size::PackedSize;
 #[cfg(feature = "alloc")]
 use crate::matrix::DynMatrix;
-use crate::matrix::{index_check, MatSlice, Matrix, MatrixLike};
+use crate::matrix::{bound_end, bound_start, index_check, MatSlice, Matrix, MatrixLike};
 use crate::vector::Vec2;
 use core::marker::PhantomData;
-use core::ops::{Deref, Index, IndexMut};
+use core::ops::{Deref, Index, IndexMut, RangeBounds};
 use core::ptr;
 use core::ptr::NonNull;
 use numeric_traits::class::RealSigned;
@@ -28,9 +28,9 @@ impl<'a, T> MatMut<'a, T> {
     /// Construct a mutable matrix slice from raw parts
     pub unsafe fn from_raw_parts(
         data: *mut T,
-        stride: usize,
-        cols: usize,
         rows: usize,
+        cols: usize,
+        stride: usize,
     ) -> MatMut<'a, T> {
         MatMut {
             data: NonNull::new_unchecked(data),
@@ -43,6 +43,31 @@ impl<'a, T> MatMut<'a, T> {
     pub fn into_raw_parts(self) -> (NonNull<T>, usize, usize, usize) {
         let (rows, cols, stride) = self.size.unpack();
         (self.data, rows, cols, stride)
+    }
+
+    /// Get a sub-slice of this matrix slice, by rows and columns.
+    pub fn slice_mut(
+        &self,
+        rows: impl RangeBounds<usize>,
+        cols: impl RangeBounds<usize>,
+    ) -> MatMut<'_, T> {
+        let stride = self.size.stride();
+
+        let row_start = bound_start(rows.start_bound());
+        let row_end = bound_end(rows.end_bound()).unwrap_or(self.rows());
+
+        let col_start = bound_start(cols.start_bound());
+        let col_end = bound_end(cols.end_bound()).unwrap_or(self.cols());
+
+        let ptr = unsafe { self.data.add(col_start).add(row_start * stride) };
+        unsafe {
+            MatMut::from_raw_parts(
+                ptr.as_ptr(),
+                row_end - row_start,
+                col_end - col_start,
+                stride,
+            )
+        }
     }
 
     /// Swap two rows of the matrix
@@ -159,7 +184,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>
     for MatMut<'a, T>
 {
     fn from(value: &'a mut Matrix<T, ROW, COL>) -> Self {
-        unsafe { MatMut::from_raw_parts(value.as_ptr_mut(), COL, ROW, COL) }
+        unsafe { MatMut::from_raw_parts(value.as_ptr_mut(), ROW, COL, COL) }
     }
 }
 
@@ -167,7 +192,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a mut Matrix<T, ROW, COL>
 impl<'a, T> From<&'a mut DynMatrix<T>> for MatMut<'a, T> {
     fn from(value: &'a mut DynMatrix<T>) -> Self {
         unsafe {
-            MatMut::from_raw_parts(value.as_ptr_mut(), value.cols(), value.rows(), value.cols())
+            MatMut::from_raw_parts(value.as_ptr_mut(), value.rows(), value.cols(), value.cols())
         }
     }
 }

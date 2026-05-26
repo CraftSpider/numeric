@@ -1,11 +1,11 @@
 use crate::matrix::slice::size::PackedSize;
 #[cfg(feature = "alloc")]
 use crate::matrix::DynMatrix;
-use crate::matrix::{index_check, Matrix, MatrixLike};
+use crate::matrix::{bound_end, bound_start, index_check, Matrix, MatrixLike};
 use crate::vector::Vec2;
 use core::fmt;
 use core::marker::PhantomData;
-use core::ops::Index;
+use core::ops::{Index, RangeBounds};
 use core::ptr::NonNull;
 use numeric_utils::static_assert;
 
@@ -26,9 +26,9 @@ impl<'a, T> MatSlice<'a, T> {
     /// Construct a matrix slice from raw parts
     pub unsafe fn from_raw_parts(
         data: *const T,
-        stride: usize,
-        cols: usize,
         rows: usize,
+        cols: usize,
+        stride: usize,
     ) -> MatSlice<'a, T> {
         MatSlice {
             data: NonNull::new_unchecked(data.cast_mut()),
@@ -51,6 +51,31 @@ impl<'a, T> MatSlice<'a, T> {
     /// Get the number of columns in the matrix
     pub fn cols(&self) -> usize {
         self.size.depth()
+    }
+
+    /// Get a sub-slice of this matrix slice, by rows and columns.
+    pub fn slice(
+        &self,
+        rows: impl RangeBounds<usize>,
+        cols: impl RangeBounds<usize>,
+    ) -> MatSlice<'_, T> {
+        let stride = self.size.stride();
+
+        let row_start = bound_start(rows.start_bound());
+        let row_end = bound_end(rows.end_bound()).unwrap_or(self.rows());
+
+        let col_start = bound_start(cols.start_bound());
+        let col_end = bound_end(cols.end_bound()).unwrap_or(self.cols());
+
+        let ptr = unsafe { self.data.add(col_start).add(row_start * stride) };
+        unsafe {
+            MatSlice::from_raw_parts(
+                ptr.as_ptr(),
+                row_end - row_start,
+                col_end - col_start,
+                stride,
+            )
+        }
     }
 }
 
@@ -112,7 +137,7 @@ impl<'a, T> Index<Vec2<usize>> for MatSlice<'a, T> {
 
 impl<'a, T, const ROW: usize, const COL: usize> From<&'a Matrix<T, ROW, COL>> for MatSlice<'a, T> {
     fn from(value: &'a Matrix<T, ROW, COL>) -> Self {
-        unsafe { MatSlice::from_raw_parts(value.as_ptr(), COL, ROW, COL) }
+        unsafe { MatSlice::from_raw_parts(value.as_ptr(), ROW, COL, COL) }
     }
 }
 
@@ -120,7 +145,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a Matrix<T, ROW, COL>> fo
 impl<'a, T> From<&'a DynMatrix<T>> for MatSlice<'a, T> {
     fn from(value: &'a DynMatrix<T>) -> Self {
         unsafe {
-            MatSlice::from_raw_parts(value.as_ptr(), value.cols(), value.rows(), value.cols())
+            MatSlice::from_raw_parts(value.as_ptr(), value.rows(), value.cols(), value.cols())
         }
     }
 }
@@ -155,5 +180,30 @@ impl<T: PartialEq, const ROW: usize, const COL: usize> PartialEq<Matrix<T, ROW, 
 impl<T: PartialEq> PartialEq<DynMatrix<T>> for MatSlice<'_, T> {
     fn eq(&self, other: &DynMatrix<T>) -> bool {
         self.eq(&MatSlice::from(other))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sub_slice() {
+        let mat = Matrix::new([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+
+        let slice = mat.slice(.., ..);
+        assert_eq!(slice, mat);
+
+        let sub1 = slice.slice(.., 1..);
+        assert_eq!(sub1.rows(), 3);
+        assert_eq!(sub1.cols(), 2);
+        assert_eq!(sub1, Matrix::new([[2, 3], [5, 6], [8, 9]]));
+
+        let sub2 = slice.slice(1.., ..);
+        assert_eq!(sub2.rows(), 2);
+        assert_eq!(sub2.cols(), 3);
+        assert_eq!(sub2, Matrix::new([[4, 5, 6], [7, 8, 9]]));
+
+        assert_eq!(sub1.slice(1.., ..), sub2.slice(.., 1..));
     }
 }
