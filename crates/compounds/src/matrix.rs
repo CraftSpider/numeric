@@ -2,21 +2,27 @@
 //!
 //! Support is included for both fixed and dynamic sized matrices, as well as views into such.
 
-#[macro_use]
-mod macros;
 #[cfg(feature = "alloc")]
 mod dynamic;
-mod refs;
+mod slice;
 mod r#static;
+mod traits;
 
 #[cfg(feature = "alloc")]
 pub use dynamic::DynMatrix;
 pub use r#static::{Matrix, SquareMatrix};
-pub use refs::{MatrixMut, MatrixRef, MatrixSlice};
+pub use slice::{MatMut, MatSlice};
+pub use traits::MatrixLike;
+
+fn index_check(expected: (usize, usize), actual: (usize, usize)) {
+    if actual.0 >= expected.0 || actual.1 >= expected.1 {
+        panic!(
+            "Index out of range for matrix of size {}x{}: ({}, {})",
+            expected.0, expected.1, actual.0, actual.1
+        )
+    }
+}
 
 // TODO:
-//   - Matrix refs? MatRef/MatMut would be just (*T, usize, usize), allow passing any size without
-//     needing size-changing ops.
-//   - Matrix slices? MatSlice/MatSliceMut would be (*T, usize, usize, Range<usize>) - we can slice
-//     out unneeded rows, then it's row length, column length, and accessible columns.
 //   - Will get to have fun re-implementing some ops on each of these.
+//   - Clean up implementation to reduce repetition.

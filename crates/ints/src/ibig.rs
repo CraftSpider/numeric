@@ -2,9 +2,7 @@
 //!
 //! Small values are stored inline, large values are stored in a ref-counted interner.
 
-use crate::big_utils::{
-    arr_size, MaybeInline, OutOfRangeError, Side, TaggedOffset, TaggedVal, INT_STORE,
-};
+use crate::big_utils::{arr_size, OutOfRangeError, Side, TaggedOffset, TaggedVal, INT_STORE};
 use crate::UBig;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -31,14 +29,6 @@ static_assert!(size_of::<IBig>() == size_of::<usize>());
 static_assert_traits!(IBig: Send + Sync);
 
 impl IBig {
-    #[inline]
-    fn val(&self) -> MaybeInline<'_> {
-        match self.0.offset() {
-            TaggedVal::Inline(val) => MaybeInline::Inline(val),
-            TaggedVal::Slice(val) => MaybeInline::Slice(val.get()),
-        }
-    }
-
     #[inline]
     fn with_slices<R>(left: &IBig, right: &IBig, f: impl FnOnce(&[usize], &[usize]) -> R) -> R {
         left.with_slice(|left| right.with_slice(|right| f(left, right)))
@@ -78,7 +68,7 @@ impl IBig {
 
     #[inline]
     pub(crate) fn with_slice<R>(&self, f: impl FnOnce(&[usize]) -> R) -> R {
-        f(self.val().slice())
+        f(self.0.to_enum().slice())
     }
 
     fn write_base<W: Write>(&self, base: usize, w: &mut W, chars: &[char]) -> fmt::Result {

@@ -131,7 +131,7 @@ impl<const T: usize> TaggedOffset<T> {
     }
 
     #[inline]
-    fn to_enum(&self) -> MaybeInline<'_> {
+    pub fn to_enum(&self) -> MaybeInline<'_> {
         match self.offset() {
             TaggedVal::Inline(val) => MaybeInline::Inline(val),
             TaggedVal::Slice(val) => MaybeInline::Slice(val.get()),

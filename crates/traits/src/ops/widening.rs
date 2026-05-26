@@ -18,7 +18,10 @@ macro_rules! widening_impl {
                 let wide = <$wide>::truncate_from(self)
                     .wrapping_mul(<$wide>::truncate_from(mul))
                     .wrapping_add(<$wide>::truncate_from(add));
-                (wide.truncate(), (wide >> <$ty>::BITS).truncate())
+                (
+                    IntoTruncating::truncate(wide),
+                    IntoTruncating::truncate(wide >> <$ty>::BITS),
+                )
             }
         }
     };

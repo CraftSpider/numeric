@@ -1,7 +1,8 @@
+use crate::matrix::traits::Sealed;
+use crate::matrix::{index_check, MatrixLike};
 use crate::vector::{Vec2, Vector};
 use core::array;
 use core::ops::{Add, Index, IndexMut, Mul, Sub};
-use core::ptr::NonNull;
 use numeric_static_iter::{zip_all, IntoStaticIter, StaticIter};
 use numeric_traits::class::RealSigned;
 use numeric_traits::identity::{One, Zero};
@@ -20,14 +21,6 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
     /// Create a new matrix from a 2D array of rows and columns.
     pub const fn new(rows: [[T; COL]; ROW]) -> Matrix<T, ROW, COL> {
         Matrix(rows)
-    }
-
-    pub(crate) fn as_ptr(&self) -> NonNull<T> {
-        NonNull::from(&self.0).cast()
-    }
-
-    pub(crate) fn as_mut_ptr(&mut self) -> NonNull<T> {
-        NonNull::from(&mut self.0).cast()
     }
 
     /// Create a matrix from an array of vector rows
@@ -52,21 +45,36 @@ impl<T, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
     pub fn transpose(self) -> Matrix<T, COL, ROW> {
         Matrix::new(zip_all(self.0).collect())
     }
+}
 
-    /// Swap two rows of the matrix
-    pub fn swap_rows(&mut self, a: usize, b: usize) {
+impl<T, const ROW: usize, const COL: usize> Sealed for Matrix<T, ROW, COL> {}
+
+impl<T, const ROW: usize, const COL: usize> MatrixLike for Matrix<T, ROW, COL> {
+    type Element = T;
+
+    fn rows(&self) -> usize {
+        ROW
+    }
+
+    fn cols(&self) -> usize {
+        COL
+    }
+
+    fn as_ptr(&self) -> *const Self::Element {
+        self.0.as_ptr().cast()
+    }
+
+    fn as_ptr_mut(&mut self) -> *mut Self::Element {
+        self.0.as_mut_ptr().cast()
+    }
+
+    fn swap_rows(&mut self, a: usize, b: usize) {
         self.0.swap(a, b);
     }
 
-    /// Swap two columns of the matrix
-    pub fn swap_columns(&mut self, a: usize, b: usize) {
-        self.0.iter_mut().for_each(|row| row.swap(a, b));
+    fn swap_columns(&mut self, a: usize, b: usize) {
+        self.0.iter_mut().for_each(|row| row.swap(a, b))
     }
-}
-
-impl<T: RealSigned, const ROW: usize, const COL: usize> Matrix<T, ROW, COL> {
-    gauss_elim!(self, ROW, COL, self.0);
-    row_reduce!();
 }
 
 impl<T: Clone, const N: usize> SquareMatrix<T, N> {
@@ -88,7 +96,8 @@ impl<T: RealSigned, const N: usize> SquareMatrix<T, N> {
                     - self[(1, 0)].clone() * self[(0, 1)].clone()
             }
             _ => {
-                let (reduced, factor) = self.clone().gauss_elim();
+                let mut reduced = self.clone();
+                let factor = reduced.gauss_elim();
 
                 reduced.diag().product() / factor
             }
@@ -205,12 +214,14 @@ impl<T, const ROW: usize, const COL: usize> Index<(usize, usize)> for Matrix<T, 
     type Output = T;
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
+        index_check((ROW, COL), index);
         &self.0[index.0][index.1]
     }
 }
 
 impl<T, const ROW: usize, const COL: usize> IndexMut<(usize, usize)> for Matrix<T, ROW, COL> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        index_check((ROW, COL), index);
         &mut self.0[index.0][index.1]
     }
 }
@@ -219,12 +230,14 @@ impl<T, const ROW: usize, const COL: usize> Index<Vec2<usize>> for Matrix<T, ROW
     type Output = T;
 
     fn index(&self, index: Vec2<usize>) -> &Self::Output {
+        index_check((ROW, COL), (*index.x(), *index.y()));
         &self.0[*index.y()][*index.x()]
     }
 }
 
 impl<T, const ROW: usize, const COL: usize> IndexMut<Vec2<usize>> for Matrix<T, ROW, COL> {
     fn index_mut(&mut self, index: Vec2<usize>) -> &mut Self::Output {
+        index_check((ROW, COL), (*index.x(), *index.y()));
         &mut self.0[*index.y()][*index.x()]
     }
 }
@@ -258,7 +271,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn test_row_reduce() {
-        let a = Matrix::new([
+        let mut a = Matrix::new([
             [1., 0., 4., 2.],
             [1., 2., 6., 2.],
             [2., 0., 8., 8.],
@@ -271,17 +284,18 @@ mod tests {
             [0., 0., 0., 4.],
             [0., 0., 0., 0.],
         ]);
-        assert_eq!(a.row_reduce(), expected);
+        a.gauss_elim();
+        assert_eq!(a, expected);
 
-        let b = Matrix::new([[2., -3., 1.], [2., 0., -1.], [1., 4., 5.]]);
+        let mut b = Matrix::new([[2., -3., 1.], [2., 0., -1.], [1., 4., 5.]]);
 
         let expected = Matrix::new([
             [1., 4., 5.],
             [0., -11., -9.],
             [0., 0., -4.454_545_454_545_454],
         ]);
-
-        assert_eq!(b.row_reduce(), expected);
+        b.gauss_elim();
+        assert_eq!(b, expected);
     }
 
     #[cfg(feature = "alloc")]
@@ -293,5 +307,20 @@ mod tests {
 
         let b = Matrix::<f64, 3, 3>::new([[2., -3., 1.], [2., 0., -1.], [1., 4., 5.]]);
         assert_eq!(b.determinant().round(), 49.);
+    }
+
+    #[test]
+    fn test_slice() {
+        let a = Matrix::new([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+
+        let tl = a.slice(0..2, 0..2);
+        assert_eq!(tl.rows(), 2);
+        assert_eq!(tl.cols(), 2);
+        assert_eq!(tl, Matrix::new([[1, 2], [4, 5]]));
+
+        let br = a.slice(1..3, 1..3);
+        assert_eq!(br.rows(), 2);
+        assert_eq!(br.cols(), 2);
+        assert_eq!(br, Matrix::new([[5, 6], [8, 9]]));
     }
 }

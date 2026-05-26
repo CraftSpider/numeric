@@ -1,9 +1,8 @@
-use crate::matrix::Matrix;
+use crate::matrix::traits::Sealed;
+use crate::matrix::{index_check, Matrix, MatrixLike};
 use crate::vector::Vec2;
 use alloc::vec::Vec;
 use core::ops::{Index, IndexMut};
-use core::ptr::NonNull;
-use numeric_traits::class::RealSigned;
 
 /// Arbitrary type matrix with a dynamic number of rows and columns.
 ///
@@ -36,52 +35,6 @@ impl<T> DynMatrix<T> {
 
         DynMatrix { data, rows, cols }
     }
-
-    pub(crate) fn as_ptr(&self) -> NonNull<T> {
-        NonNull::new(self.data.as_ptr().cast_mut()).unwrap()
-    }
-
-    pub(crate) fn as_mut_ptr(&mut self) -> NonNull<T> {
-        NonNull::new(self.data.as_mut_ptr()).unwrap()
-    }
-
-    /// Get the number of rows in the matrix
-    pub fn rows(&self) -> usize {
-        self.rows
-    }
-
-    /// Get the number of columns in the matrix
-    pub fn cols(&self) -> usize {
-        self.cols
-    }
-
-    /// Swap two rows of the matrix
-    pub fn swap_rows(&mut self, a: usize, b: usize) {
-        if a == b {
-            return;
-        }
-        let l = usize::min(a, b);
-        let r = usize::max(a, b);
-        let (start, end) = self.data.split_at_mut(r * self.cols);
-        let start = &mut start[l * self.cols..(l + 1) * self.cols];
-        let end = &mut end[..self.cols];
-        start.swap_with_slice(end);
-    }
-
-    /// Swap two columns of the matrix
-    pub fn swap_columns(&mut self, a: usize, b: usize) {
-        if a == b {
-            return;
-        }
-        for i in 0..self.rows {
-            self.data.swap(i * self.cols + a, i * self.cols + b);
-        }
-    }
-}
-
-impl<T: RealSigned> DynMatrix<T> {
-    gauss_elim!(self, self.rows, self.cols, self.data);
-    row_reduce!();
 }
 
 impl<T, const ROW: usize, const COL: usize> From<[[T; COL]; ROW]> for DynMatrix<T> {
@@ -123,12 +76,14 @@ impl<T> Index<(usize, usize)> for DynMatrix<T> {
     type Output = T;
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
+        index_check((self.rows, self.cols), index);
         &self.data[index.0 * self.cols + index.1]
     }
 }
 
 impl<T> IndexMut<(usize, usize)> for DynMatrix<T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        index_check((self.rows, self.cols), index);
         &mut self.data[index.0 * self.cols + index.1]
     }
 }
@@ -137,13 +92,58 @@ impl<T> Index<Vec2<usize>> for DynMatrix<T> {
     type Output = T;
 
     fn index(&self, index: Vec2<usize>) -> &Self::Output {
+        index_check((self.rows, self.cols), (*index.x(), *index.y()));
         &self.data[index.y() * self.cols + index.x()]
     }
 }
 
 impl<T> IndexMut<Vec2<usize>> for DynMatrix<T> {
     fn index_mut(&mut self, index: Vec2<usize>) -> &mut Self::Output {
+        index_check((self.rows, self.cols), (*index.x(), *index.y()));
         &mut self.data[index.y() * self.cols + index.x()]
+    }
+}
+
+impl<T> Sealed for DynMatrix<T> {}
+
+impl<T> MatrixLike for DynMatrix<T> {
+    type Element = T;
+
+    fn rows(&self) -> usize {
+        self.rows
+    }
+
+    fn cols(&self) -> usize {
+        self.cols
+    }
+
+    fn as_ptr(&self) -> *const Self::Element {
+        self.data.as_ptr()
+    }
+
+    fn as_ptr_mut(&mut self) -> *mut Self::Element {
+        self.data.as_mut_ptr()
+    }
+
+    fn swap_rows(&mut self, a: usize, b: usize) {
+        if a == b {
+            return;
+        }
+        let l = usize::min(a, b);
+        let r = usize::max(a, b);
+        let (start, end) = self.data.split_at_mut(r * self.cols);
+        let start = &mut start[l * self.cols..(l + 1) * self.cols];
+        let end = &mut end[..self.cols];
+        start.swap_with_slice(end);
+    }
+
+    fn swap_columns(&mut self, a: usize, b: usize) {
+        if a == b {
+            return;
+        }
+        for i in 0..self.rows {
+            self.data.swap(i * self.cols + a, i * self.cols + b);
+        }
     }
 }
 
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_row_reduce() {
-        let a = DynMatrix::from([
+        let mut a = DynMatrix::from([
             [1., 0., 4., 2.],
             [1., 2., 6., 2.],
             [2., 0., 8., 8.],
@@ -217,6 +217,7 @@ mod tests {
             [0., 0., 0., 4.],
             [0., 0., 0., 0.],
         ]);
-        assert_eq!(a.row_reduce(), expected);
+        a.gauss_elim();
+        assert_eq!(a, expected);
     }
 }
