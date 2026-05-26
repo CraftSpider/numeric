@@ -1,7 +1,9 @@
 use crate::matrix::slice::size::PackedSize;
 #[cfg(feature = "alloc")]
 use crate::matrix::DynMatrix;
-use crate::matrix::{bound_end, bound_start, index_check, Matrix, MatrixLike};
+use crate::matrix::{
+    bound_end, bound_start, index_check, range_check, slice, MatMut, Matrix, MatrixLike,
+};
 use crate::vector::Vec2;
 use core::fmt;
 use core::marker::PhantomData;
@@ -23,7 +25,22 @@ pub struct MatSlice<'a, T> {
 }
 
 impl<'a, T> MatSlice<'a, T> {
+    pub(crate) fn new_raw(data: NonNull<T>, size: PackedSize) -> MatSlice<'a, T> {
+        MatSlice {
+            data,
+            size,
+            _phantom: PhantomData,
+        }
+    }
+
     /// Construct a matrix slice from raw parts
+    ///
+    /// # Safety
+    ///
+    /// The provided pointer must point to a valid position in a matrix in row-major order.
+    ///
+    /// It must be safe to read contiguous ranges of length `cols` every `stride` elements,
+    /// `rows` times. Items in between these ranges need not be valid for reads.
     pub unsafe fn from_raw_parts(
         data: *const T,
         rows: usize,
@@ -53,12 +70,25 @@ impl<'a, T> MatSlice<'a, T> {
         self.size.depth()
     }
 
+    pub(crate) fn stride(&self) -> usize {
+        self.size.stride()
+    }
+
+    pub(crate) fn ptr(&self) -> NonNull<T> {
+        self.data
+    }
+
     /// Get a sub-slice of this matrix slice, by rows and columns.
+    ///
+    /// # Panics
+    ///
+    /// If the provided ranges are out of bounds for this slice. For a non-panicking version, use
+    /// [`Self::try_slice`].
     pub fn slice(
         &self,
         rows: impl RangeBounds<usize>,
         cols: impl RangeBounds<usize>,
-    ) -> MatSlice<'_, T> {
+    ) -> MatSlice<'a, T> {
         let stride = self.size.stride();
 
         let row_start = bound_start(rows.start_bound());
@@ -67,7 +97,16 @@ impl<'a, T> MatSlice<'a, T> {
         let col_start = bound_start(cols.start_bound());
         let col_end = bound_end(cols.end_bound()).unwrap_or(self.cols());
 
+        range_check(
+            (self.rows(), self.cols()),
+            (row_start, row_end),
+            (col_start, col_end),
+        );
+
+        // SAFETY: Row and column starts have been verified in-bounds of our pointer range
         let ptr = unsafe { self.data.add(col_start).add(row_start * stride) };
+        // SAFETY: Internal pointer and stride guaranteed valid.
+        //         Rows and columns ranges validated in-bounds.
         unsafe {
             MatSlice::from_raw_parts(
                 ptr.as_ptr(),
@@ -76,6 +115,26 @@ impl<'a, T> MatSlice<'a, T> {
                 stride,
             )
         }
+    }
+
+    /// Iterate over rows of this matrix slice.
+    pub fn row_iter(&self) -> slice::RowIter<'a, T> {
+        slice::RowIter::new(*self)
+    }
+
+    /// Iterate over columns of this matrix slice.
+    pub fn column_iter(&self) -> slice::ColumnIter<'a, T> {
+        slice::ColumnIter::new(*self)
+    }
+
+    /// Iterate over all elements in this matrix slice in row-major order.
+    pub fn iter_row_major(&self) -> slice::RowMajorIter<'a, T> {
+        slice::RowMajorIter::new(*self)
+    }
+
+    /// Iterate over all elements in this matrix slice in column-major order.
+    pub fn iter_column_major(&self) -> slice::ColumnMajorIter<'a, T> {
+        slice::ColumnMajorIter::new(*self)
     }
 }
 
@@ -135,8 +194,15 @@ impl<'a, T> Index<Vec2<usize>> for MatSlice<'a, T> {
     }
 }
 
+impl<'a, T> From<MatMut<'a, T>> for MatSlice<'a, T> {
+    fn from(value: MatMut<'a, T>) -> Self {
+        Self::new_raw(value.ptr(), value.size())
+    }
+}
+
 impl<'a, T, const ROW: usize, const COL: usize> From<&'a Matrix<T, ROW, COL>> for MatSlice<'a, T> {
     fn from(value: &'a Matrix<T, ROW, COL>) -> Self {
+        // SAFETY: Arguments trivially valid by definition
         unsafe { MatSlice::from_raw_parts(value.as_ptr(), ROW, COL, COL) }
     }
 }
@@ -144,6 +210,7 @@ impl<'a, T, const ROW: usize, const COL: usize> From<&'a Matrix<T, ROW, COL>> fo
 #[cfg(feature = "alloc")]
 impl<'a, T> From<&'a DynMatrix<T>> for MatSlice<'a, T> {
     fn from(value: &'a DynMatrix<T>) -> Self {
+        // SAFETY: Arguments trivially valid by definition
         unsafe {
             MatSlice::from_raw_parts(value.as_ptr(), value.rows(), value.cols(), value.cols())
         }
@@ -205,5 +272,81 @@ mod tests {
         assert_eq!(sub2, Matrix::new([[4, 5, 6], [7, 8, 9]]));
 
         assert_eq!(sub1.slice(1.., ..), sub2.slice(.., 1..));
+    }
+
+    #[test]
+    fn test_row_iter() {
+        let mat = Matrix::new([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+
+        let slice = mat.slice(.., ..);
+
+        let mut idx = 1;
+        for row in slice.row_iter() {
+            for item in row {
+                assert_eq!(*item, idx);
+                idx += 1;
+            }
+        }
+
+        let sub1 = slice.slice(.., 1..);
+        let mut idx = 2;
+        for row in sub1.row_iter() {
+            for item in row {
+                assert_eq!(*item, idx);
+                idx += 1;
+            }
+            idx += 1;
+        }
+    }
+
+    #[test]
+    fn test_column_iter() {
+        let mat = Matrix::new([[1, 4, 7], [2, 5, 8], [3, 6, 9]]);
+
+        let slice = mat.slice(.., ..);
+
+        let mut idx = 1;
+        for col in slice.column_iter() {
+            for item in col {
+                assert_eq!(*item, idx);
+                idx += 1;
+            }
+        }
+
+        let sub1 = slice.slice(1.., ..);
+        let mut idx = 2;
+        for col in sub1.column_iter() {
+            for item in col {
+                assert_eq!(*item, idx);
+                idx += 1;
+            }
+            idx += 1;
+        }
+    }
+
+    #[test]
+    fn test_row_major_iter() {
+        let mat = Matrix::new([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+
+        let slice = mat.slice(.., ..);
+
+        let mut idx = 1;
+        for item in slice.iter_row_major() {
+            assert_eq!(*item, idx);
+            idx += 1;
+        }
+    }
+
+    #[test]
+    fn test_column_major_iter() {
+        let mat = Matrix::new([[1, 4, 7], [2, 5, 8], [3, 6, 9]]);
+
+        let slice = mat.slice(.., ..);
+
+        let mut idx = 1;
+        for item in slice.iter_column_major() {
+            assert_eq!(*item, idx);
+            idx += 1;
+        }
     }
 }

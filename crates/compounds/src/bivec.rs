@@ -15,7 +15,9 @@ use crate::vector::Vector;
 use numeric_traits::class::RealSigned;
 
 // TODO: Put this in some algorithms location
-const fn choose_n(mut n: usize, mut r: usize) -> usize {
+const fn choose_n(n: usize, r: usize) -> usize {
+    let mut n = n as u128;
+    let mut r = r as u128;
     if n < r {
         return 0;
     }
@@ -34,7 +36,7 @@ const fn choose_n(mut n: usize, mut r: usize) -> usize {
         r -= 1;
     }
     out /= denom;
-    out
+    out as usize
 }
 
 /// A 2-blade, or 2-vector, representing the wedge product of two vectors.

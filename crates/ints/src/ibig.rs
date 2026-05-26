@@ -68,7 +68,7 @@ impl IBig {
 
     #[inline]
     pub(crate) fn with_slice<R>(&self, f: impl FnOnce(&[usize]) -> R) -> R {
-        f(self.0.to_enum().slice())
+        self.0.with_slice(f)
     }
 
     fn write_base<W: Write>(&self, base: usize, w: &mut W, chars: &[char]) -> fmt::Result {

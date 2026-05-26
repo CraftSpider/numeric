@@ -1,4 +1,4 @@
-use crate::matrix::{bound_end, bound_start, slice, MatMut, MatSlice};
+use crate::matrix::{bound_end, bound_start, range_check, slice, MatMut, MatSlice};
 use crate::vector::Vec2;
 use core::ops::{IndexMut, RangeBounds};
 use numeric_traits::class::RealSigned;
@@ -52,9 +52,18 @@ pub trait MatrixLike:
         let col_start = bound_start(cols.start_bound());
         let col_end = bound_end(cols.end_bound()).unwrap_or(self.cols());
 
+        range_check(
+            (self.rows(), self.cols()),
+            (row_start, row_end),
+            (col_start, col_end),
+        );
+
         let cols = self.cols();
 
+        // SAFETY: Row and column starts have been verified in-bounds of our pointer range
         let ptr = unsafe { self.as_ptr().add(col_start).add(row_start * cols) };
+        // SAFETY: Internal pointer and stride guaranteed valid.
+        //         Rows and columns ranges validated in-bounds.
         unsafe { MatSlice::from_raw_parts(ptr, row_end - row_start, col_end - col_start, cols) }
     }
 
@@ -73,9 +82,18 @@ pub trait MatrixLike:
         let col_start = bound_start(cols.start_bound());
         let col_end = bound_end(cols.end_bound()).unwrap_or(self.cols());
 
+        range_check(
+            (self.rows(), self.cols()),
+            (row_start, row_end),
+            (col_start, col_end),
+        );
+
         let cols = self.cols();
 
+        // SAFETY: Row and column starts have been verified in-bounds of our pointer range
         let ptr = unsafe { self.as_ptr_mut().add(col_start).add(row_start * cols) };
+        // SAFETY: Internal pointer and stride guaranteed valid.
+        //         Rows and columns ranges validated in-bounds.
         unsafe { MatMut::from_raw_parts(ptr, row_end - row_start, col_end - col_start, cols) }
     }
 
@@ -83,21 +101,25 @@ pub trait MatrixLike:
 
     // Iterators
 
-    // fn row_iter(&self) -> slice::RowIter<'_, Self::Element> {
-    //     todo!()
-    // }
-    //
-    // fn column_iter(&self) -> slice::ColumnIter<'_, Self::Element> {
-    //     todo!()
-    // }
-    //
-    // fn iter_row_major(&self) -> slice::RowMajorIter<'_, Self::Element> {
-    //     todo!()
-    // }
-    //
-    // fn iter_column_major(&self) -> slice::ColumnMajorIter<'_, Self::Element> {
-    //     todo!()
-    // }
+    /// Iterator over rows of this matrix
+    fn row_iter(&self) -> slice::RowIter<'_, Self::Element> {
+        self.slice(.., ..).row_iter()
+    }
+
+    /// Iterator over columns of this matrix
+    fn column_iter(&self) -> slice::ColumnIter<'_, Self::Element> {
+        self.slice(.., ..).column_iter()
+    }
+
+    /// Iterator over all elements in this matrix in row-major order
+    fn iter_row_major(&self) -> slice::RowMajorIter<'_, Self::Element> {
+        self.slice(.., ..).iter_row_major()
+    }
+
+    /// Iterator over all elements in this matrix in column-major order
+    fn iter_column_major(&self) -> slice::ColumnMajorIter<'_, Self::Element> {
+        self.slice(.., ..).iter_column_major()
+    }
 
     // In-place mutations
 

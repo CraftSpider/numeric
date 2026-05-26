@@ -131,10 +131,10 @@ impl<const T: usize> TaggedOffset<T> {
     }
 
     #[inline]
-    pub fn to_enum(&self) -> MaybeInline<'_> {
+    pub fn with_slice<U>(&self, f: impl FnOnce(&[usize]) -> U) -> U {
         match self.offset() {
-            TaggedVal::Inline(val) => MaybeInline::Inline(val),
-            TaggedVal::Slice(val) => MaybeInline::Slice(val.get()),
+            TaggedVal::Inline(val) => f(&[val]),
+            TaggedVal::Slice(val) => f(val.get()),
         }
     }
 }
@@ -151,18 +151,3 @@ impl<const T: usize> Eq for TaggedOffset<T> {}
 unsafe impl<const T: usize> Send for TaggedOffset<T> {}
 // SAFETY: TaggedOffset pointee is guaranteed Send + Sync
 unsafe impl<const T: usize> Sync for TaggedOffset<T> {}
-
-pub enum MaybeInline<'a> {
-    Inline(usize),
-    Slice(&'a [usize]),
-}
-
-impl MaybeInline<'_> {
-    #[inline]
-    pub const fn slice(&self) -> &[usize] {
-        match self {
-            MaybeInline::Inline(i) => core::slice::from_ref(i),
-            MaybeInline::Slice(s) => s,
-        }
-    }
-}
