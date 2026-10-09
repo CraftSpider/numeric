@@ -9,11 +9,22 @@ mod r#static;
 mod traits;
 
 use core::ops::Bound;
+use core::ptr::NonNull;
 #[cfg(feature = "alloc")]
 pub use dynamic::DynMatrix;
 pub use r#static::{Matrix, SquareMatrix};
 pub use slice::{MatMut, MatSlice, *};
 pub use traits::MatrixLike;
+
+trait NonNullExt<T> {
+    fn wrapping_add(self, offset: usize) -> Self;
+}
+
+impl<T> NonNullExt<T> for NonNull<T> {
+    fn wrapping_add(self, offset: usize) -> Self {
+        NonNull::new(self.as_ptr().wrapping_add(offset)).unwrap()
+    }
+}
 
 fn index_check(expected: (usize, usize), actual: (usize, usize)) {
     if actual.0 >= expected.0 || actual.1 >= expected.1 {
@@ -25,25 +36,25 @@ fn index_check(expected: (usize, usize), actual: (usize, usize)) {
 }
 
 fn range_check(expected: (usize, usize), rows: (usize, usize), cols: (usize, usize)) {
-    if rows.0 >= expected.0 {
+    if rows.0 > expected.0 {
         panic!(
             "Row start index out of range for matrix of size {}x{}: {}",
             expected.0, expected.1, rows.0
         )
     }
-    if rows.1 >= expected.0 {
+    if rows.1 > expected.0 {
         panic!(
             "Row end index out of range for matrix of size {}x{}: {}",
             expected.0, expected.1, rows.1
         )
     }
-    if cols.0 >= expected.1 {
+    if cols.0 > expected.1 {
         panic!(
             "Column start index out of range for matrix of size {}x{}: {}",
             expected.0, expected.1, cols.0
         )
     }
-    if cols.1 >= expected.1 {
+    if cols.1 > expected.1 {
         panic!(
             "Column end index out of range for matrix of size {}x{}: {}",
             expected.0, expected.1, cols.1

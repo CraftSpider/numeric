@@ -1,4 +1,4 @@
-use crate::matrix::MatSlice;
+use crate::matrix::{MatSlice, NonNullExt};
 use core::ptr::NonNull;
 use core::{iter, slice};
 
@@ -75,7 +75,7 @@ impl<'a, T: 'a> Iterator for ColumnItemIter<'a, T> {
         // SAFETY: Internal pointer guaranteed valid till we reach `end`
         let out = unsafe { self.ptr.as_ref() };
         // SAFETY: Pointer guaranteed to have provenance up till `end`
-        self.ptr = unsafe { self.ptr.add(self.stride) };
+        self.ptr = self.ptr.wrapping_add(self.stride);
         Some(out)
     }
 }
